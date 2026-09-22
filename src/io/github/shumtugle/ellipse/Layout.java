@@ -42,6 +42,7 @@ final class Layout {
     /** One screen inside an application, opened by its own name rather than the front door. */
     static final String ACTIVITY = "activity";
     /** This home screen's own clock, with the date, the weather and the charge. */
+    /** Kept to know a clock left in an older layout, so it can be left out. */
     static final String CLOCK = "clock";
 
     private static final String FILE = "layout.json";
@@ -202,9 +203,6 @@ final class Layout {
     static Layout fresh(Context context) {
         Layout layout = new Layout();
         Screen screen = new Screen();
-        Item clock = new Item(CLOCK, 0, 0);
-        clock.w = layout.columns;
-        screen.items.add(clock);
         layout.screens.add(screen);
         layout.dock.items.add(new Item(DOOR, 0, 0));
 
@@ -478,6 +476,11 @@ final class Layout {
             if (items != null) {
                 for (int k = 0; k < items.length(); k++) {
                     Item item = Item.from(items.getJSONObject(k));
+                    if (CLOCK.equals(item.kind)) {
+                        // A clock from an older layout: the home screen has
+                        // none of its own any more, and leaves it out.
+                        continue;
+                    }
                     item.x = Math.max(0, Math.min(layout.columns - 1, item.x));
                     item.y = Math.max(0, Math.min(layout.rows - 1, item.y));
                     item.w = Math.min(item.w, layout.columns - item.x);

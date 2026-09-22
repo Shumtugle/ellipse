@@ -141,35 +141,8 @@ no_room	На этом экране ему нет места
 # Clock
 clock	Часы
 
-# Circle
-circle	Круг
-
-# Time
-time_part	Время
-
-# Date
-date_part	Дата
-
-# Window
-small_part	Окошко
-
-# Charge
-charge_part	Заряд
-
-# Headphones
-ears_part	Наушники
-
-# Shown
-shown	Показано
-
 # Hidden
 hidden	Скрыто
-
-# Dial
-state_dial	Циферблат
-
-# Application
-state_app	Приложение
 
 # None
 state_none	Нет
@@ -185,9 +158,6 @@ to_middle	По центру
 
 # A width of {w} cannot stand exactly in the middle of {n} columns: make it one wider or one narrower
 middle_cannot	Ширина {w} не встаёт ровно посередине {n} столбцов: сделай на один шире или уже
-
-# An application in the window
-window_app	В окошке — приложение
 
 # Immersion
 immersion	Погружение
@@ -228,168 +198,6 @@ richness	Насыщенность
 # From the wallpaper
 wallpaper	От обоев
 
-# Weather
-weather	Погода
-
-# Where I am
-here	Где я
-
-# A chosen city
-city_mode	Выбранный город
-
-# The weather follows the phone. A rough place is enough; the exact one is never asked for.
-here_what	Погода едет вместе с телефоном. Хватает примерного места, точное не спрашивается
-
-# The weather stays with one city, found by its name.
-city_what	Погода остаётся для одного города, найденного по имени
-
-# The place is not known yet
-here_none	Место пока не определено
-
-# No city chosen: the weather waits for one
-city_none	Город не выбран: погода ждёт
-
-# A city
-city	Город
-
-# Find
-find	Найти
-
-# Nothing found
-found_none	Ничего не нашлось
-
-# Headphones' charge
-ears	Заряд наушников
-
-# Shown on the clock while headphones that tell their charge are near. The system asks for leave once.
-ears_what	Виден на часах, пока рядом наушники, которые сообщают заряд. Система спросит разрешение один раз
-
-# Allow
-allow	Разрешить
-
-# Allowed
-allowed	Разрешено
-
-# Weather data by Open-Meteo.com
-weather_by	Данные о погоде: Open-Meteo.com
-
-# Places by GeoNames
-places_by	Места: GeoNames
-
-# Both under the CC BY 4.0 licence; shown rounded, as signs
-licence_by	Обе под лицензией CC BY 4.0; показаны округлёнными, знаками
-
-# Nothing yet: the weather has not been asked for
-none	Пока пусто: погоду ещё не спрашивали
-
-# Feels like
-feels	Ощущается как
-
-# Dry
-dry	Сухо
-
-# Raining
-raining	Идёт дождь
-
-# Snowing
-snowing	Идёт снег
-
-# Rain in
-rain_in	Дождь через
-
-# Snow in
-snow_in	Снег через
-
-# min
-min	мин
-
-# Wind
-wind	Ветер
-
-# m/s
-ms	м/с
-
-# Humidity
-wet	Влажность
-
-# Pressure
-press	Давление
-
-# UV index
-sun	УФ-индекс
-
-# Harmless
-uv_low	Неопасно
-
-# Take care
-uv_mid	Осторожно
-
-# Seek shade
-uv_high	В тень
-
-# Air
-air	Воздух
-
-# No pollen today
-no_pollen	Сегодня пыльцы нет
-
-# Alder
-alder	Ольха
-
-# Birch
-birch	Берёза
-
-# Grass
-grass	Злаки
-
-# Mugwort
-mugwort	Полынь
-
-# Daylight
-daylight	Световой день
-
-# Geomagnetic activity
-geomagnetic	Геомагнитная активность
-
-# Aurora likely
-aurora	Северное сияние
-
-# Aurora possible
-maybe	Возможно сияние
-
-# Quiet
-quiet	Спокойно
-
-# Today
-today	Сегодня
-
-# Sunday
-sunday	Воскресенье
-
-# Monday
-monday	Понедельник
-
-# Tuesday
-tuesday	Вторник
-
-# Wednesday
-wednesday	Среда
-
-# Thursday
-thursday	Четверг
-
-# Friday
-friday	Пятница
-
-# Saturday
-saturday	Суббота
-
-# Weather and air by Open-Meteo.com, CC BY 4.0, rounded and drawn as signs. Geomagnetic index by NOAA SWPC, public domain.
-sky_sources	Погода и воздух — Open-Meteo.com, CC BY 4.0, округлены и нарисованы знаками. Геомагнитный индекс — NOAA SWPC, общественное достояние.
-
-# Layout
-layout	Раскладка
-
 # Export
 export	Экспорт
 
@@ -426,12 +234,6 @@ not_readable	Этот файл Ellipse не читает
 # The layout, the settings and the language are written.
 exported	Раскладка, настройки и язык записаны
 
-# The layout is read: {n} screens.
-imported	Раскладка прочитана, экранов: {n}
-
-# That file is not a layout.
-not_a_layout	Этот файл — не раскладка
-
 # Language
 language	Язык
 
@@ -452,9 +254,6 @@ module_save	Сохранить шаблон
 
 # Use English
 use_english	Вернуть английский
-
-# The language is taken.
-module_taken	Язык принят
 
 # That file is not a language module.
 module_bad	Это не языковой модуль
@@ -524,84 +323,6 @@ tag_updated	обновлено
 
 # Nothing opened or installed lately.
 fresh_empty	Недавно ничего не открывалось и не ставилось
-
-# No clock stands on any screen yet. Hold a finger on an empty place of a screen and choose the clock.
-clock_none	Часов пока нет ни на одном экране. Подержи палец на пустом месте экрана и выбери «Часы».
-
-# Not on the screens
-clock_absent	Нет на экранах
-
-# Parts
-parts	Части
-
-# Choose the application
-choose_app	Выбрать приложение
-
-# Window
-face	Форма окна
-
-# As the style
-face_auto	Как стиль
-
-# Round
-face_round	Круг
-
-# Squircle
-face_squircle	Сквиркл
-
-# Scalloped
-face_cookie	Печенье
-
-# Like the tile
-face_tile	Как плитка
-
-# Frame
-frame	Рамка
-
-# Outline
-outline	Обводка
-
-# None
-outline_none	Нет
-
-# Silver
-outline_silver	Серебро
-
-# Ground of the windows
-well	Цвет полей
-
-# How solid
-density	Плотность
-
-# Second hand
-second	Секундная
-
-# As everything
-second_same	Как всё
-
-# Red
-second_red	Красная
-
-# As everywhere
-ink_same	Как везде
-
-# Its own
-ink_own	Свой
-
-# Let go
-veil	Прозрачность
-
-# Made of
-style	Из чего
-
-# Like the tiles
-style_tile	Как плитка
-
-# Glass
-style_glass	Стекло
-
-# Flat
-style_flat	Плоский
 
 # Something broke
 fault	Сбой

@@ -112,8 +112,6 @@ public final class Home extends Activity {
     private Grip grip;
     /** Whether the card about a fall has been offered in this life of the screen. */
     private boolean told;
-    /** The request that asks where the phone is, at the first start. */
-    private static final int PLACE = 41;
     /** Air between the dock's shelf and the bar at the foot. */
     private static final int DOCK_GAP = Round.dp(8f);
     /** How much of the glass the keyboard takes, while it is up. */
@@ -273,9 +271,6 @@ public final class Home extends Activity {
         board.turnTo(state != null ? state.getInt("page", layout.home) : layout.home, false);
 
         read();
-        if (Keep.askPlace(this) && !Sky.mayLocate(this)) {
-            requestPermissions(new String[] {android.Manifest.permission.ACCESS_COARSE_LOCATION}, PLACE);
-        }
         doors.registerCallback(watch, new Handler(Looper.getMainLooper()));
     }
 
@@ -376,7 +371,6 @@ public final class Home extends Activity {
         if (width == 0 || height == 0) {
             return;
         }
-        almanacs.clear();
         float cellWidth = (width - 2f * Round.dp(4f)) / layout.columns;
         float room = height - barTop - barBottom;
         dockHigh = 0;
@@ -401,7 +395,7 @@ public final class Home extends Activity {
                 View view = make(item);
                 if (view != null) {
                     Sheet.Spot spot = new Sheet.Spot(item.x, item.y, item.w, item.h);
-                    spot.bleed = Layout.WIDGET.equals(item.kind) || Layout.CLOCK.equals(item.kind);
+                    spot.bleed = Layout.WIDGET.equals(item.kind);
                     sheet.addView(view, spot);
                 }
             }
@@ -526,8 +520,6 @@ public final class Home extends Activity {
                     stage.show(true);
                 }
             });
-        } else if (Layout.CLOCK.equals(item.kind)) {
-            view = almanac(item);
         } else if (Layout.ACTIVITY.equals(item.kind)) {
             view = screenTile(item);
         } else if (Layout.SHORTCUT.equals(item.kind)) {
@@ -556,7 +548,7 @@ public final class Home extends Activity {
                 return true;
             }
         });
-        if (!Layout.WIDGET.equals(item.kind) && !Layout.CLOCK.equals(item.kind)) {
+        if (!Layout.WIDGET.equals(item.kind)) {
             view.setStateListAnimator(Give.tile());
         }
         return view;
@@ -679,10 +671,10 @@ public final class Home extends Activity {
         if (app != null) {
             shortcuts(offer, app);
         }
-        if (Layout.CLOCK.equals(item.kind) || Layout.DOOR.equals(item.kind)) {
+        if (Layout.DOOR.equals(item.kind)) {
             // What the thing shows is chosen in the settings; its card keeps
             // where it stands and how large it is, which is seen moving here.
-            final String subject = Layout.CLOCK.equals(item.kind) ? "clock" : "drawer";
+            final String subject = "drawer";
             offer.tool(Sketch.GEAR, Words.s("settings"), new Runnable() {
                 public void run() {
                     closeCard();
@@ -690,10 +682,7 @@ public final class Home extends Activity {
                 }
             });
         }
-        if (Layout.CLOCK.equals(item.kind)) {
-            credit(offer);
-        }
-        if (Layout.WIDGET.equals(item.kind) || Layout.CLOCK.equals(item.kind)) {
+        if (Layout.WIDGET.equals(item.kind)) {
             sizes(offer, item);
         }
         lift(load, picture, offer, onStage(view));
@@ -710,9 +699,6 @@ public final class Home extends Activity {
         }
         if (Layout.DOOR.equals(item.kind)) {
             return Words.s("put_door");
-        }
-        if (Layout.CLOCK.equals(item.kind)) {
-            return Words.s("clock");
         }
         if (Layout.SHORTCUT.equals(item.kind) || Layout.ACTIVITY.equals(item.kind)) {
             return item.label;
@@ -1104,231 +1090,14 @@ public final class Home extends Activity {
         return face;
     }
 
-    // ------------------------------------------------------------ the clock
 
-    private final List<Almanac> almanacs = new ArrayList<Almanac>();
-    private int chargeLevel = -1;
-    private boolean chargePlugged;
-    private int earsLevel = -1;
 
-    /** The home screen's own clock, dressed in the tiles' material, with what its windows show. */
-    private View almanac(final Layout.Item item) {
-        final Almanac clock = new Almanac(this);
-        String small = item.options.get("small");
-        String chosenName = item.options.get("app");
-        if (chosenName == null && small != null && small.indexOf('/') > 0) {
-            chosenName = small;
-        }
-        Bitmap chosen = null;
-        if (chosenName != null) {
-            ComponentName target = ComponentName.unflattenFromString(chosenName);
-            if (target != null) {
-                try {
-                    Drawable icon = getPackageManager().getActivityIcon(target);
-                    chosen = Tile.render(icon, Round.dp(96f), look);
-                } catch (Exception gone) {
-                    chosen = null;
-                }
-            }
-        }
-        clock.dress(look, item.options, chosen, new Almanac.Hand() {
-            public void pressed(String window) {
-                clockPressed(window, clock);
-            }
-        });
-        clock.weather(Sky.now(this));
-        clock.charge(chargeLevel, chargePlugged);
-        clock.ears(earsLevel);
-        almanacs.add(clock);
-        return clock;
-    }
 
-    /** What a press on each of the clock's windows opens. */
-    private void clockPressed(String window, Almanac clock) {
-        Intent open = null;
-        if (Almanac.DIAL.equals(window)) {
-            open = new Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS);
-        } else if ("calendar".equals(window)) {
-            open = Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALENDAR);
-        } else if ("battery".equals(window)) {
-            open = new Intent(Intent.ACTION_POWER_USAGE_SUMMARY);
-        } else if (Almanac.WEATHER.equals(window)) {
-            if (Sky.city(this) == null && !Sky.here(this)) {
-                startActivity(new Intent(this, Tune.class).putExtra(Tune.SUBJECT, "weather"));
-            } else {
-                openForecast(clock);
-            }
-            return;
-        } else {
-            ComponentName target = window == null ? null : ComponentName.unflattenFromString(window);
-            if (target != null) {
-                openScreen(target, board);
-            } else {
-                board.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
-            }
-            return;
-        }
-        try {
-            open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(open);
-        } catch (RuntimeException none) {
-            board.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
-        }
-    }
 
-    private Forecast forecast;
 
-    /**
-     * The weather, whole, grown out of the window that was pressed; the
-     * screens step back behind it as they do behind the drawer.
-     */
-    private void openForecast(Almanac clock) {
-        if (forecast != null) {
-            return;
-        }
-        android.graphics.RectF box = clock.pressed();
-        int[] at = new int[2];
-        int[] base = new int[2];
-        clock.getLocationInWindow(at);
-        stage.getLocationInWindow(base);
-        float cx = at[0] - base[0] + box.centerX();
-        float cy = at[1] - base[1] + box.centerY();
-        float radius = Math.min(box.width(), box.height()) / 2f;
-        stage.still(true);
-        forecast = new Forecast(this, look, barTop, barBottom, new Forecast.Hand() {
-            public void depth(float open) {
-                float back = 1f - 0.06f * open;
-                board.setScaleX(back);
-                board.setScaleY(back);
-                echo(back, 1f, Round.px(18f) * open);
-                if (Build.VERSION.SDK_INT >= 31) {
-                    float blur = Round.px(18f) * open;
-                    board.setRenderEffect(blur < 0.5f ? null : android.graphics.RenderEffect
-                        .createBlurEffect(blur, blur, android.graphics.Shader.TileMode.CLAMP));
-                }
-            }
 
-            public void closed() {
-                stage.still(false);
-                forecast = null;
-            }
-        });
-        stage.addView(forecast, new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        forecast.open(cx, cy, radius);
-        Sky.freshen(this, new Runnable() {
-            public void run() {
-                tellWeather();
-                if (forecast != null) {
-                    forecast.refresh();
-                }
-            }
-        });
-    }
 
-    private void tellWeather() {
-        Sky.Now now = Sky.now(this);
-        for (Almanac clock : almanacs) {
-            clock.weather(now);
-        }
-    }
 
-    /** The weather's credit on the clock's card: its licence asks for it wherever the weather is shown. */
-    private void credit(Offer offer) {
-        offer.link(Sketch.INFO, Words.s("weather_by"), new Runnable() {
-            public void run() {
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(Sky.WEATHER_SOURCE))
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-                } catch (RuntimeException none) {
-                    board.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
-                }
-            }
-        });
-    }
-
-    private final android.content.BroadcastReceiver power = new android.content.BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            int level = intent.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, -1);
-            int scale = intent.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100);
-            int plug = intent.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0);
-            chargeLevel = level < 0 ? -1 : Math.round(level * 100f / Math.max(1, scale));
-            chargePlugged = plug != 0;
-            for (Almanac clock : almanacs) {
-                clock.charge(chargeLevel, chargePlugged);
-            }
-        }
-    };
-
-    private static final String EARS_CHANGED = "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED";
-    private static final String EARS_LEVEL = "android.bluetooth.device.extra.BATTERY_LEVEL";
-
-    /** Headphones tell their charge when they change it; gone, they tell nothing. */
-    private final android.content.BroadcastReceiver ears = new android.content.BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (EARS_CHANGED.equals(intent.getAction())) {
-                earsLevel = intent.getIntExtra(EARS_LEVEL, -1);
-            } else {
-                earsLevel = -1;
-            }
-            for (Almanac clock : almanacs) {
-                clock.ears(earsLevel);
-            }
-        }
-    };
-    private boolean listening;
-
-    /** Whether this home screen may hear headphones: from Android 12 only with the owner's leave. */
-    private boolean hearsEars() {
-        return Build.VERSION.SDK_INT < 31
-            || checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-                == android.content.pm.PackageManager.PERMISSION_GRANTED;
-    }
-
-    private void listen() {
-        if (listening) {
-            return;
-        }
-        listening = true;
-        power.onReceive(this, registerReceiver(power, new android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED)));
-        if (hearsEars()) {
-            android.content.IntentFilter heard = new android.content.IntentFilter(EARS_CHANGED);
-            heard.addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED);
-            try {
-                registerReceiver(ears, heard);
-                earsLevel = earsNow();
-            } catch (RuntimeException refused) {
-                earsLevel = -1;
-            }
-            for (Almanac clock : almanacs) {
-                clock.ears(earsLevel);
-            }
-        }
-        Sky.freshen(this, new Runnable() {
-            public void run() {
-                tellWeather();
-            }
-        });
-    }
-
-    private void unlisten() {
-        if (!listening) {
-            return;
-        }
-        listening = false;
-        try {
-            unregisterReceiver(power);
-        } catch (RuntimeException already) {
-            // Not registered.
-        }
-        try {
-            unregisterReceiver(ears);
-        } catch (RuntimeException already) {
-            // Not registered.
-        }
-    }
 
     /**
      * The charge of headphones already near when the screen is shown. The
@@ -1336,26 +1105,6 @@ public final class Home extends Activity {
      * so it is asked for carefully, and a refusal means nothing is shown.
      */
     @SuppressWarnings("deprecation")
-    private int earsNow() {
-        try {
-            android.bluetooth.BluetoothAdapter adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
-            if (adapter == null) {
-                return -1;
-            }
-            for (android.bluetooth.BluetoothDevice device : adapter.getBondedDevices()) {
-                Object near = device.getClass().getMethod("isConnected").invoke(device);
-                if (Boolean.TRUE.equals(near)) {
-                    Object level = device.getClass().getMethod("getBatteryLevel").invoke(device);
-                    if (level instanceof Integer && (Integer) level >= 0) {
-                        return (Integer) level;
-                    }
-                }
-            }
-        } catch (Exception refused) {
-            return -1;
-        }
-        return -1;
-    }
 
     // ------------------------------------------------------------ widget sizes
 
@@ -1813,24 +1562,6 @@ public final class Home extends Activity {
                 }
             });
         }
-        offer.row(Sketch.CLOCK, Words.s("clock"), new Runnable() {
-            public void run() {
-                int w = layout.columns;
-                int h = Math.min(3, layout.rows);
-                int[] at = layout.nearest(screen, 0, cy, w, h, null);
-                if (at == null) {
-                    android.widget.Toast.makeText(Home.this, Words.s("no_room"),
-                        android.widget.Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                Layout.Item made = new Layout.Item(Layout.CLOCK, at[0], at[1]);
-                made.w = w;
-                made.h = h;
-                layout.screens.get(screen).items.add(made);
-                layout.save(Home.this);
-                build();
-            }
-        });
         offer.row(Sketch.WIDGET, Words.s("widget"), new Runnable() {
             public void run() {
                 openPicker(screen, cx, cy);
@@ -1936,29 +1667,8 @@ public final class Home extends Activity {
             recreate();
             return;
         }
-        listen();
     }
 
-    /**
-     * The answer to the first start's question. Allowed, the weather comes
-     * at once for where the phone is; refused, it waits for a city, and a
-     * press on it opens the weather's settings.
-     */
-    @Override
-    public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
-        super.onRequestPermissionsResult(request, permissions, results);
-        if (request != PLACE) {
-            return;
-        }
-        boolean granted = results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED;
-        Sky.follow(this, granted);
-        Sky.freshen(this, new Runnable() {
-            public void run() {
-                tellWeather();
-            }
-        });
-        tellWeather();
-    }
 
     /** The day turning into the night under the home screen, while it stands. */
     @Override
@@ -1981,7 +1691,6 @@ public final class Home extends Activity {
     protected void onPause() {
         super.onPause();
         seen = false;
-        unlisten();
     }
 
     /** Home: whatever lies open closes; on bare screens, back to the main one. */
@@ -2009,14 +1718,6 @@ public final class Home extends Activity {
             }
             closed = true;
         }
-        if (forecast != null) {
-            if (seen) {
-                forecast.close();
-            } else {
-                forecast.drop();
-            }
-            closed = true;
-        }
         closeCard();
         if (stage.isOpen()) {
             stage.close(seen);
@@ -2033,9 +1734,7 @@ public final class Home extends Activity {
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (forecast != null) {
-            forecast.close();
-        } else if (roll != null) {
+        if (roll != null) {
             roll.close();
         } else if (picker != null) {
             picker.close();

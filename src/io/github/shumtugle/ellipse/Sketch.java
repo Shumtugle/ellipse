@@ -540,7 +540,21 @@ final class Sketch extends View {
                 break;
             }
             case WEATHER: {
-                Sky.draw(canvas, new Sky.Now(true, 0f, 2, true), w / 2f, h / 2f, Math.min(w, h) * 0.95f, ink);
+                float s = Math.min(w, h);
+                stroke(soft, line);
+                canvas.drawCircle(w / 2f - s * 0.12f, h / 2f - s * 0.12f, s * 0.14f, paint);
+                android.graphics.Path cloud = new android.graphics.Path();
+                cloud.moveTo(w / 2f - s * 0.26f, h / 2f + s * 0.24f);
+                cloud.lineTo(w / 2f + s * 0.18f, h / 2f + s * 0.24f);
+                cloud.cubicTo(w / 2f + s * 0.36f, h / 2f + s * 0.24f, w / 2f + s * 0.36f, h / 2f - s * 0.02f,
+                    w / 2f + s * 0.18f, h / 2f - s * 0.02f);
+                cloud.cubicTo(w / 2f + s * 0.12f, h / 2f - s * 0.22f, w / 2f - s * 0.14f, h / 2f - s * 0.18f,
+                    w / 2f - s * 0.16f, h / 2f + s * 0.02f);
+                cloud.cubicTo(w / 2f - s * 0.34f, h / 2f + s * 0.04f, w / 2f - s * 0.34f, h / 2f + s * 0.24f,
+                    w / 2f - s * 0.26f, h / 2f + s * 0.24f);
+                cloud.close();
+                stroke(ink, line);
+                canvas.drawPath(cloud, paint);
                 break;
             }
             case CALENDAR: {

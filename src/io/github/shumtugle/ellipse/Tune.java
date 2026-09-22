@@ -287,10 +287,9 @@ public final class Tune extends Activity {
      * contents says, under the subject's name, how it stands now, so most
      * questions are answered without going in.
      */
-    private static final int[] GLYPHS = {Sketch.WINDOW_FOLLOWS, Sketch.SCREENS, Sketch.CLOCK, Sketch.DRAWER,
-        Sketch.PALETTE, Sketch.WEATHER, Sketch.FOLDER_OPEN, Sketch.LANGUAGE};
-    private static final String[] SUBJECTS = {"tile", "screens", "clock", "drawer", "colour", "weather", "files",
-        "language"};
+    private static final int[] GLYPHS = {Sketch.WINDOW_FOLLOWS, Sketch.SCREENS, Sketch.DRAWER,
+        Sketch.PALETTE, Sketch.FOLDER_OPEN, Sketch.LANGUAGE};
+    private static final String[] SUBJECTS = {"tile", "screens", "drawer", "colour", "files", "language"};
 
     private ScrollView index;
     private LinearLayout indexColumn;
@@ -397,11 +396,6 @@ public final class Tune extends Activity {
                 Layout.stash(this);
                 Layout.fresh(this).save(this);
                 Keep.touch(this);
-                if (!Sky.mayLocate(this)) {
-                    // The answer rebuilds the room; nothing more to wait for here.
-                    requestPermissions(new String[] {android.Manifest.permission.ACCESS_COARSE_LOCATION}, HERE);
-                    return;
-                }
             } else {
                 Keep.toMine(this);
                 Layout.unstash(this);
@@ -508,24 +502,16 @@ public final class Tune extends Activity {
                 return grid.columns + " \u00d7 " + grid.rows + "  \u00b7  "
                     + Words.s(Keep.endless(this) ? "turn_round" : "turn_ends")
                 + (Keep.dock(this) ? "  \u00b7  " + Words.s("dock") : "");
-            case 2:
-                return clockStanding();
-            case 3: {
+            case 2: {
                 String[] orders = {"order_name", "order_installed", "order_updated"};
                 return Words.s(Keep.across(this) ? "way_across" : "way_down") + "  \u00b7  "
                     + Words.s(orders[Math.max(0, Math.min(2, Keep.order(this)))]);
             }
-            case 4:
+            case 3:
                 return (Keep.night(this) == Keep.PHONE ? Words.s("theme_auto")
                     : Words.s(Keep.night(this) == Keep.DAY ? "theme_light" : "theme_dark")) + "  \u00b7  "
                     + (Keep.wall(this) ? Words.s("wallpaper") : Words.s("hue"));
-            case 5: {
-                if (Sky.here(this) && Sky.mayLocate(this)) {
-                    return Words.s("here") + (Sky.city(this) != null ? "  \u00b7  " + Sky.city(this) : "");
-                }
-                return Sky.city(this) != null ? Sky.city(this) : Words.s("city_none");
-            }
-            case 6: {
+            case 4: {
                 String place = folderName();
                 return place != null ? place : Words.s("folder_none");
             }
@@ -538,11 +524,9 @@ public final class Tune extends Activity {
         switch (which) {
             case 0: return tileCard();
             case 1: return screensCard();
-            case 2: return clockCard();
-            case 3: return drawerCard();
-            case 4: return colourCard();
-            case 5: return weatherCard();
-            case 6: return filesCard();
+            case 2: return drawerCard();
+            case 3: return colourCard();
+            case 4: return filesCard();
             default: return languageCard();
         }
     }
@@ -1363,347 +1347,15 @@ public final class Tune extends Activity {
 
     // ------------------------------------------------------------ the clock card
 
-    /**
-     * The clock on the screens: what its circle shows, what its small
-     * window shows and opens, and which of its parts are there at all.
-     * Where it stands and how large it is stays on its own card on the
-     * screen, where it can be seen moving. A clock on each of several
-     * screens is set each on its own.
-     */
-    private View clockCard() {
-        LinearLayout card = card(Words.s("clock"));
-        List<Layout.Item> clocks = clocks();
-        if (clocks.isEmpty()) {
-            card.addView(words(Letter.BODY_L, Words.s("clock_none"), Tone.ON_SURFACE_VARIANT), spaced(16));
-            return card;
-        }
-        for (int i = 0; i < clocks.size(); i++) {
-            clockParts(card, clocks.get(i), clocks.size() > 1, i == 0);
-        }
-        return card;
-    }
 
-    private void clockParts(LinearLayout card, final Layout.Item item, boolean named, boolean first) {
-        if (named) {
-            TextView where = words(Letter.TITLE_L, Words.s("screen_n").replace("{n}",
-                String.valueOf(screenOf(item) + 1)), Tone.ON_SURFACE);
-            Letter.serif(where);
-            card.addView(where, spaced(first ? 16 : 36));
-        }
-        card.addView(words(Letter.TITLE_S, Words.s("style"), Tone.ON_SURFACE_VARIANT), spaced(named ? 12 : 16));
-        final String[] styles = {Almanac.LIKE_TILE, Almanac.GLASS, Almanac.FLAT};
-        String worn = item.options.get("style");
-        int dressed = Almanac.GLASS.equals(worn) ? 1 : Almanac.FLAT.equals(worn) ? 2 : 0;
-        Cards made = new Cards(new String[] {Words.s("style_tile"), Words.s("style_glass"),
-                Words.s("style_flat")},
-            new Sketch[] {new Sketch(this, Sketch.SHAPE).shape(Tile.Look.MEASURED.power, Tile.Look.MEASURED.ratio),
-                new Sketch(this, Sketch.WINDOW_ROUND), new Sketch(this, Sketch.WINDOW_RAW)},
-            dressed, 112, new Picked() {
-                public void picked(int which) {
-                    item.options.put("style", styles[which]);
-                    keepClocks();
-                }
-            });
-        card.addView(made.view(), spaced(12));
 
-        card.addView(labelled(Words.s("veil"), null), spaced(20));
-        float letGo = 0f;
-        try {
-            String said = item.options.get("veil");
-            letGo = said == null ? 0f : Math.max(0f, Math.min(1f, Integer.parseInt(said) / 100f));
-        } catch (NumberFormatException none) {
-            letGo = 0f;
-        }
-        card.addView(new Dial(this, letGo, new Dial.Moved() {
-            public void moved(float value, boolean done) {
-                item.options.put("veil", String.valueOf(Math.round(value * 100f)));
-                if (done) {
-                    keepClocks();
-                }
-            }
-        }).large(), wideRow());
 
-        card.addView(words(Letter.TITLE_S, Words.s("face"), Tone.ON_SURFACE_VARIANT), spaced(20));
-        final String[] faces = {Almanac.AUTO, Almanac.ROUND, Almanac.SQUIRCLE, Almanac.COOKIE,
-            Almanac.LIKE_TILE};
-        String cut = item.options.get("face");
-        int shaped = 0;
-        for (int i = 0; i < faces.length; i++) {
-            if (faces[i].equals(cut)) {
-                shaped = i;
-            }
-        }
-        Cards cuts = new Cards(new String[] {Words.s("face_auto"), Words.s("face_round"),
-                Words.s("face_squircle"), Words.s("face_cookie"), Words.s("face_tile")},
-            new Sketch[] {new Sketch(this, Sketch.AUTO), new Sketch(this, Sketch.WINDOW_ROUND),
-                new Sketch(this, Sketch.SHAPE).shape(4f, 1f), new Sketch(this, Sketch.COOKIE),
-                new Sketch(this, Sketch.SHAPE).shape(look.power, look.ratio)},
-            shaped, 104, 5, new Picked() {
-                public void picked(int which) {
-                    item.options.put("face", faces[which]);
-                    keepClocks();
-                }
-            });
-        card.addView(cuts.view(), spaced(12));
 
-        card.addView(labelled(Words.s("frame"), null), spaced(20));
-        float rim = 0.25f;
-        try {
-            String said = item.options.get("frame");
-            rim = said == null ? 0.25f : Math.max(0f, Math.min(1f, Float.parseFloat(said)));
-        } catch (NumberFormatException none) {
-            rim = 0.25f;
-        }
-        card.addView(new Dial(this, rim, new Dial.Moved() {
-            public void moved(float value, boolean done) {
-                item.options.put("frame", String.valueOf(Math.round(value * 100f) / 100f));
-                if (done) {
-                    keepClocks();
-                }
-            }
-        }).large(), wideRow());
 
-        card.addView(words(Letter.TITLE_S, Words.s("outline"), Tone.ON_SURFACE_VARIANT), spaced(20));
-        Cards lines = new Cards(new String[] {Words.s("outline_none"), Words.s("outline_silver")},
-            new Sketch[] {new Sketch(this, Sketch.CLOSE), new Sketch(this, Sketch.RIM).rim(Tile.Look.METAL)},
-            "silver".equals(item.options.get("line")) ? 1 : 0, 104, new Picked() {
-                public void picked(int which) {
-                    if (which == 1) {
-                        item.options.put("line", "silver");
-                    } else {
-                        item.options.remove("line");
-                    }
-                    keepClocks();
-                }
-            });
-        card.addView(lines.view(), spaced(12));
 
-        card.addView(words(Letter.TITLE_S, Words.s("well"), Tone.ON_SURFACE_VARIANT), spaced(20));
-        int wellSaid = -1;
-        try {
-            String said = item.options.get("well");
-            wellSaid = said == null ? -1 : Math.round(Float.parseFloat(said));
-        } catch (NumberFormatException none) {
-            wellSaid = -1;
-        }
-        final Cards[] wells = new Cards[1];
-        wells[0] = new Cards(new String[] {Words.s("ink_same"), Words.s("ink_own")},
-            new Sketch[] {new Sketch(this, Sketch.CLOSE), new Sketch(this, Sketch.PALETTE)},
-            wellSaid >= 0 ? 1 : 0, 104, new Picked() {
-                public void picked(int which) {
-                    if (which == 0) {
-                        item.options.remove("well");
-                    } else if (item.options.get("well") == null) {
-                        item.options.put("well", String.valueOf(Math.round(Tone.hue())));
-                    }
-                    keepClocks();
-                }
-            });
-        card.addView(wells[0].view(), spaced(12));
-        Dial ground = new Dial(this, (wellSaid < 0 ? Tone.hue() : wellSaid) / 360f, new Dial.Moved() {
-            public void moved(float value, boolean done) {
-                item.options.put("well", String.valueOf(Math.round(value * 360f) % 360));
-                wells[0].select(1);
-                if (done) {
-                    keepClocks();
-                }
-            }
-        }).large();
-        int[] wheel = new int[13];
-        for (int i = 0; i < wheel.length; i++) {
-            wheel[i] = Tone.at(Tone.night() ? 30f : 88f, 30.0, i * 30f % 360f);
-        }
-        ground.colours(wheel);
-        card.addView(ground, wideRow());
 
-        card.addView(labelled(Words.s("density"), null), spaced(16));
-        float solid = 0.85f;
-        try {
-            String said = item.options.get("dense");
-            solid = said == null ? 0.85f : Math.max(0f, Math.min(1f, Float.parseFloat(said)));
-        } catch (NumberFormatException none) {
-            solid = 0.85f;
-        }
-        card.addView(new Dial(this, solid, new Dial.Moved() {
-            public void moved(float value, boolean done) {
-                item.options.put("dense", String.valueOf(Math.round(value * 100f) / 100f));
-                if (done) {
-                    keepClocks();
-                }
-            }
-        }).large(), wideRow());
 
-        card.addView(words(Letter.TITLE_S, Words.s("second"), Tone.ON_SURFACE_VARIANT), spaced(20));
-        Cards seconds = new Cards(new String[] {Words.s("second_same"), Words.s("second_red")},
-            new Sketch[] {new Sketch(this, Sketch.CLOCK), new Sketch(this, Sketch.PIN)},
-            "red".equals(item.options.get("second")) ? 1 : 0, 104, new Picked() {
-                public void picked(int which) {
-                    if (which == 1) {
-                        item.options.put("second", "red");
-                    } else {
-                        item.options.remove("second");
-                    }
-                    keepClocks();
-                }
-            });
-        card.addView(seconds.view(), spaced(12));
 
-        card.addView(words(Letter.TITLE_S, Words.s("circle"), Tone.ON_SURFACE_VARIANT), spaced(20));
-        final String[] bigs = {Almanac.DIAL, Almanac.WEATHER, Almanac.NONE};
-        Cards big = new Cards(new String[] {Words.s("state_dial"), Words.s("weather"), Words.s("state_none")},
-            new Sketch[] {new Sketch(this, Sketch.CLOCK), new Sketch(this, Sketch.WEATHER),
-                new Sketch(this, Sketch.CLOSE)},
-            bigOf(item), 112, new Picked() {
-                public void picked(int which) {
-                    item.options.put("big", bigs[which]);
-                    keepClocks();
-                }
-            });
-        card.addView(big.view(), spaced(12));
-
-        card.addView(words(Letter.TITLE_S, Words.s("small_part"), Tone.ON_SURFACE_VARIANT), spaced(20));
-        final Cards[] small = new Cards[1];
-        final TextView[] chooser = new TextView[1];
-        final Runnable chosen = new Runnable() {
-            public void run() {
-                small[0].select(1);
-                chooser[0].setText(appSaid(item));
-                keepClocks();
-            }
-        };
-        small[0] = new Cards(new String[] {Words.s("weather"), Words.s("state_app"), Words.s("state_none")},
-            new Sketch[] {new Sketch(this, Sketch.WEATHER), new Sketch(this, Sketch.DRAWER),
-                new Sketch(this, Sketch.CLOSE)},
-            smallOf(item), 112, new Picked() {
-                public void picked(int which) {
-                    if (which == 1 && appOf(item) == null) {
-                        // A window for an application, and none chosen yet:
-                        // choose one now, or the window stays as it was.
-                        final int was = smallOf(item);
-                        pickApp(item, chosen, new Runnable() {
-                            public void run() {
-                                small[0].select(was);
-                            }
-                        });
-                        return;
-                    }
-                    item.options.put("small", which == 0 ? Almanac.WEATHER
-                        : which == 1 ? Almanac.APP : Almanac.NONE);
-                    keepClocks();
-                }
-            });
-        card.addView(small[0].view(), spaced(12));
-        chooser[0] = button(appSaid(item), false, new View.OnClickListener() {
-            public void onClick(View v) {
-                pickApp(item, chosen, null);
-            }
-        });
-        LinearLayout.LayoutParams chooserPlace = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT, Round.dp(48f));
-        chooserPlace.topMargin = Round.dp(12f);
-        card.addView(chooser[0], chooserPlace);
-
-        card.addView(words(Letter.TITLE_S, Words.s("parts"), Tone.ON_SURFACE_VARIANT), spaced(20));
-        final String[] parts = {"time", "date", "charge", "ears"};
-        boolean[] on = new boolean[parts.length];
-        for (int i = 0; i < parts.length; i++) {
-            on[i] = !"off".equals(item.options.get(parts[i]));
-        }
-        Cards shown = new Cards(new String[] {Words.s("time_part"), Words.s("date_part"), Words.s("charge_part"),
-                Words.s("ears_part")},
-            new Sketch[] {new Sketch(this, Sketch.CLOCK), new Sketch(this, Sketch.CALENDAR),
-                new Sketch(this, Sketch.BATTERY), new Sketch(this, Sketch.HEADPHONES)},
-            -1, 104, 4, new Picked() {
-                public void picked(int which) {
-                    String part = parts[which];
-                    if ("off".equals(item.options.get(part))) {
-                        item.options.remove(part);
-                    } else {
-                        item.options.put(part, "off");
-                    }
-                    keepClocks();
-                }
-            }).each(on);
-        card.addView(shown.view(), spaced(12));
-    }
-
-    /** Every clock on the screens, in the order of the screens. */
-    private List<Layout.Item> clocks() {
-        List<Layout.Item> found = new ArrayList<Layout.Item>();
-        for (Layout.Screen screen : grid.screens) {
-            for (Layout.Item item : screen.items) {
-                if (Layout.CLOCK.equals(item.kind)) {
-                    found.add(item);
-                }
-            }
-        }
-        return found;
-    }
-
-    private int screenOf(Layout.Item item) {
-        for (int i = 0; i < grid.screens.size(); i++) {
-            if (grid.screens.get(i).items.contains(item)) {
-                return i;
-            }
-        }
-        return 0;
-    }
-
-    private static int bigOf(Layout.Item item) {
-        String now = item.options.get("big");
-        return Almanac.WEATHER.equals(now) ? 1 : Almanac.NONE.equals(now) ? 2 : 0;
-    }
-
-    private static int smallOf(Layout.Item item) {
-        String now = item.options.get("small");
-        if (now == null || Almanac.WEATHER.equals(now)) {
-            return 0;
-        }
-        return Almanac.NONE.equals(now) ? 2 : 1;
-    }
-
-    /** The application the clock's small window opens, as written down; an older clock kept it in the window's own place. */
-    private static android.content.ComponentName appOf(Layout.Item item) {
-        String name = item.options.get("app");
-        String small = item.options.get("small");
-        if (name == null && small != null && small.indexOf('/') > 0) {
-            name = small;
-        }
-        return name == null ? null : android.content.ComponentName.unflattenFromString(name);
-    }
-
-    /** The name of that application, or the question of which it is to be. */
-    private String appSaid(Layout.Item item) {
-        android.content.ComponentName target = appOf(item);
-        if (target == null) {
-            return Words.s("choose_app");
-        }
-        try {
-            return getPackageManager().getActivityInfo(target, 0).loadLabel(getPackageManager()).toString();
-        } catch (Exception gone) {
-            return Words.s("choose_app");
-        }
-    }
-
-    /** How the first clock stands, in a few words, for its line in the contents. */
-    private String clockStanding() {
-        List<Layout.Item> clocks = clocks();
-        if (clocks.isEmpty()) {
-            return Words.s("clock_absent");
-        }
-        Layout.Item first = clocks.get(0);
-        String[] bigs = {"state_dial", "weather", "state_none"};
-        int small = smallOf(first);
-        String window = small == 0 ? Words.s("weather") : small == 2 ? Words.s("state_none") : appSaid(first);
-        return Words.s(bigs[bigOf(first)]) + "  \u00b7  " + window;
-    }
-
-    /** The clocks written down with the screens; the home screen builds itself anew when it is next seen. */
-    private void keepClocks() {
-        grid.save(this);
-        Keep.touch(this);
-        restate();
-    }
 
     // ------------------------------------------------------------ the screens card
 
@@ -1933,205 +1585,10 @@ public final class Tune extends Activity {
     private TextView cityName;
     private LinearLayout found;
 
-    /**
-     * The city the clock's weather is for, found by its name; and the
-     * leave, from Android 12, to hear the charge of headphones.
-     */
-    private View weatherCard() {
-        LinearLayout card = card(Words.s("weather"));
-        boolean following = Sky.here(this) && Sky.mayLocate(this);
-        Cards where = new Cards(new String[] {Words.s("here"), Words.s("city_mode")},
-            new Sketch[] {new Sketch(this, Sketch.PIN), new Sketch(this, Sketch.SEARCH)},
-            following ? 0 : 1, 120, new Picked() {
-                public void picked(int which) {
-                    if (which == 0) {
-                        if (Sky.mayLocate(Tune.this)) {
-                            Sky.follow(Tune.this, true);
-                            Keep.touch(Tune.this);
-                            recreate();
-                        } else {
-                            requestPermissions(new String[] {
-                                android.Manifest.permission.ACCESS_COARSE_LOCATION}, HERE);
-                        }
-                    } else {
-                        Sky.follow(Tune.this, false);
-                        Keep.touch(Tune.this);
-                    }
-                }
-            });
-        card.addView(where.view(), spaced(16));
-        card.addView(words(Letter.BODY_M, Words.s(following ? "here_what" : "city_what"),
-            Tone.ON_SURFACE_VARIANT), spaced(8));
-        String city = Sky.city(this);
-        if (following && city == null) {
-            city = Words.s("here_none");
-        }
-        cityName = words(city != null ? Letter.HEADLINE_S : Letter.BODY_M,
-            city != null ? city : Words.s("city_none"), city != null ? Tone.ON_SURFACE : Tone.ON_SURFACE_VARIANT);
-        if (city != null) {
-            Letter.serif(cityName);
-        }
-        card.addView(cityName, spaced(12));
 
-        LinearLayout ask = new LinearLayout(this);
-        ask.setOrientation(LinearLayout.HORIZONTAL);
-        ask.setGravity(Gravity.CENTER_VERTICAL);
-        final android.widget.EditText name = new android.widget.EditText(this);
-        Letter.set(name, Letter.TITLE_M);
-        name.setSingleLine(true);
-        name.setHint(Words.s("city"));
-        name.setPadding(Round.dp(20f), 0, Round.dp(20f), 0);
-        name.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
-        painters.add(new Runnable() {
-            public void run() {
-                name.setBackground(new Cast.Pane(Round.FULL));
-                name.setTextColor(Tone.of(Tone.ON_SURFACE));
-                name.setHintTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
-            }
-        });
-        ask.addView(name, new LinearLayout.LayoutParams(0, Round.dp(56f), 1f));
-        final Runnable search = new Runnable() {
-            public void run() {
-                findCity(name.getText().toString().trim());
-            }
-        };
-        name.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            public boolean onEditorAction(TextView v, int action, android.view.KeyEvent event) {
-                search.run();
-                return true;
-            }
-        });
-        ask.addView(button(Words.s("find"), true, new View.OnClickListener() {
-            public void onClick(View v) {
-                search.run();
-            }
-        }), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Round.dp(56f)) {
-            {
-                leftMargin = Round.dp(8f);
-            }
-        });
-        card.addView(ask, spaced(12));
-        found = new LinearLayout(this);
-        found.setOrientation(LinearLayout.VERTICAL);
-        card.addView(found, spaced(8));
-        card.addView(credit(Words.s("weather_by"), Sky.WEATHER_SOURCE), spaced(16));
-        card.addView(credit(Words.s("places_by"), Sky.PLACES_SOURCE), spaced(4));
-        card.addView(credit(Words.s("licence_by"), Sky.LICENCE), spaced(4));
 
-        if (Build.VERSION.SDK_INT >= 31) {
-            card.addView(words(Letter.TITLE_S, Words.s("ears"), Tone.ON_SURFACE_VARIANT), spaced(20));
-            card.addView(words(Letter.BODY_M, Words.s("ears_what"), Tone.ON_SURFACE_VARIANT), spaced(2));
-            final boolean allowed = checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
-                == android.content.pm.PackageManager.PERMISSION_GRANTED;
-            TextView allow = button(Words.s(allowed ? "allowed" : "allow"), !allowed, new View.OnClickListener() {
-                public void onClick(View v) {
-                    if (!allowed) {
-                        requestPermissions(new String[] {android.Manifest.permission.BLUETOOTH_CONNECT}, EARS);
-                    }
-                }
-            });
-            card.addView(allow, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, Round.dp(48f)) {
-                {
-                    topMargin = Round.dp(12f);
-                }
-            });
-        }
-        return card;
-    }
 
-    @Override
-    public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
-        super.onRequestPermissionsResult(request, permissions, results);
-        if (request == EARS) {
-            Keep.touch(this);
-            recreate();
-        } else if (request == HERE) {
-            boolean granted = results.length > 0
-                && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED;
-            Sky.follow(this, granted);
-            Keep.touch(this);
-            recreate();
-        }
-    }
 
-    /** A line saying where something comes from; a press opens its page. */
-    private TextView credit(String text, final String page) {
-        TextView made = words(Letter.LABEL_M, text, Tone.PRIMARY);
-        made.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                try {
-                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(page)));
-                } catch (ActivityNotFoundException none) {
-                    v.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
-                }
-            }
-        });
-        return made;
-    }
-
-    /** Places that answer to a name, as buttons; a press chooses one. */
-    private void findCity(final String name) {
-        if (name.length() == 0) {
-            return;
-        }
-        found.removeAllViews();
-        new Thread(new Runnable() {
-            public void run() {
-                List<Sky.Place> places;
-                try {
-                    places = Sky.find(name);
-                } catch (Exception unreachable) {
-                    places = null;
-                }
-                final List<Sky.Place> shown = places;
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        showPlaces(shown);
-                    }
-                });
-            }
-        }).start();
-    }
-
-    private void showPlaces(List<Sky.Place> places) {
-        found.removeAllViews();
-        if (places == null || places.isEmpty()) {
-            TextView none = words(Letter.BODY_M, Words.s("found_none"), Tone.ON_SURFACE_VARIANT);
-            none.setTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
-            found.addView(none, spaced(4));
-            return;
-        }
-        for (final Sky.Place place : places) {
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.VERTICAL);
-            row.setPadding(Round.dp(16f), Round.dp(10f), Round.dp(16f), Round.dp(10f));
-            row.setBackground(touch(new Cast.Slab(Tone.of(Tone.SURFACE_HIGH), 20f),
-                Tone.of(Tone.ON_SURFACE), 20f));
-            row.setStateListAnimator(Give.press());
-            TextView big = Letter.set(new TextView(this), Letter.TITLE_M);
-            big.setText(place.name);
-            big.setTextColor(Tone.of(Tone.ON_SURFACE));
-            row.addView(big);
-            if (place.region.length() > 0) {
-                TextView small = Letter.set(new TextView(this), Letter.BODY_S);
-                small.setText(place.region);
-                small.setTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
-                row.addView(small);
-            }
-            row.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    Sky.choose(Tune.this, place);
-                    Keep.touch(Tune.this);
-                    found.removeAllViews();
-                    cityName.setText(place.name);
-                    Letter.set(cityName, Letter.HEADLINE_S);
-                    Letter.serif(cityName);
-                    cityName.setTextColor(Tone.of(Tone.ON_SURFACE));
-                }
-            });
-            found.addView(row, spaced(found.getChildCount() == 0 ? 0 : 6));
-        }
-    }
 
     // ------------------------------------------------------------ the files card
 
@@ -2460,88 +1917,7 @@ public final class Tune extends Activity {
         sheet = veil;
     }
 
-    /**
-     * Every application, to choose the one the clock's small window opens.
-     * Chosen, the clock is told; let go without a choice, whoever asked is
-     * told that instead.
-     */
-    private void pickApp(final Layout.Item item, final Runnable chosen, final Runnable dropped) {
-        if (sheet != null) {
-            return;
-        }
-        new Thread(new Runnable() {
-            public void run() {
-                final List<App> apps = App.all(Tune.this);
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        if (!isFinishing() && sheet == null) {
-                            showApps(apps, item, chosen, dropped);
-                        }
-                    }
-                });
-            }
-        }).start();
-    }
 
-    private void showApps(List<App> apps, final Layout.Item item, final Runnable chosen, Runnable dropped) {
-        final FrameLayout veil = new FrameLayout(this);
-        veil.setBackgroundColor(0x66000000);
-        veil.setClickable(true);
-        veil.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                closeSheet();
-            }
-        });
-        LinearLayout panel = new LinearLayout(this);
-        panel.setOrientation(LinearLayout.VERTICAL);
-        panel.setClickable(true);
-        panel.setBackground(Round.sheet(Tone.of(Tone.SURFACE_CONTAINER), Round.XL));
-        panel.setPadding(Round.dp(16f), Round.dp(20f), Round.dp(16f), Round.dp(24f));
-        TextView title = words(Letter.HEADLINE_S, Words.s("choose_app"), Tone.ON_SURFACE);
-        Letter.serif(title);
-        title.setTextColor(Tone.of(Tone.ON_SURFACE));
-        title.setPadding(Round.dp(8f), 0, Round.dp(8f), Round.dp(12f));
-        panel.addView(title);
-        ScrollView scroll = new ScrollView(this);
-        scroll.setVerticalScrollBarEnabled(false);
-        LinearLayout list = new LinearLayout(this);
-        list.setOrientation(LinearLayout.VERTICAL);
-        for (int i = 0; i < apps.size(); i++) {
-            final App app = apps.get(i);
-            TextView row = Letter.set(new TextView(this), Letter.TITLE_M);
-            row.setText(app.label);
-            row.setTextColor(Tone.of(Tone.ON_SURFACE));
-            row.setSingleLine(true);
-            row.setEllipsize(TextUtils.TruncateAt.END);
-            row.setPadding(Round.dp(16f), Round.dp(14f), Round.dp(16f), Round.dp(14f));
-            row.setBackground(touch(new Cast.Slab(Tone.of(Tone.SURFACE_HIGH), 20f),
-                Tone.of(Tone.ON_SURFACE), 20f));
-            row.setStateListAnimator(give());
-            row.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    sheetDropped = null;
-                    closeSheet();
-                    item.options.put("app", app.component().flattenToString());
-                    item.options.put("small", Almanac.APP);
-                    chosen.run();
-                }
-            });
-            list.addView(row, spaced(i == 0 ? 0 : 6));
-        }
-        scroll.addView(list);
-        panel.addView(scroll, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        FrameLayout.LayoutParams at = new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
-        at.topMargin = Round.dp(120f);
-        veil.addView(panel, at);
-        root.addView(veil, new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        veil.setAlpha(0f);
-        veil.animate().alpha(1f).setDuration(Pace.SHEET).setInterpolator(Pace.STANDARD).start();
-        sheet = veil;
-        sheetDropped = dropped;
-    }
 
     private void closeSheet() {
         if (sheet != null) {

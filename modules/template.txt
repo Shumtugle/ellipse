@@ -141,35 +141,8 @@ no_room
 # Clock
 clock	
 
-# Circle
-circle	
-
-# Time
-time_part	
-
-# Date
-date_part	
-
-# Window
-small_part	
-
-# Charge
-charge_part	
-
-# Headphones
-ears_part	
-
-# Shown
-shown	
-
 # Hidden
 hidden	
-
-# Dial
-state_dial	
-
-# Application
-state_app	
 
 # None
 state_none	
@@ -185,9 +158,6 @@ to_middle
 
 # A width of {w} cannot stand exactly in the middle of {n} columns: make it one wider or one narrower
 middle_cannot	
-
-# An application in the window
-window_app	
 
 # Immersion
 immersion	
@@ -228,168 +198,6 @@ richness
 # From the wallpaper
 wallpaper	
 
-# Weather
-weather	
-
-# Where I am
-here	
-
-# A chosen city
-city_mode	
-
-# The weather follows the phone. A rough place is enough; the exact one is never asked for.
-here_what	
-
-# The weather stays with one city, found by its name.
-city_what	
-
-# The place is not known yet
-here_none	
-
-# No city chosen: the weather waits for one
-city_none	
-
-# A city
-city	
-
-# Find
-find	
-
-# Nothing found
-found_none	
-
-# Headphones' charge
-ears	
-
-# Shown on the clock while headphones that tell their charge are near. The system asks for leave once.
-ears_what	
-
-# Allow
-allow	
-
-# Allowed
-allowed	
-
-# Weather data by Open-Meteo.com
-weather_by	
-
-# Places by GeoNames
-places_by	
-
-# Both under the CC BY 4.0 licence; shown rounded, as signs
-licence_by	
-
-# Nothing yet: the weather has not been asked for
-none	
-
-# Feels like
-feels	
-
-# Dry
-dry	
-
-# Raining
-raining	
-
-# Snowing
-snowing	
-
-# Rain in
-rain_in	
-
-# Snow in
-snow_in	
-
-# min
-min	
-
-# Wind
-wind	
-
-# m/s
-ms	
-
-# Humidity
-wet	
-
-# Pressure
-press	
-
-# UV index
-sun	
-
-# Harmless
-uv_low	
-
-# Take care
-uv_mid	
-
-# Seek shade
-uv_high	
-
-# Air
-air	
-
-# No pollen today
-no_pollen	
-
-# Alder
-alder	
-
-# Birch
-birch	
-
-# Grass
-grass	
-
-# Mugwort
-mugwort	
-
-# Daylight
-daylight	
-
-# Geomagnetic activity
-geomagnetic	
-
-# Aurora likely
-aurora	
-
-# Aurora possible
-maybe	
-
-# Quiet
-quiet	
-
-# Today
-today	
-
-# Sunday
-sunday	
-
-# Monday
-monday	
-
-# Tuesday
-tuesday	
-
-# Wednesday
-wednesday	
-
-# Thursday
-thursday	
-
-# Friday
-friday	
-
-# Saturday
-saturday	
-
-# Weather and air by Open-Meteo.com, CC BY 4.0, rounded and drawn as signs. Geomagnetic index by NOAA SWPC, public domain.
-sky_sources	
-
-# Layout
-layout	
-
 # Export
 export	
 
@@ -426,12 +234,6 @@ not_readable
 # The layout, the settings and the language are written.
 exported	
 
-# The layout is read: {n} screens.
-imported	
-
-# That file is not a layout.
-not_a_layout	
-
 # Language
 language	
 
@@ -452,9 +254,6 @@ module_save
 
 # Use English
 use_english	
-
-# The language is taken.
-module_taken	
 
 # That file is not a language module.
 module_bad	
@@ -524,84 +323,6 @@ tag_updated
 
 # Nothing opened or installed lately.
 fresh_empty	
-
-# No clock stands on any screen yet. Hold a finger on an empty place of a screen and choose the clock.
-clock_none	
-
-# Not on the screens
-clock_absent	
-
-# Parts
-parts	
-
-# Choose the application
-choose_app	
-
-# Window
-face	
-
-# As the style
-face_auto	
-
-# Round
-face_round	
-
-# Squircle
-face_squircle	
-
-# Scalloped
-face_cookie	
-
-# Like the tile
-face_tile	
-
-# Frame
-frame	
-
-# Outline
-outline	
-
-# None
-outline_none	
-
-# Silver
-outline_silver	
-
-# Ground of the windows
-well	
-
-# How solid
-density	
-
-# Second hand
-second	
-
-# As everything
-second_same	
-
-# Red
-second_red	
-
-# As everywhere
-ink_same	
-
-# Its own
-ink_own	
-
-# Let go
-veil	
-
-# Made of
-style	
-
-# Like the tiles
-style_tile	
-
-# Glass
-style_glass	
-
-# Flat
-style_flat	
 
 # Something broke
 fault	
