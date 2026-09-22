@@ -1406,6 +1406,23 @@ public final class Tune extends Activity {
             });
         card.addView(made.view(), spaced(12));
 
+        card.addView(labelled(Words.s("veil"), null), spaced(20));
+        float letGo = 0f;
+        try {
+            String said = item.options.get("veil");
+            letGo = said == null ? 0f : Math.max(0f, Math.min(1f, Integer.parseInt(said) / 100f));
+        } catch (NumberFormatException none) {
+            letGo = 0f;
+        }
+        card.addView(new Dial(this, letGo, new Dial.Moved() {
+            public void moved(float value, boolean done) {
+                item.options.put("veil", String.valueOf(Math.round(value * 100f)));
+                if (done) {
+                    keepClocks();
+                }
+            }
+        }).large(), wideRow());
+
         card.addView(words(Letter.TITLE_S, Words.s("circle"), Tone.ON_SURFACE_VARIANT), spaced(20));
         final String[] bigs = {Almanac.DIAL, Almanac.WEATHER, Almanac.NONE};
         Cards big = new Cards(new String[] {Words.s("state_dial"), Words.s("weather"), Words.s("state_none")},

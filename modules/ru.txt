@@ -537,6 +537,9 @@ parts	Части
 # Choose the application
 choose_app	Выбрать приложение
 
+# Let go
+veil	Прозрачность
+
 # Made of
 style	Из чего
 

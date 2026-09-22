@@ -537,6 +537,9 @@ parts
 # Choose the application
 choose_app	
 
+# Let go
+veil	
+
 # Made of
 style	
 

@@ -57,6 +57,8 @@ final class Almanac extends View {
 
     private Tile.Look look;
     private String style = LIKE_TILE;
+    /** How far the plate is let go: nothing at all at one, and only the windows are left standing. */
+    private float veil;
     private String big = DIAL;
     private String small = WEATHER;
     private String app;
@@ -143,6 +145,13 @@ final class Almanac extends View {
     void dress(Tile.Look look, java.util.Map<String, String> options, Bitmap chosen, Hand hand) {
         this.look = look;
         style = part(options, "style", LIKE_TILE);
+        veil = 0f;
+        try {
+            String said = options.get("veil");
+            veil = said == null ? 0f : Math.max(0f, Math.min(1f, Integer.parseInt(said) / 100f));
+        } catch (NumberFormatException none) {
+            veil = 0f;
+        }
         big = part(options, "big", DIAL);
         String kept = part(options, "small", WEATHER);
         app = options.get("app");
@@ -235,20 +244,36 @@ final class Almanac extends View {
         // The default draws the clock the design system's way: a card of the
         // surface, the dial on a scalloped face, the windows each in a
         // container of its own colour, all flat.
+        // Like the tiles means like the tiles themselves: whatever material
+        // they are cut from, the clock is cut from. Only when they have no
+        // material of their own — no rim, or no mask over the icons — does
+        // the clock fall back on the flat way or on a plate of shade.
         boolean glass = GLASS.equals(style);
-        boolean flat = FLAT.equals(style) || (!glass && Cast.flat);
-        boolean material = !flat && !glass && look.rim != Tile.Look.BARE;
+        boolean material = !glass && !FLAT.equals(style)
+            && look.rim != Tile.Look.BARE && look.window != Tile.Look.RAW;
+        boolean flat = !glass && !material && (FLAT.equals(style) || Cast.flat);
+        int held = -1;
+        if (veil > 0.01f) {
+            // The plate let go: what is under it, the table itself, comes through.
+            held = canvas.saveLayerAlpha(0f, 0f, w, h, Math.round(255f * (1f - veil)));
+        }
         if (glass) {
             // A pane of smoked glass lying on the wallpaper, with the light
             // caught along its upper edge: nothing of the table is hidden,
             // only darkened.
-            paint.setShader(new RadialGradient(w * 0.5f, h * 0.2f, Math.max(w, h) * 0.9f,
-                0xB22C2620, 0xD90A0908, Shader.TileMode.CLAMP));
+            // Glass is seen through: a breath of smoke over the table, a
+            // brighter line where the light lies along its upper edge, and a
+            // sheen falling across its top.
+            paint.setShader(new RadialGradient(w * 0.5f, h * 0.15f, Math.max(w, h) * 0.9f,
+                0x40312A22, 0x73090807, Shader.TileMode.CLAMP));
+            canvas.drawPath(plate, paint);
+            paint.setShader(new LinearGradient(0f, inset, 0f, h * 0.55f, 0x26FFFFFF, 0x00FFFFFF,
+                Shader.TileMode.CLAMP));
             canvas.drawPath(plate, paint);
             paint.setShader(null);
             edge.setStyle(Paint.Style.STROKE);
             edge.setStrokeWidth(Math.max(1f, Round.px(1f)));
-            edge.setShader(new LinearGradient(0f, inset, 0f, h - inset, 0x59FFFFFF, 0x0DFFFFFF,
+            edge.setShader(new LinearGradient(0f, inset, 0f, h - inset, 0x8CFFFFFF, 0x14FFFFFF,
                 Shader.TileMode.CLAMP));
             canvas.drawPath(plate, edge);
             edge.setShader(null);
@@ -266,6 +291,9 @@ final class Almanac extends View {
             paint.setShader(null);
             paint.setColor(0x80000000);
             canvas.drawPath(plate, paint);
+        }
+        if (held >= 0) {
+            canvas.restoreToCount(held);
         }
         int accent = flat ? Tone.of(Tone.PRIMARY) : glass ? 0xFFF4ECDD : Tile.accentOf(look.rim);
         int ink = 0xFFF4ECDD;
@@ -419,7 +447,7 @@ final class Almanac extends View {
             });
         }
 
-        if (material && look.gloss) {
+        if (material && look.gloss && veil < 0.02f) {
             Tile.glaze(canvas, plate, inset, inset, w - 2f * inset, h - 2f * inset);
         }
     }
@@ -434,8 +462,8 @@ final class Almanac extends View {
             // Windows cut in the pane: a little darker than it, their cut
             // catching the same light.
             glass.setShader(null);
-            glass.setColor(0x4D000000);
-            edge.setColor(0x33FFFFFF);
+            glass.setColor(0x59000000);
+            edge.setColor(0x40FFFFFF);
             if (round) {
                 canvas.drawOval(box, glass);
                 canvas.drawOval(box, edge);
