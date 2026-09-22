@@ -194,6 +194,19 @@ public final class Words {
         "tag_new",
         "tag_updated",
         "fresh_empty",
+        "clock_none",
+        "clock_absent",
+        "parts",
+        "choose_app",
+        "door_own",
+        "door_dots",
+        "door_four",
+        "door_ring",
+        "door_arch",
+        "door_rise",
+        "door_star",
+        "door_keyhole",
+        "door_glass",
     };
 
     private static final String[] EN = {
@@ -371,6 +384,19 @@ public final class Words {
         "new",
         "updated",
         "Nothing opened or installed lately.",
+        "No clock stands on any screen yet. Hold a finger on an empty place of a screen and choose the clock.",
+        "Not on the screens",
+        "Parts",
+        "Choose the application",
+        "Its own sign",
+        "Nine dots",
+        "Four tiles",
+        "Ellipse",
+        "Arch",
+        "Upward",
+        "Star",
+        "Keyhole",
+        "Bare glass",
     };
 
     private static final Map<String, String> TABLE = new LinkedHashMap<String, String>();

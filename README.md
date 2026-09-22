@@ -44,7 +44,8 @@ it, tiles two to a row. For an application, the shortcuts it offers into
 itself, marked in the card's own ink, and the screens inside it; a press
 opens one, a long press lifts it onto a screen. For a widget or the clock,
 its width, its height, its row and its column, each between a minus and a
-plus, and a way to the middle of its row. A long press on bare ground
+plus, and a way to the middle of its row. The clock's card and the door's
+lead to their settings. A long press on bare ground
 offers the door, the clock, a widget, another screen, the removal of an
 empty one, the main screen, and the settings.
 
@@ -53,7 +54,7 @@ in the same material, with the same glaze. A round window with a dial, or
 the weather large; a long window with the hour and the date; small windows
 with the weather or an application of the owner's choosing, the phone's
 charge, and the charge of headphones while they are near. Each part can be
-turned off on the clock's card, down to the date alone, which then stands
+turned off in the settings, down to the date alone, which then stands
 as the leaf of a calendar; the rest share the room.
 
 **The weather.** For a city chosen by name, or for wherever the phone is,
@@ -109,7 +110,14 @@ the owner's look with its sign in the window, and a line saying how the
 subject stands now. A subject opens out of its tile in a circle, the tile
 flying up to the head of the screen while the contents step back, darken
 and, on Android 12 and later, blur; going back folds the screen into the
-tile again. Tile, screens, drawer, colour, weather, files, language.
+tile again. Tile, screens, clock, drawer, colour, weather, files, language.
+
+The clock's circle, its small window and its parts are chosen in the
+settings, and so is the face of the door to the drawer: the home screen's
+own sign, or a mark behind the glass of its window, nine dots, four tiles,
+the ellipse, an arch, a rise, a star, a keyhole, or the bare glass alone.
+The card of the clock or of the door on a screen opens their subject
+straight away, and going back from it goes back to the screen.
 
 **The file.** One readable text file carries the layout of the screens,
 every setting, and the language in use. It goes into a folder the owner

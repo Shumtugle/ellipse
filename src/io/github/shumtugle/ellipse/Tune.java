@@ -117,6 +117,9 @@ public final class Tune extends Activity {
     private static final float SEAL = 60f;
     private static final float SEAL_HEAD = 72f;
 
+    /** Asked for by name, a subject opens at once, from a thing on a screen that belongs to it. */
+    static final String SUBJECT = "subject";
+
     private final List<Runnable> painters = new ArrayList<Runnable>();
     private final List<Cards> groups = new ArrayList<Cards>();
     private final List<View> cards = new ArrayList<View>();
@@ -148,6 +151,10 @@ public final class Tune extends Activity {
     private TextView gridSaid;
     private TextView said;
     private TextView tongueSaid;
+    /** Opened straight into a subject from a screen: going back from it goes back there. */
+    private boolean direct;
+    /** Told when a sheet is let go without a choice. */
+    private Runnable sheetDropped;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -225,8 +232,21 @@ public final class Tune extends Activity {
         setContentView(root);
         paint();
         int reopen = state == null ? -1 : state.getInt("section", -1);
+        direct = state != null && state.getBoolean("direct", false);
+        if (state == null && getIntent().getStringExtra(SUBJECT) != null) {
+            // Come straight from a thing on a screen: its subject opens at
+            // once and rises into the room, and going back goes back there.
+            reopen = subjectOf(getIntent().getStringExtra(SUBJECT));
+            direct = reopen >= 0;
+        }
         if (reopen >= 0) {
             openSection(reopen, false);
+            if (direct && state == null) {
+                page.setAlpha(0f);
+                page.setTranslationY(Round.px(28f));
+                page.animate().alpha(1f).translationY(0f).setDuration(Pace.ARRIVE)
+                    .setInterpolator(Pace.EMPHASIS).start();
+            }
         } else {
             arrive();
         }
@@ -237,6 +257,16 @@ public final class Tune extends Activity {
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         out.putInt("section", section);
+        out.putBoolean("direct", direct);
+    }
+
+    private static int subjectOf(String name) {
+        for (int i = 0; i < SUBJECTS.length; i++) {
+            if (SUBJECTS[i].equals(name)) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     // ------------------------------------------------------------ the contents
@@ -247,9 +277,9 @@ public final class Tune extends Activity {
      * contents says, under the subject's name, how it stands now, so most
      * questions are answered without going in.
      */
-    private static final int[] GLYPHS = {Sketch.WINDOW_FOLLOWS, Sketch.SCREENS, Sketch.DRAWER,
+    private static final int[] GLYPHS = {Sketch.WINDOW_FOLLOWS, Sketch.SCREENS, Sketch.CLOCK, Sketch.DRAWER,
         Sketch.PALETTE, Sketch.WEATHER, Sketch.FOLDER_OPEN, Sketch.LANGUAGE};
-    private static final String[] SUBJECTS = {"tile", "screens", "drawer", "colour", "weather", "files",
+    private static final String[] SUBJECTS = {"tile", "screens", "clock", "drawer", "colour", "weather", "files",
         "language"};
 
     private ScrollView index;
@@ -371,20 +401,22 @@ public final class Tune extends Activity {
             case 1:
                 return grid.columns + " \u00d7 " + grid.rows + "  \u00b7  "
                     + Words.s(Keep.endless(this) ? "turn_round" : "turn_ends");
-            case 2: {
+            case 2:
+                return clockStanding();
+            case 3: {
                 String[] orders = {"order_name", "order_installed", "order_updated"};
                 return Words.s(Keep.across(this) ? "way_across" : "way_down") + "  \u00b7  "
                     + Words.s(orders[Math.max(0, Math.min(2, Keep.order(this)))]);
             }
-            case 3:
+            case 4:
                 return Keep.wall(this) ? Words.s("wallpaper") : Words.s("hue");
-            case 4: {
+            case 5: {
                 if (Sky.here(this) && Sky.mayLocate(this)) {
                     return Words.s("here") + (Sky.city(this) != null ? "  \u00b7  " + Sky.city(this) : "");
                 }
                 return Sky.city(this) != null ? Sky.city(this) : Words.s("city_none");
             }
-            case 5: {
+            case 6: {
                 String place = folderName();
                 return place != null ? place : Words.s("folder_none");
             }
@@ -397,10 +429,11 @@ public final class Tune extends Activity {
         switch (which) {
             case 0: return tileCard();
             case 1: return screensCard();
-            case 2: return drawerCard();
-            case 3: return colourCard();
-            case 4: return weatherCard();
-            case 5: return filesCard();
+            case 2: return clockCard();
+            case 3: return drawerCard();
+            case 4: return colourCard();
+            case 5: return weatherCard();
+            case 6: return filesCard();
             default: return languageCard();
         }
     }
@@ -626,6 +659,10 @@ public final class Tune extends Activity {
      */
     private void closeSection() {
         if (page == null) {
+            return;
+        }
+        if (direct) {
+            finish();
             return;
         }
         final ScrollView leaving = page;
@@ -1159,7 +1196,207 @@ public final class Tune extends Activity {
                 }
             });
         card.addView(order.view(), spaced(12));
+
+        card.addView(words(Letter.TITLE_S, Words.s("put_door"), Tone.ON_SURFACE_VARIANT), spaced(24));
+        String[] faces = new String[Door.NAMES.length];
+        Sketch[] fronts = new Sketch[Door.NAMES.length];
+        for (int i = 0; i < faces.length; i++) {
+            faces[i] = Words.s(Door.NAMES[i]);
+            fronts[i] = new Sketch(this, Sketch.DOOR).door(i);
+        }
+        Cards doors = new Cards(faces, fronts, Keep.door(this), 112, 3, new Picked() {
+            public void picked(int which) {
+                Keep.saveDoor(Tune.this, which);
+            }
+        });
+        card.addView(doors.view(), spaced(12));
         return card;
+    }
+
+    // ------------------------------------------------------------ the clock card
+
+    /**
+     * The clock on the screens: what its circle shows, what its small
+     * window shows and opens, and which of its parts are there at all.
+     * Where it stands and how large it is stays on its own card on the
+     * screen, where it can be seen moving. A clock on each of several
+     * screens is set each on its own.
+     */
+    private View clockCard() {
+        LinearLayout card = card(Words.s("clock"));
+        List<Layout.Item> clocks = clocks();
+        if (clocks.isEmpty()) {
+            card.addView(words(Letter.BODY_L, Words.s("clock_none"), Tone.ON_SURFACE_VARIANT), spaced(16));
+            return card;
+        }
+        for (int i = 0; i < clocks.size(); i++) {
+            clockParts(card, clocks.get(i), clocks.size() > 1, i == 0);
+        }
+        return card;
+    }
+
+    private void clockParts(LinearLayout card, final Layout.Item item, boolean named, boolean first) {
+        if (named) {
+            TextView where = words(Letter.TITLE_L, Words.s("screen_n").replace("{n}",
+                String.valueOf(screenOf(item) + 1)), Tone.ON_SURFACE);
+            Letter.serif(where);
+            card.addView(where, spaced(first ? 16 : 36));
+        }
+        card.addView(words(Letter.TITLE_S, Words.s("circle"), Tone.ON_SURFACE_VARIANT), spaced(named ? 12 : 16));
+        final String[] bigs = {Almanac.DIAL, Almanac.WEATHER, Almanac.NONE};
+        Cards big = new Cards(new String[] {Words.s("state_dial"), Words.s("weather"), Words.s("state_none")},
+            new Sketch[] {new Sketch(this, Sketch.CLOCK), new Sketch(this, Sketch.WEATHER),
+                new Sketch(this, Sketch.CLOSE)},
+            bigOf(item), 112, new Picked() {
+                public void picked(int which) {
+                    item.options.put("big", bigs[which]);
+                    keepClocks();
+                }
+            });
+        card.addView(big.view(), spaced(12));
+
+        card.addView(words(Letter.TITLE_S, Words.s("small_part"), Tone.ON_SURFACE_VARIANT), spaced(20));
+        final Cards[] small = new Cards[1];
+        final TextView[] chooser = new TextView[1];
+        final Runnable chosen = new Runnable() {
+            public void run() {
+                small[0].select(1);
+                chooser[0].setText(appSaid(item));
+                keepClocks();
+            }
+        };
+        small[0] = new Cards(new String[] {Words.s("weather"), Words.s("state_app"), Words.s("state_none")},
+            new Sketch[] {new Sketch(this, Sketch.WEATHER), new Sketch(this, Sketch.DRAWER),
+                new Sketch(this, Sketch.CLOSE)},
+            smallOf(item), 112, new Picked() {
+                public void picked(int which) {
+                    if (which == 1 && appOf(item) == null) {
+                        // A window for an application, and none chosen yet:
+                        // choose one now, or the window stays as it was.
+                        final int was = smallOf(item);
+                        pickApp(item, chosen, new Runnable() {
+                            public void run() {
+                                small[0].select(was);
+                            }
+                        });
+                        return;
+                    }
+                    item.options.put("small", which == 0 ? Almanac.WEATHER
+                        : which == 1 ? Almanac.APP : Almanac.NONE);
+                    keepClocks();
+                }
+            });
+        card.addView(small[0].view(), spaced(12));
+        chooser[0] = button(appSaid(item), false, new View.OnClickListener() {
+            public void onClick(View v) {
+                pickApp(item, chosen, null);
+            }
+        });
+        LinearLayout.LayoutParams chooserPlace = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, Round.dp(48f));
+        chooserPlace.topMargin = Round.dp(12f);
+        card.addView(chooser[0], chooserPlace);
+
+        card.addView(words(Letter.TITLE_S, Words.s("parts"), Tone.ON_SURFACE_VARIANT), spaced(20));
+        final String[] parts = {"time", "date", "charge", "ears"};
+        boolean[] on = new boolean[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            on[i] = !"off".equals(item.options.get(parts[i]));
+        }
+        Cards shown = new Cards(new String[] {Words.s("time_part"), Words.s("date_part"), Words.s("charge_part"),
+                Words.s("ears_part")},
+            new Sketch[] {new Sketch(this, Sketch.CLOCK), new Sketch(this, Sketch.CALENDAR),
+                new Sketch(this, Sketch.BATTERY), new Sketch(this, Sketch.HEADPHONES)},
+            -1, 104, 4, new Picked() {
+                public void picked(int which) {
+                    String part = parts[which];
+                    if ("off".equals(item.options.get(part))) {
+                        item.options.remove(part);
+                    } else {
+                        item.options.put(part, "off");
+                    }
+                    keepClocks();
+                }
+            }).each(on);
+        card.addView(shown.view(), spaced(12));
+    }
+
+    /** Every clock on the screens, in the order of the screens. */
+    private List<Layout.Item> clocks() {
+        List<Layout.Item> found = new ArrayList<Layout.Item>();
+        for (Layout.Screen screen : grid.screens) {
+            for (Layout.Item item : screen.items) {
+                if (Layout.CLOCK.equals(item.kind)) {
+                    found.add(item);
+                }
+            }
+        }
+        return found;
+    }
+
+    private int screenOf(Layout.Item item) {
+        for (int i = 0; i < grid.screens.size(); i++) {
+            if (grid.screens.get(i).items.contains(item)) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    private static int bigOf(Layout.Item item) {
+        String now = item.options.get("big");
+        return Almanac.WEATHER.equals(now) ? 1 : Almanac.NONE.equals(now) ? 2 : 0;
+    }
+
+    private static int smallOf(Layout.Item item) {
+        String now = item.options.get("small");
+        if (now == null || Almanac.WEATHER.equals(now)) {
+            return 0;
+        }
+        return Almanac.NONE.equals(now) ? 2 : 1;
+    }
+
+    /** The application the clock's small window opens, as written down; an older clock kept it in the window's own place. */
+    private static android.content.ComponentName appOf(Layout.Item item) {
+        String name = item.options.get("app");
+        String small = item.options.get("small");
+        if (name == null && small != null && small.indexOf('/') > 0) {
+            name = small;
+        }
+        return name == null ? null : android.content.ComponentName.unflattenFromString(name);
+    }
+
+    /** The name of that application, or the question of which it is to be. */
+    private String appSaid(Layout.Item item) {
+        android.content.ComponentName target = appOf(item);
+        if (target == null) {
+            return Words.s("choose_app");
+        }
+        try {
+            return getPackageManager().getActivityInfo(target, 0).loadLabel(getPackageManager()).toString();
+        } catch (Exception gone) {
+            return Words.s("choose_app");
+        }
+    }
+
+    /** How the first clock stands, in a few words, for its line in the contents. */
+    private String clockStanding() {
+        List<Layout.Item> clocks = clocks();
+        if (clocks.isEmpty()) {
+            return Words.s("clock_absent");
+        }
+        Layout.Item first = clocks.get(0);
+        String[] bigs = {"state_dial", "weather", "state_none"};
+        int small = smallOf(first);
+        String window = small == 0 ? Words.s("weather") : small == 2 ? Words.s("state_none") : appSaid(first);
+        return Words.s(bigs[bigOf(first)]) + "  \u00b7  " + window;
+    }
+
+    /** The clocks written down with the screens; the home screen builds itself anew when it is next seen. */
+    private void keepClocks() {
+        grid.save(this);
+        Keep.touch(this);
+        restate();
     }
 
     // ------------------------------------------------------------ the screens card
@@ -1892,10 +2129,98 @@ public final class Tune extends Activity {
         sheet = veil;
     }
 
+    /**
+     * Every application, to choose the one the clock's small window opens.
+     * Chosen, the clock is told; let go without a choice, whoever asked is
+     * told that instead.
+     */
+    private void pickApp(final Layout.Item item, final Runnable chosen, final Runnable dropped) {
+        if (sheet != null) {
+            return;
+        }
+        new Thread(new Runnable() {
+            public void run() {
+                final List<App> apps = App.all(Tune.this);
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if (!isFinishing() && sheet == null) {
+                            showApps(apps, item, chosen, dropped);
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private void showApps(List<App> apps, final Layout.Item item, final Runnable chosen, Runnable dropped) {
+        final FrameLayout veil = new FrameLayout(this);
+        veil.setBackgroundColor(0x66000000);
+        veil.setClickable(true);
+        veil.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                closeSheet();
+            }
+        });
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setClickable(true);
+        panel.setBackground(Round.sheet(Tone.of(Tone.SURFACE_CONTAINER), Round.XL));
+        panel.setPadding(Round.dp(16f), Round.dp(20f), Round.dp(16f), Round.dp(24f));
+        TextView title = words(Letter.HEADLINE_S, Words.s("choose_app"), Tone.ON_SURFACE);
+        Letter.serif(title);
+        title.setTextColor(Tone.of(Tone.ON_SURFACE));
+        title.setPadding(Round.dp(8f), 0, Round.dp(8f), Round.dp(12f));
+        panel.addView(title);
+        ScrollView scroll = new ScrollView(this);
+        scroll.setVerticalScrollBarEnabled(false);
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        for (int i = 0; i < apps.size(); i++) {
+            final App app = apps.get(i);
+            TextView row = Letter.set(new TextView(this), Letter.TITLE_M);
+            row.setText(app.label);
+            row.setTextColor(Tone.of(Tone.ON_SURFACE));
+            row.setSingleLine(true);
+            row.setEllipsize(TextUtils.TruncateAt.END);
+            row.setPadding(Round.dp(16f), Round.dp(14f), Round.dp(16f), Round.dp(14f));
+            row.setBackground(touch(new Cast.Slab(Tone.of(Tone.SURFACE_HIGH), 20f),
+                Tone.of(Tone.ON_SURFACE), 20f));
+            row.setStateListAnimator(give());
+            row.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    sheetDropped = null;
+                    closeSheet();
+                    item.options.put("app", app.component().flattenToString());
+                    item.options.put("small", Almanac.APP);
+                    chosen.run();
+                }
+            });
+            list.addView(row, spaced(i == 0 ? 0 : 6));
+        }
+        scroll.addView(list);
+        panel.addView(scroll, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        FrameLayout.LayoutParams at = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM);
+        at.topMargin = Round.dp(120f);
+        veil.addView(panel, at);
+        root.addView(veil, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        veil.setAlpha(0f);
+        veil.animate().alpha(1f).setDuration(Pace.SHEET).setInterpolator(Pace.STANDARD).start();
+        sheet = veil;
+        sheetDropped = dropped;
+    }
+
     private void closeSheet() {
         if (sheet != null) {
             root.removeView(sheet);
             sheet = null;
+        }
+        if (sheetDropped != null) {
+            Runnable told = sheetDropped;
+            sheetDropped = null;
+            told.run();
         }
     }
 
@@ -2313,6 +2638,8 @@ public final class Tune extends Activity {
         private final ValueAnimator[] moving;
         private final Picked picked;
         private int chosen;
+        /** For cards set each on its own, which are; for a group of one choice, nothing. */
+        private boolean[] ons;
 
         Cards(String[] labels, Sketch[] marks, int chosen, int height, Picked picked) {
             this(labels, marks, chosen, height, labels.length, picked);
@@ -2381,7 +2708,23 @@ public final class Tune extends Activity {
             return row;
         }
 
+        /** The cards set each on its own, as parts shown or hidden: a press turns one over. */
+        Cards each(boolean[] on) {
+            ons = on.clone();
+            for (int i = 0; i < items.length; i++) {
+                corners[i] = ons[i] ? CHOSEN : REST;
+                sets[i] = ons[i] ? 1f : 0f;
+            }
+            return this;
+        }
+
         void select(int which) {
+            if (ons != null) {
+                ons[which] = !ons[which];
+                paint(true);
+                items[which].performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                return;
+            }
             if (which != chosen) {
                 chosen = which;
                 paint(true);
@@ -2398,7 +2741,7 @@ public final class Tune extends Activity {
             int kind = Cast.metal(look.rim);
             int glow = Cast.glow(kind);
             for (int i = 0; i < items.length; i++) {
-                boolean on = i == chosen;
+                boolean on = ons != null ? ons[i] : i == chosen;
                 if (!move || settings[i] == null) {
                     settings[i] = new Cast.Setting(Tone.of(Tone.SURFACE_HIGH), kind, Round.px(corners[i]), sets[i]);
                     items[i].setBackground(touch(settings[i], Tone.of(Tone.ON_SURFACE), REST));

@@ -525,3 +525,41 @@ tag_updated	обновлено
 # Nothing opened or installed lately.
 fresh_empty	Недавно ничего не открывалось и не ставилось
 
+# No clock stands on any screen yet. Hold a finger on an empty place of a screen and choose the clock.
+clock_none	Часов пока нет ни на одном экране. Подержи палец на пустом месте экрана и выбери «Часы».
+
+# Not on the screens
+clock_absent	Нет на экранах
+
+# Parts
+parts	Части
+
+# Choose the application
+choose_app	Выбрать приложение
+
+# Its own sign
+door_own	Свой знак
+
+# Nine dots
+door_dots	Девять точек
+
+# Four tiles
+door_four	Четыре плитки
+
+# Ellipse
+door_ring	Эллипс
+
+# Arch
+door_arch	Арка
+
+# Upward
+door_rise	Вверх
+
+# Star
+door_star	Звезда
+
+# Keyhole
+door_keyhole	Скважина
+
+# Bare glass
+door_glass	Пустое стекло

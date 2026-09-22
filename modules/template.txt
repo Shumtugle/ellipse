@@ -525,3 +525,41 @@ tag_updated
 # Nothing opened or installed lately.
 fresh_empty	
 
+# No clock stands on any screen yet. Hold a finger on an empty place of a screen and choose the clock.
+clock_none	
+
+# Not on the screens
+clock_absent	
+
+# Parts
+parts	
+
+# Choose the application
+choose_app	
+
+# Its own sign
+door_own	
+
+# Nine dots
+door_dots	
+
+# Four tiles
+door_four	
+
+# Ellipse
+door_ring	
+
+# Arch
+door_arch	
+
+# Upward
+door_rise	
+
+# Star
+door_star	
+
+# Keyhole
+door_keyhole	
+
+# Bare glass
+door_glass	

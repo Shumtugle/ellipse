@@ -194,6 +194,7 @@ public final class Keep {
         o.put("endless", endless(context));
         o.put("order", order(context));
         o.put("immersion", immersion(context));
+        o.put("door", door(context));
         return o;
     }
 
@@ -210,12 +211,23 @@ public final class Keep {
                 edit.putBoolean(key, o.optBoolean(key));
             }
         }
-        for (String key : new String[] {"rim", "order", "immersion", "window"}) {
+        for (String key : new String[] {"rim", "order", "immersion", "window", "door"}) {
             if (o.has(key)) {
                 edit.putInt(key, o.optInt(key));
             }
         }
         mark(edit, context);
+    }
+
+    // ---------------------------------------------------------------- door
+
+    /** Which face the door to the drawer wears: this home screen's own sign, or a mark behind glass. */
+    static int door(Context context) {
+        return store(context).getInt("door", Door.OWN);
+    }
+
+    static void saveDoor(Context context, int face) {
+        mark(store(context).edit().putInt("door", face), context);
     }
 
     // ---------------------------------------------------------------- immersion

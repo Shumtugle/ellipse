@@ -249,7 +249,10 @@ public final class Home extends Activity {
             }
         });
         setContentView(stage);
-        board.turnTo(layout.home, false);
+        // Built anew, after the settings or a turn of the phone, the home
+        // screen opens where it was left; started for the first time, on
+        // the main screen.
+        board.turnTo(state != null ? state.getInt("page", layout.home) : layout.home, false);
 
         read();
         doors.registerCallback(watch, new Handler(Looper.getMainLooper()));
@@ -390,7 +393,8 @@ public final class Home extends Activity {
         } else if (Layout.WIDGET.equals(item.kind)) {
             view = widget(item);
         } else if (Layout.DOOR.equals(item.kind)) {
-            view = Things.tile(this, icons, null, "door", tile, getApplicationInfo().loadIcon(getPackageManager()));
+            int face = Keep.door(this);
+            view = Things.tile(this, icons, null, "door:" + face, tile, Door.face(this, face, Cast.metal(look.rim)));
             view.setContentDescription(Words.s("drawer"));
             view.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
@@ -550,8 +554,19 @@ public final class Home extends Activity {
         if (app != null) {
             shortcuts(offer, app);
         }
+        if (Layout.CLOCK.equals(item.kind) || Layout.DOOR.equals(item.kind)) {
+            // What the thing shows is chosen in the settings; its card keeps
+            // where it stands and how large it is, which is seen moving here.
+            final String subject = Layout.CLOCK.equals(item.kind) ? "clock" : "drawer";
+            offer.tool(Sketch.GEAR, Words.s("settings"), new Runnable() {
+                public void run() {
+                    stage.closeOffer();
+                    startActivity(new Intent(Home.this, Tune.class).putExtra(Tune.SUBJECT, subject));
+                }
+            });
+        }
         if (Layout.CLOCK.equals(item.kind)) {
-            clockRows(offer, item);
+            credit(offer);
         }
         if (Layout.WIDGET.equals(item.kind) || Layout.CLOCK.equals(item.kind)) {
             sizes(offer, item);
@@ -1014,7 +1029,7 @@ public final class Home extends Activity {
             open = new Intent(Intent.ACTION_POWER_USAGE_SUMMARY);
         } else if (Almanac.WEATHER.equals(window)) {
             if (Sky.city(this) == null && !Sky.here(this)) {
-                startActivity(new Intent(this, Tune.class));
+                startActivity(new Intent(this, Tune.class).putExtra(Tune.SUBJECT, "weather"));
             } else {
                 openForecast(clock);
             }
@@ -1092,54 +1107,8 @@ public final class Home extends Activity {
         }
     }
 
-    /**
-     * On the clock's card, a tile for each of its parts; a press turns the
-     * part over, the clock changes behind the card, and the card stays.
-     */
-    private void clockRows(Offer offer, final Layout.Item item) {
-        offer.turn(Sketch.WINDOW_ROUND, Words.s("circle"), roundSaid(item),
-            !Almanac.NONE.equals(item.options.get("big")), new Offer.Turn() {
-                public String turn() {
-                    String now = item.options.get("big");
-                    String next = Almanac.WEATHER.equals(now) ? Almanac.NONE
-                        : Almanac.NONE.equals(now) ? Almanac.DIAL : Almanac.WEATHER;
-                    item.options.put("big", next);
-                    clockChanged();
-                    return roundSaid(item);
-                }
-            });
-        offer.turn(Sketch.CLOCK, Words.s("time_part"), shown(item, "time"), !"off".equals(item.options.get("time")),
-            flip(item, "time"));
-        offer.turn(Sketch.CALENDAR, Words.s("date_part"), shown(item, "date"),
-            !"off".equals(item.options.get("date")), flip(item, "date"));
-        offer.turn(Sketch.WEATHER, Words.s("small_part"), smallSaid(item),
-            !Almanac.NONE.equals(item.options.get("small")), new Offer.Turn() {
-                public String turn() {
-                    String now = item.options.get("small");
-                    boolean hasApp = item.options.get("app") != null
-                        || (now != null && now.indexOf('/') > 0);
-                    String next;
-                    if (now == null || Almanac.WEATHER.equals(now)) {
-                        next = hasApp ? Almanac.APP : Almanac.NONE;
-                    } else if (Almanac.NONE.equals(now)) {
-                        next = Almanac.WEATHER;
-                    } else {
-                        next = Almanac.NONE;
-                    }
-                    item.options.put("small", next);
-                    clockChanged();
-                    return smallSaid(item);
-                }
-            });
-        offer.turn(Sketch.BATTERY, Words.s("charge_part"), shown(item, "charge"),
-            !"off".equals(item.options.get("charge")), flip(item, "charge"));
-        offer.turn(Sketch.HEADPHONES, Words.s("ears_part"), shown(item, "ears"),
-            !"off".equals(item.options.get("ears")), flip(item, "ears"));
-        offer.link(Sketch.DRAWER, Words.s("window_app"), new Runnable() {
-            public void run() {
-                pickForClock(item);
-            }
-        });
+    /** The weather's credit on the clock's card: its licence asks for it wherever the weather is shown. */
+    private void credit(Offer offer) {
         offer.link(Sketch.INFO, Words.s("weather_by"), new Runnable() {
             public void run() {
                 try {
@@ -1150,74 +1119,6 @@ public final class Home extends Activity {
                 }
             }
         });
-    }
-
-    private void clockChanged() {
-        layout.save(this);
-        build();
-    }
-
-    /** A part of the clock that is shown or hidden, turned over. */
-    private Offer.Turn flip(final Layout.Item item, final String part) {
-        return new Offer.Turn() {
-            public String turn() {
-                boolean off = "off".equals(item.options.get(part));
-                if (off) {
-                    item.options.remove(part);
-                } else {
-                    item.options.put(part, "off");
-                }
-                clockChanged();
-                return shown(item, part);
-            }
-        };
-    }
-
-    private static String shown(Layout.Item item, String part) {
-        return Words.s("off".equals(item.options.get(part)) ? "hidden" : "shown");
-    }
-
-    private static String roundSaid(Layout.Item item) {
-        String now = item.options.get("big");
-        return Words.s(Almanac.WEATHER.equals(now) ? "weather"
-            : Almanac.NONE.equals(now) ? "state_none" : "state_dial");
-    }
-
-    private String smallSaid(Layout.Item item) {
-        String now = item.options.get("small");
-        if (now == null || Almanac.WEATHER.equals(now)) {
-            return Words.s("weather");
-        }
-        if (Almanac.NONE.equals(now)) {
-            return Words.s("state_none");
-        }
-        String name = item.options.get("app") != null ? item.options.get("app") : now;
-        App app = known.get(Layout.door(name));
-        return app != null ? app.label : Words.s("state_app");
-    }
-
-    /** Every application, to choose the one the clock's small window opens. */
-    private void pickForClock(final Layout.Item item) {
-        stage.still(true);
-        roll = new Roll(this, Words.s("window_app"), null, barTop, barBottom, new Roll.Hand() {
-            public void closed() {
-                stage.still(false);
-                roll = null;
-            }
-        });
-        for (final App app : apps) {
-            roll.row(app.label, null, new Runnable() {
-                public void run() {
-                    item.options.put("app", app.component().flattenToString());
-                    item.options.put("small", Almanac.APP);
-                    layout.save(Home.this);
-                    build();
-                }
-            }, null);
-        }
-        stage.addView(roll, new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
-        roll.show();
     }
 
     private final android.content.BroadcastReceiver power = new android.content.BroadcastReceiver() {
@@ -1816,6 +1717,12 @@ public final class Home extends Activity {
             return;
         }
         listen();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        out.putInt("page", board.page());
     }
 
     @Override

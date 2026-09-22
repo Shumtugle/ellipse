@@ -118,8 +118,9 @@ final class Board extends ViewGroup {
         return (Sheet) getChildAt(i);
     }
 
+    /** The screen in view; before the screens are there, the one asked for. */
     int page() {
-        return page;
+        return wished >= 0 ? wished : page;
     }
 
     int count() {
@@ -151,7 +152,7 @@ final class Board extends ViewGroup {
         for (int i = 0; i < getChildCount(); i++) {
             getChildAt(i).layout(i * width, 0, (i + 1) * width, b - t);
         }
-        if (wished >= 0) {
+        if (wished >= 0 && getChildCount() > 0) {
             page = wished;
             wished = -1;
         }
@@ -172,6 +173,14 @@ final class Board extends ViewGroup {
      */
     void turnTo(int target, boolean animate) {
         int count = getChildCount();
+        if (count == 0) {
+            // No screens yet: the one asked for is kept as asked, and found
+            // among them once they are there. Clamped to none, it was lost,
+            // and every home screen built anew opened on the first.
+            wished = Math.max(0, target);
+            page = wished;
+            return;
+        }
         int lowest = round() ? -1 : 0;
         int highest = round() ? count : Math.max(0, count - 1);
         target = Math.max(lowest, Math.min(highest, target));
@@ -182,6 +191,7 @@ final class Board extends ViewGroup {
             return;
         }
         page = real;
+        wished = -1;
         wrapTo = target == real ? -1 : real;
         int dx = target * getWidth() - getScrollX();
         if (!animate || dx == 0) {

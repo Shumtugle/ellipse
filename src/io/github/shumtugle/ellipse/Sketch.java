@@ -61,6 +61,7 @@ final class Sketch extends View {
     static final int LANGUAGE = 37;
     static final int PALETTE = 38;
     static final int FORWARD = 39;
+    static final int DOOR = 40;
 
     private Paint metal;
     private Paint shine;
@@ -72,6 +73,8 @@ final class Sketch extends View {
     private float ratio = Tile.Look.MEASURED.ratio;
     private int rim;
     private int bars;
+    private int face;
+    private android.graphics.drawable.Drawable own;
     private int ink = 0xFFFFFFFF;
     private int soft = 0x66FFFFFF;
 
@@ -91,6 +94,13 @@ final class Sketch extends View {
     /** Which of the system's bars the screen keeps: none put away, the top, the bottom, or both. */
     Sketch bars(int mode) {
         bars = mode;
+        invalidate();
+        return this;
+    }
+
+    /** Which face of the door to draw. */
+    Sketch door(int face) {
+        this.face = face;
         invalidate();
         return this;
     }
@@ -115,6 +125,28 @@ final class Sketch extends View {
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);
         switch (kind) {
+            case DOOR: {
+                float side = Math.min(w, h);
+                if (face == Door.OWN) {
+                    if (own == null) {
+                        own = getContext().getApplicationInfo().loadIcon(getContext().getPackageManager());
+                    }
+                    int draw = Math.round(side * 0.92f);
+                    int left = Math.round((w - draw) / 2f);
+                    int top = Math.round((h - draw) / 2f);
+                    own.setBounds(left, top, left + draw, top + draw);
+                    own.draw(canvas);
+                } else if (face == Door.GLASS) {
+                    float wide = side * 0.9f;
+                    float tall = wide / Tile.Look.MEASURED.ratio;
+                    stroke(soft, line);
+                    canvas.drawPath(Tile.curve((w - wide) / 2f, (h - tall) / 2f, wide, tall,
+                        Tile.Look.MEASURED.power), paint);
+                } else {
+                    Door.mark(canvas, paint, face, w / 2f, h / 2f, side * 0.92f, ink, soft);
+                }
+                break;
+            }
             case SHAPE: {
                 float wide = Math.min(w * 0.86f, h * 0.86f * ratio);
                 float tall = wide / ratio;
