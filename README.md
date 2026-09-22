@@ -91,11 +91,25 @@ buttons do the same, less.
 **Immersion.** The home screen keeps both of the system's bars, or puts
 away the top one, the bottom one, or both.
 
-**The settings.** Split by subject: the first screen is the contents, each
-line saying how its subject stands now; a subject slides in as a screen of
-its own. Tile, screens, drawer, colour, weather, files, language. A choice
-between a few things is a group of cards drawn with what they do; a dial
-moves only by a finger drawn along it.
+**The settings.** A room where the tiles are kept. It is lit from above
+and goes dark towards the floor; at its head four of the owner's own tiles
+stand on cloth in a case under glass, with the name of their look on a
+plate below them. Everything a finger moves is made of what the tiles are
+made of: the chosen card is set in a rim of their material, as a stone is
+set in a ring; the button that does the likely thing is a plate of it with
+its word cut in; a number stands behind glass between two coins and rolls
+when it changes, and shakes its head when it cannot. A dial is a groove
+with a scale and a cap of the material, which lifts under the finger; a
+colour dial shows the colour under its cap through a small window. Change
+the material and every one of them is cast again, and a glint runs across
+the glass of the case.
+
+The first screen is the contents, each subject known by a small tile of
+the owner's look with its sign in the window, and a line saying how the
+subject stands now. A subject opens out of its tile in a circle, the tile
+flying up to the head of the screen while the contents step back, darken
+and, on Android 12 and later, blur; going back folds the screen into the
+tile again. Tile, screens, drawer, colour, weather, files, language.
 
 **The file.** One readable text file carries the layout of the screens,
 every setting, and the language in use. It goes into a folder the owner

@@ -1,13 +1,22 @@
 package io.github.shumtugle.ellipse;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.animation.StateListAnimator;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Outline;
+import android.graphics.Paint;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,7 +25,11 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewAnimationUtils;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
+import android.view.ViewTreeObserver;
+import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -32,27 +45,42 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The settings, on one screen, in the manner of the rest: large and plain.
+ * The settings, as a room the tiles are kept in.
  *
- * The screen opens on the tiles themselves: four of the owner's own, the
- * first four of the main home screen, large, on a card of their own, with
- * the look they wear named under them. Every move of a dial below redraws
- * them, so a tile is chosen by eye and not by number, though the number
- * stands beside every dial too.
+ * The room is dark and lit from above, and it is entered with the lamp
+ * off: the light comes up, the cards rise into it one after another, the
+ * seals of the subjects are struck into their places, and a band of light
+ * runs once across the glass of the case at the top.
  *
- * Then come cards, one to a subject. A choice between a few things is a
- * group of cards drawn with what they do rather than a row of words: a
- * shape is its own silhouette, a rim a disc of its metal, a way of the
- * drawer a little screen that runs down or three that lie side by side.
- * The card chosen is filled with the seed's colour and squares its
- * corners a little, as if pressed into place; every card gives under the
- * finger. A count is a large numeral between a minus and a plus.
+ * The case holds four of the owner's own tiles, the first four of the
+ * main home screen, standing on dark cloth inside a frame of their own
+ * material, each with its shadow on the floor under it, and a plate below
+ * them that names the look they wear. Every move of a dial redraws them,
+ * so a tile is chosen by eye and not by number, though the number stands
+ * beside every dial too.
+ *
+ * Under the case are the subjects, each a line with a seal: a small tile
+ * of the owner's look with the subject's sign in its window, so the list
+ * is made of the very thing it sets. A press on a line opens its subject
+ * out of the seal: the glass of the new screen grows round from it, the
+ * seal flies up to stand beside the subject's name, and the contents step
+ * back out of focus. Back folds the screen into the seal it came from.
+ *
+ * Inside a subject, a choice between a few things is a group of cards
+ * drawn with what they do. The chosen card is set, as a stone is set: a
+ * rim of the material closes in around it and its face turns to glass. A
+ * number is a cap on a groove; a count stands behind glass between two
+ * coins, and rolls as it changes. The button most likely wanted is a plate
+ * of the material with its word cut in; the others are glass.
+ *
+ * Change the material and all of it is cast again, and the light runs
+ * across the case to show it.
  *
  * Nothing here reaches into the home screen. A setting is written down;
  * the home screen finds it changed when it is shown again, and builds
  * itself anew. The layout of the home screens and a language module go
  * out to a file and come back from one; at the bottom stands the way out,
- * the system's own choice of home screen.
+ * the system's own choice of home screen, on a plate of its own.
  */
 public final class Tune extends Activity {
 
@@ -85,16 +113,27 @@ public final class Tune extends Activity {
     private static final float REST = 28f;
     private static final float CHOSEN = 16f;
 
+    /** The size of a seal on a line of the contents, and at the head of a subject. */
+    private static final float SEAL = 60f;
+    private static final float SEAL_HEAD = 72f;
+
     private final List<Runnable> painters = new ArrayList<Runnable>();
     private final List<Cards> groups = new ArrayList<Cards>();
     private final List<View> cards = new ArrayList<View>();
-    private final ImageView[] previews = new ImageView[4];
+    /** Every seal on the screen, cast again whenever the look changes. */
+    private final List<Cast.Seal> seals = new ArrayList<Cast.Seal>();
+    /** The cases of tiles on show: the one in the contents, and the tile subject's own while it is open. */
+    private final List<Showcase> cases = new ArrayList<Showcase>();
     private final Drawable[] faces = new Drawable[4];
 
     private Tile.Look look;
     private Layout grid;
     private FrameLayout root;
     private View sheet;
+    private Cast.Room room;
+    private Cast.Room pageRoom;
+    private Showcase showcase;
+    private Showcase pageCase;
     private Cards shapes;
     private Dial round;
     private Dial wide;
@@ -106,7 +145,6 @@ public final class Tune extends Activity {
     private TextView roundValue;
     private TextView wideValue;
     private TextView closeValue;
-    private TextView named;
     private TextView gridSaid;
     private TextView said;
     private TextView tongueSaid;
@@ -120,25 +158,45 @@ public final class Tune extends Activity {
         Tile.materials(getResources());
         look = Keep.tile(this);
         grid = Layout.load(this);
+        if (state == null) {
+            // The room does its own arriving: the lamp comes up and the
+            // cards rise into its light. The system's slide would only
+            // bring in a room already lit.
+            overridePendingTransition(0, 0);
+        }
+
+        // The room runs under the bars as well, so the light from the
+        // ceiling is not cut off by a band of flat colour at the top.
+        room = new Cast.Room();
+        getWindow().setBackgroundDrawable(room);
+        getWindow().setStatusBarColor(0x00000000);
+        getWindow().setNavigationBarColor(0x00000000);
+        if (Build.VERSION.SDK_INT >= 29) {
+            getWindow().setStatusBarContrastEnforced(false);
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
 
         LinearLayout column = new LinearLayout(this);
         column.setOrientation(LinearLayout.VERTICAL);
-        column.setPadding(Round.dp(16f), Round.dp(40f), Round.dp(16f), Round.dp(48f));
+        column.setPadding(Round.dp(16f), Round.dp(36f), Round.dp(16f), Round.dp(48f));
 
-        TextView title = words(Letter.DISPLAY_S, Words.s("settings"), Tone.ON_SURFACE);
+        TextView title = words(Letter.DISPLAY_M, Words.s("settings"), Tone.ON_SURFACE);
         Letter.serif(title);
         title.setPadding(Round.dp(8f), 0, Round.dp(8f), 0);
         column.addView(title);
+        cards.add(title);
 
         said = words(Letter.BODY_M, "", Tone.PRIMARY);
         tongueSaid = words(Letter.BODY_M, "", Tone.PRIMARY);
-        specimenCard = specimen();
-        column.addView(specimenCard, spaced(24));
+        showcase = new Showcase();
+        cases.add(showcase);
+        column.addView(showcase.view, spaced(20));
+        cards.add(showcase.view);
         contents = new LinearLayout(this);
         contents.setOrientation(LinearLayout.VERTICAL);
-        column.addView(contents, spaced(16));
+        column.addView(contents, spaced(20));
         listSections();
-        column.addView(way(), spaced(16));
+        column.addView(way(), spaced(20));
 
         String version = "";
         try {
@@ -146,10 +204,14 @@ public final class Tune extends Activity {
         } catch (Exception unknown) {
             version = "";
         }
-        TextView made = words(Letter.LABEL_M, getString(R.string.app_name) + "  " + version,
-            Tone.ON_SURFACE_VARIANT);
-        made.setPadding(Round.dp(8f), 0, 0, 0);
-        column.addView(made, spaced(28));
+        // The maker's mark, as small and as spaced as a hallmark.
+        TextView made = words(Letter.LABEL_M, (getString(R.string.app_name) + "  \u00b7  " + version)
+            .toUpperCase(java.util.Locale.ROOT), Tone.OUTLINE);
+        Letter.serif(made);
+        made.setLetterSpacing(0.3f);
+        made.setGravity(Gravity.CENTER);
+        column.addView(made, spaced(32));
+        cards.add(made);
 
         ScrollView scroll = new ScrollView(this);
         scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -193,9 +255,16 @@ public final class Tune extends Activity {
     private ScrollView index;
     private LinearLayout indexColumn;
     private LinearLayout contents;
-    private View specimenCard;
     private ScrollView page;
+    private FrameLayout headSeal;
     private int section = -1;
+    /** The seal of each line of the contents, which its subject opens out of and folds back into. */
+    private final View[] lineSeals = new View[SUBJECTS.length];
+    private final TextView[] standings = new TextView[SUBJECTS.length];
+    /** How many painters, groups and seals the contents own; a subject's are those after. */
+    private int ownPainters;
+    private int ownGroups;
+    private int ownSeals;
 
     private void listSections() {
         contents.removeAllViews();
@@ -204,18 +273,23 @@ public final class Tune extends Activity {
             final LinearLayout line = new LinearLayout(this);
             line.setOrientation(LinearLayout.HORIZONTAL);
             line.setGravity(Gravity.CENTER_VERTICAL);
-            line.setPadding(Round.dp(16f), Round.dp(14f), Round.dp(16f), Round.dp(14f));
-            final FrameLayout disc = new FrameLayout(this);
-            final Sketch mark = new Sketch(this, GLYPHS[i]);
-            disc.addView(mark, new FrameLayout.LayoutParams(Round.dp(26f), Round.dp(26f), Gravity.CENTER));
-            line.addView(disc, new LinearLayout.LayoutParams(Round.dp(52f), Round.dp(52f)));
+            line.setPadding(Round.dp(12f), Round.dp(12f), Round.dp(18f), Round.dp(12f));
+            FrameLayout seal = seal(GLYPHS[i], SEAL);
+            lineSeals[i] = seal;
+            line.addView(seal, new LinearLayout.LayoutParams(Round.dp(SEAL), Round.dp(SEAL)));
             LinearLayout both = new LinearLayout(this);
             both.setOrientation(LinearLayout.VERTICAL);
-            both.addView(words(Letter.TITLE_L, Words.s(SUBJECTS[i]), Tone.ON_SURFACE));
+            TextView name = words(Letter.TITLE_L, Words.s(SUBJECTS[i]), Tone.ON_SURFACE);
+            Letter.serif(name);
+            both.addView(name);
             TextView now = words(Letter.BODY_M, standing(i), Tone.ON_SURFACE_VARIANT);
             now.setSingleLine(true);
-            now.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            both.addView(now);
+            now.setEllipsize(TextUtils.TruncateAt.END);
+            standings[i] = now;
+            LinearLayout.LayoutParams nowPlace = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            nowPlace.topMargin = Round.dp(2f);
+            both.addView(now, nowPlace);
             LinearLayout.LayoutParams bothPlace = new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
             bothPlace.leftMargin = Round.dp(16f);
@@ -224,10 +298,8 @@ public final class Tune extends Activity {
             line.addView(on, new LinearLayout.LayoutParams(Round.dp(20f), Round.dp(20f)));
             painters.add(new Runnable() {
                 public void run() {
-                    line.setBackground(Round.touch(Round.box(Tone.of(Tone.SURFACE_CONTAINER), 24f),
-                        Tone.of(Tone.ON_SURFACE), 24f));
-                    disc.setBackground(Round.box(Tone.of(Tone.SECONDARY_CONTAINER), Round.FULL));
-                    mark.ink(Tone.of(Tone.ON_SECONDARY_CONTAINER), Tone.of(Tone.ON_SECONDARY_CONTAINER));
+                    line.setBackground(touch(new Cast.Slab(Tone.of(Tone.SURFACE_CONTAINER), 26f),
+                        Tone.of(Tone.ON_SURFACE), 26f));
                     on.ink(Tone.of(Tone.ON_SURFACE_VARIANT), 0);
                 }
             });
@@ -239,10 +311,47 @@ public final class Tune extends Activity {
             });
             LinearLayout.LayoutParams place = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            place.topMargin = i == 0 ? 0 : Round.dp(6f);
+            place.topMargin = i == 0 ? 0 : Round.dp(8f);
             contents.addView(line, place);
             cards.add(line);
         }
+    }
+
+    /** The lines of the contents told again how their subjects stand. */
+    private void restate() {
+        for (int i = 0; i < standings.length; i++) {
+            if (standings[i] != null) {
+                standings[i].setText(standing(i));
+            }
+        }
+    }
+
+    /**
+     * A seal: a small tile of the owner's look, with a subject's sign in
+     * its window, in the colour the material gives what shows through
+     * glass.
+     */
+    private FrameLayout seal(int glyph, float size) {
+        final FrameLayout made = new FrameLayout(this);
+        final Cast.Seal back = new Cast.Seal(Cast.Seal.BACK);
+        final Cast.Seal front = new Cast.Seal(Cast.Seal.FRONT);
+        seals.add(back);
+        seals.add(front);
+        made.setBackground(back);
+        made.setForeground(front);
+        final Sketch mark = new Sketch(this, glyph);
+        int side = Round.dp(size * 0.42f);
+        made.addView(mark, new FrameLayout.LayoutParams(side, side, Gravity.CENTER));
+        painters.add(new Runnable() {
+            public void run() {
+                int kind = Cast.metal(look.rim);
+                int glow = Cast.glow(kind);
+                back.recast(look);
+                front.recast(look);
+                mark.ink(glow, (glow & 0x00FFFFFF) | 0x73000000);
+            }
+        });
+        return made;
     }
 
     /** How a subject stands now, in a few words. */
@@ -297,19 +406,26 @@ public final class Tune extends Activity {
     }
 
     /**
-     * A subject opens as a screen of its own, sliding in over the contents,
-     * which step back to the left. The subject's name stands at its head
-     * beside a key back; the tiles go along with the subject of the tiles,
-     * so what is changed can be seen changing.
+     * A subject opens as a screen of its own, out of the seal that was
+     * pressed. Its name stands at its head beside the same seal, larger,
+     * and a key back; the tile subject has a case of tiles of its own, so
+     * what is changed can be seen changing.
+     *
+     * Whatever the subject adds to the painters, the groups and the seals
+     * is its own, and is let go when it closes; the contents keep only
+     * what they had.
      */
     private void openSection(int which, boolean animate) {
         if (page != null) {
             return;
         }
         section = which;
+        ownPainters = painters.size();
+        ownGroups = groups.size();
+        ownSeals = seals.size();
         LinearLayout column = new LinearLayout(this);
         column.setOrientation(LinearLayout.VERTICAL);
-        column.setPadding(Round.dp(16f), Round.dp(40f), Round.dp(16f), Round.dp(48f));
+        column.setPadding(Round.dp(16f), Round.dp(28f), Round.dp(16f), Round.dp(48f));
 
         LinearLayout head = new LinearLayout(this);
         head.setOrientation(LinearLayout.HORIZONTAL);
@@ -326,25 +442,30 @@ public final class Tune extends Activity {
         });
         painters.add(new Runnable() {
             public void run() {
-                back.setBackground(Round.touch(Round.box(Tone.of(Tone.SURFACE_CONTAINER), Round.FULL),
-                    Tone.of(Tone.ON_SURFACE), Round.FULL));
+                back.setBackground(touch(new Cast.Pane(Round.FULL), Tone.of(Tone.ON_SURFACE), Round.FULL));
                 arrow.ink(Tone.of(Tone.ON_SURFACE), 0);
             }
         });
-        head.addView(back, new LinearLayout.LayoutParams(Round.dp(52f), Round.dp(52f)));
+        head.addView(back, new LinearLayout.LayoutParams(Round.dp(48f), Round.dp(48f)));
+        headSeal = seal(GLYPHS[which], SEAL_HEAD);
+        LinearLayout.LayoutParams sealPlace = new LinearLayout.LayoutParams(Round.dp(SEAL_HEAD),
+            Round.dp(SEAL_HEAD));
+        sealPlace.leftMargin = Round.dp(12f);
+        head.addView(headSeal, sealPlace);
         TextView title = words(Letter.DISPLAY_S, Words.s(SUBJECTS[which]), Tone.ON_SURFACE);
-        Letter.serif(title);
-        title.setSingleLine(true);
-        title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        Letter.fit(title, new int[] {Letter.DISPLAY_S, Letter.HEADLINE_L, Letter.HEADLINE_M}, true);
         LinearLayout.LayoutParams titlePlace = new LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        titlePlace.leftMargin = Round.dp(14f);
+        titlePlace.leftMargin = Round.dp(16f);
         head.addView(title, titlePlace);
         column.addView(head);
 
+        List<View> arriving = new ArrayList<View>();
         if (which == 0) {
-            ((ViewGroup) specimenCard.getParent()).removeView(specimenCard);
-            column.addView(specimenCard, spaced(20));
+            pageCase = new Showcase();
+            cases.add(pageCase);
+            column.addView(pageCase.view, spaced(20));
+            arriving.add(pageCase.view);
         }
         View body = build(which);
         if (body instanceof ViewGroup && ((ViewGroup) body).getChildCount() > 0) {
@@ -352,97 +473,374 @@ public final class Tune extends Activity {
             ((ViewGroup) body).removeViewAt(0);
         }
         column.addView(body, spaced(16));
+        // The card lies there at once; what is on it rises into place.
+        if (body instanceof ViewGroup) {
+            ViewGroup parts = (ViewGroup) body;
+            for (int i = 0; i < parts.getChildCount(); i++) {
+                arriving.add(parts.getChildAt(i));
+            }
+        }
 
         page = new ScrollView(this);
         page.setOverScrollMode(View.OVER_SCROLL_NEVER);
         page.setVerticalScrollBarEnabled(false);
         page.addView(column);
         page.setClickable(true);
+        pageRoom = new Cast.Room();
+        page.setBackground(pageRoom);
+        final ScrollView placed = page;
+        page.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                // The piece of the room under the subject meets the piece behind the bars.
+                int[] at = new int[2];
+                v.getLocationInWindow(at);
+                if (placed == page && pageRoom != null) {
+                    pageRoom.place(at[1], getWindow().getDecorView().getHeight());
+                }
+            }
+        });
         root.addView(page, new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         paint();
-        preview();
-        float width = getResources().getDisplayMetrics().widthPixels;
+        if (pageCase != null) {
+            pageCase.borrow(showcase);
+        }
         if (animate) {
-            page.setTranslationX(width);
-            page.animate().translationX(0f).setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
-            index.animate().translationX(-width * 0.25f).alpha(0f).setDuration(Pace.ARRIVE)
-                .setInterpolator(Pace.EMPHASIS).start();
-            body.setAlpha(0f);
-            body.setTranslationY(Round.px(24f));
-            body.animate().alpha(1f).translationY(0f).setStartDelay(Pace.STAGGER * 2).setDuration(Pace.ARRIVE)
-                .setInterpolator(Pace.EMPHASIS).start();
+            grow(lineSeals[which], arriving);
         } else {
-            index.setTranslationX(-width * 0.25f);
+            index.setScaleX(0.92f);
+            index.setScaleY(0.92f);
             index.setAlpha(0f);
         }
     }
 
-    /** Back to the contents, the subject sliding away to the right. */
+    /**
+     * The subject grows out of its seal. The glass of the new screen opens
+     * round from the seal's middle, starting no larger than the seal, so
+     * for an instant the seal is the screen; the seal itself goes up to its
+     * place beside the name; the contents behind step back, darken and,
+     * where the system can, go out of focus. What the subject holds rises
+     * into place a moment after, one piece after another.
+     */
+    private void grow(final View pressed, final List<View> arriving) {
+        final ScrollView opening = page;
+        opening.setAlpha(0f);
+        for (int i = 0; i < arriving.size(); i++) {
+            View part = arriving.get(i);
+            part.setAlpha(0f);
+            part.setTranslationY(Round.px(28f));
+        }
+        opening.getViewTreeObserver().addOnPreDrawListener(new ViewTreeObserver.OnPreDrawListener() {
+            public boolean onPreDraw() {
+                opening.getViewTreeObserver().removeOnPreDrawListener(this);
+                int[] from = new int[2];
+                int[] to = new int[2];
+                int[] base = new int[2];
+                pressed.getLocationInWindow(from);
+                headSeal.getLocationInWindow(to);
+                opening.getLocationInWindow(base);
+                float fromSide = Math.max(1f, pressed.getWidth());
+                float scale = fromSide / Math.max(1f, headSeal.getWidth());
+                headSeal.setPivotX(0f);
+                headSeal.setPivotY(0f);
+                headSeal.setTranslationX(from[0] - to[0]);
+                headSeal.setTranslationY(from[1] - to[1]);
+                headSeal.setScaleX(scale);
+                headSeal.setScaleY(scale);
+                headSeal.animate().translationX(0f).translationY(0f).scaleX(1f).scaleY(1f)
+                    .setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
+
+                float cx = from[0] - base[0] + fromSide / 2f;
+                float cy = from[1] - base[1] + pressed.getHeight() / 2f;
+                float far = (float) Math.hypot(Math.max(cx, opening.getWidth() - cx),
+                    Math.max(cy, opening.getHeight() - cy));
+                opening.setAlpha(1f);
+                Animator reveal = ViewAnimationUtils.createCircularReveal(opening, Math.round(cx),
+                    Math.round(cy), fromSide * 0.45f, far);
+                reveal.setDuration(Pace.ARRIVE + 80L);
+                reveal.setInterpolator(Pace.EMPHASIS);
+                reveal.start();
+                recede(true);
+                for (int i = 0; i < arriving.size(); i++) {
+                    arriving.get(i).animate().alpha(1f).translationY(0f)
+                        .setStartDelay(140L + Math.min(i, 12) * 40L).setDuration(Pace.ARRIVE)
+                        .setInterpolator(Pace.EMPHASIS).start();
+                }
+                if (pageCase != null) {
+                    opening.postDelayed(new Runnable() {
+                        public void run() {
+                            if (pageCase != null) {
+                                pageCase.front.sweep();
+                            }
+                        }
+                    }, 420L);
+                }
+                return true;
+            }
+        });
+    }
+
+    private ValueAnimator depth;
+
+    /** The contents step back behind an open subject, or come forward again; one movement at a time. */
+    private void recede(final boolean away) {
+        if (depth != null) {
+            depth.cancel();
+        }
+        depth = ValueAnimator.ofFloat(away ? 0f : 1f, away ? 1f : 0f);
+        depth.setDuration(away ? Pace.ARRIVE : Pace.GROW);
+        depth.setInterpolator(Pace.EMPHASIS);
+        depth.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            public void onAnimationUpdate(ValueAnimator a) {
+                float d = (Float) a.getAnimatedValue();
+                index.setScaleX(1f - 0.08f * d);
+                index.setScaleY(1f - 0.08f * d);
+                index.setAlpha(1f - 0.65f * d);
+                if (Build.VERSION.SDK_INT >= 31) {
+                    float blur = Round.px(18f) * d;
+                    index.setRenderEffect(blur < 0.5f ? null : android.graphics.RenderEffect
+                        .createBlurEffect(blur, blur, Shader.TileMode.CLAMP));
+                }
+            }
+        });
+        depth.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator a) {
+                if (away && page != null) {
+                    // Hidden whole behind the subject: nothing to draw, nothing to blur.
+                    index.setAlpha(0f);
+                    if (Build.VERSION.SDK_INT >= 31) {
+                        index.setRenderEffect(null);
+                    }
+                }
+            }
+        });
+        depth.start();
+    }
+
+    /**
+     * Back to the contents: the subject folds into the seal it came from.
+     * The seal at its head goes down to where the line's seal stands, the
+     * glass closes round onto it, and the contents come forward and into
+     * focus behind.
+     */
     private void closeSection() {
         if (page == null) {
             return;
         }
         final ScrollView leaving = page;
+        final int was = section;
+        final FrameLayout flying = headSeal;
         page = null;
         section = -1;
-        float width = getResources().getDisplayMetrics().widthPixels;
-        leaving.animate().translationX(width).setDuration(Pace.GROW).setInterpolator(Pace.EMPHASIS)
-            .withEndAction(new Runnable() {
-                public void run() {
+        headSeal = null;
+
+        // What the subject brought is let go now; its screen is only a picture from here on.
+        painters.subList(ownPainters, painters.size()).clear();
+        groups.subList(ownGroups, groups.size()).clear();
+        seals.subList(ownSeals, seals.size()).clear();
+        if (pageCase != null) {
+            cases.remove(pageCase);
+            pageCase = null;
+        }
+        pageRoom = null;
+        round = null;
+        wide = null;
+        close = null;
+        thick = null;
+        hue = null;
+        rich = null;
+        roundValue = null;
+        wideValue = null;
+        closeValue = null;
+        thickValue = null;
+        shapes = null;
+
+        restate();
+        paint();
+
+        // Where the line's seal will stand once the contents are at full size again.
+        View target = lineSeals[was];
+        index.setScaleX(1f);
+        index.setScaleY(1f);
+        int[] to = new int[2];
+        target.getLocationInWindow(to);
+        index.setScaleX(0.92f);
+        index.setScaleY(0.92f);
+        int[] from = new int[2];
+        int[] base = new int[2];
+        flying.getLocationInWindow(from);
+        leaving.getLocationInWindow(base);
+        float side = Math.max(1f, target.getWidth());
+        float scale = side / Math.max(1f, flying.getWidth() * flying.getScaleX());
+        flying.animate().cancel();
+        flying.setPivotX(0f);
+        flying.setPivotY(0f);
+        flying.animate().translationX(flying.getTranslationX() + to[0] - from[0])
+            .translationY(flying.getTranslationY() + to[1] - from[1])
+            .scaleX(flying.getScaleX() * scale).scaleY(flying.getScaleY() * scale)
+            .setDuration(Pace.GROW).setInterpolator(Pace.STANDARD).start();
+
+        float cx = to[0] - base[0] + side / 2f;
+        float cy = to[1] - base[1] + target.getHeight() / 2f;
+        float far = (float) Math.hypot(Math.max(cx, leaving.getWidth() - cx),
+            Math.max(cy, leaving.getHeight() - cy));
+        if (leaving.isAttachedToWindow()) {
+            Animator fold = ViewAnimationUtils.createCircularReveal(leaving, Math.round(cx), Math.round(cy),
+                far, side * 0.45f);
+            fold.setDuration(Pace.GROW);
+            fold.setInterpolator(Pace.STANDARD);
+            fold.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator a) {
                     root.removeView(leaving);
                 }
-            }).start();
-        if (specimenCard.getParent() != indexColumn) {
-            ((ViewGroup) specimenCard.getParent()).removeView(specimenCard);
-            indexColumn.addView(specimenCard, 1, spaced(24));
+            });
+            fold.start();
+        } else {
+            root.removeView(leaving);
         }
-        listSections();
-        paint();
-        index.animate().translationX(0f).alpha(1f).setDuration(Pace.GROW).setInterpolator(Pace.EMPHASIS).start();
+        index.setAlpha(0.35f);
+        recede(false);
+        // The line's own seal answers the one coming home, a beat after it lands.
+        target.animate().cancel();
+        target.setScaleX(1f);
+        target.setScaleY(1f);
+        target.animate().scaleX(1.12f).scaleY(1.12f).setStartDelay(Pace.GROW - 60L).setDuration(Pace.PRESS)
+            .setInterpolator(Pace.STANDARD).withEndAction(new Runnable() {
+                public void run() {
+                    lineSeals[was].animate().scaleX(1f).scaleY(1f).setStartDelay(0L).setDuration(Pace.GROW)
+                        .setInterpolator(new OvershootInterpolator(3f)).start();
+                }
+            }).start();
     }
 
-    /** The cards come in one after another, rising a little as they come. */
+    /**
+     * The room is entered with the lamp off. The light comes up; the cards
+     * rise into it one after another; each seal is struck into its place,
+     * coming down large and settling with a little give; the tiles in the
+     * case rise last, and a band of light runs once across its glass.
+     */
     private void arrive() {
+        room.light(0f);
+        ValueAnimator lamp = ValueAnimator.ofFloat(0f, 1f);
+        lamp.setDuration(900L);
+        lamp.setInterpolator(Pace.STANDARD);
+        lamp.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            public void onAnimationUpdate(ValueAnimator a) {
+                room.light((Float) a.getAnimatedValue());
+            }
+        });
+        lamp.start();
+        long begin = 120L;
         for (int i = 0; i < cards.size(); i++) {
             View card = cards.get(i);
             card.setAlpha(0f);
-            card.setTranslationY(Round.px(24f));
-            card.animate().alpha(1f).translationY(0f).setStartDelay(i * Pace.STAGGER)
+            card.setTranslationY(Round.px(28f));
+            card.animate().alpha(1f).translationY(0f).setStartDelay(begin + i * Pace.STAGGER)
                 .setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
         }
+        OvershootInterpolator strike = new OvershootInterpolator(2.2f);
+        int first = cards.indexOf(contents.getChildAt(0));
+        for (int i = 0; i < lineSeals.length; i++) {
+            View seal = lineSeals[i];
+            seal.setAlpha(0f);
+            seal.setScaleX(1.6f);
+            seal.setScaleY(1.6f);
+            seal.animate().alpha(1f).scaleX(1f).scaleY(1f)
+                .setStartDelay(begin + (Math.max(0, first) + i) * Pace.STAGGER + 160L)
+                .setDuration(Pace.GROW).setInterpolator(strike).start();
+        }
+        for (int i = 0; i < showcase.tiles.length; i++) {
+            ImageView tile = showcase.tiles[i];
+            tile.setAlpha(0f);
+            tile.setTranslationY(Round.px(18f));
+            tile.animate().alpha(1f).translationY(0f).setStartDelay(begin + 220L + i * 70L)
+                .setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
+        }
+        root.postDelayed(new Runnable() {
+            public void run() {
+                showcase.front.sweep();
+            }
+        }, 760L);
     }
 
     // ------------------------------------------------------------ the tiles
 
-    /** Four tiles, two by two, large, and the name of the look they wear. */
-    private View specimen() {
-        final LinearLayout card = new LinearLayout(this);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(Round.dp(20f), Round.dp(24f), Round.dp(20f), Round.dp(20f));
-        for (int r = 0; r < 2; r++) {
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(Gravity.CENTER);
-            for (int c = 0; c < 2; c++) {
-                ImageView tile = new ImageView(this);
-                tile.setScaleType(ImageView.ScaleType.CENTER);
-                previews[r * 2 + c] = tile;
-                row.addView(tile, new LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+    /**
+     * A case of four tiles under glass, two by two, and the plate below
+     * them with the name of the look they wear. The case, its plate and
+     * its frame are cast in the material with everything else.
+     */
+    private final class Showcase {
+
+        final FrameLayout view;
+        final ImageView[] tiles = new ImageView[4];
+        final TextView label;
+        final Cast.Front front;
+
+        Showcase() {
+            view = new FrameLayout(Tune.this);
+            LinearLayout inside = new LinearLayout(Tune.this);
+            inside.setOrientation(LinearLayout.VERTICAL);
+            inside.setPadding(Round.dp(22f), Round.dp(30f), Round.dp(22f), Round.dp(24f));
+            for (int r = 0; r < 2; r++) {
+                LinearLayout row = new LinearLayout(Tune.this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER);
+                for (int c = 0; c < 2; c++) {
+                    ImageView tile = new ImageView(Tune.this);
+                    tile.setScaleType(ImageView.ScaleType.CENTER);
+                    // As tall as a tile will be before there is one, so the
+                    // case does not grow under the reader when the icons come.
+                    tile.setMinimumHeight(stoodHeight());
+                    tiles[r * 2 + c] = tile;
+                    row.addView(tile, new LinearLayout.LayoutParams(0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                }
+                inside.addView(row, spaced(r == 0 ? 0 : 4));
             }
-            card.addView(row, spaced(r == 0 ? 0 : 12));
+            label = Letter.set(new TextView(Tune.this), Letter.LABEL_L);
+            Letter.serif(label);
+            label.setSingleLine(true);
+            label.setGravity(Gravity.CENTER);
+            label.setPadding(Round.dp(20f), Round.dp(8f), Round.dp(20f), Round.dp(8f));
+            LinearLayout.LayoutParams plate = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            plate.gravity = Gravity.CENTER_HORIZONTAL;
+            plate.topMargin = Round.dp(14f);
+            inside.addView(label, plate);
+            view.addView(inside, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            front = new Cast.Front(34f);
+            view.setForeground(front);
+            painters.add(new Runnable() {
+                public void run() {
+                    int kind = Cast.metal(look.rim);
+                    view.setBackground(new Cast.Case(kind,
+                        Tone.at(7f, 3.0 + 6.0 * Tone.rich(), Tone.hue()),
+                        Tone.at(24f, 6.0 + 12.0 * Tone.rich(), Tone.hue())));
+                    label.setBackground(new Cast.Plate(kind, Round.FULL, look.gloss));
+                    Cast.engrave(label, kind);
+                }
+            });
         }
-        named = words(Letter.LABEL_L, "", Tone.ON_SURFACE_VARIANT);
-        named.setGravity(Gravity.CENTER);
-        card.addView(named, spaced(16));
-        painters.add(new Runnable() {
-            public void run() {
-                card.setBackground(Round.box(Tone.of(Tone.SURFACE_HIGH), 32f));
+
+        /** The tiles and the plate of another case, as they stand. */
+        void borrow(Showcase other) {
+            for (int i = 0; i < tiles.length; i++) {
+                tiles[i].setImageDrawable(other.tiles[i].getDrawable());
+                tiles[i].setMinimumHeight(other.tiles[i].getMinimumHeight());
             }
-        });
-        cards.add(card);
-        return card;
+            label.setText(other.label.getText());
+        }
+    }
+
+    /** Light runs across the glass of every case: the look has just been cast anew. */
+    private void sheen() {
+        for (Showcase shown : cases) {
+            shown.front.sweep();
+        }
     }
 
     /**
@@ -492,16 +890,28 @@ public final class Tune extends Activity {
         }).start();
     }
 
-    /** The tiles drawn again: four tiles are a few milliseconds, so this is done while the finger moves. */
+    /**
+     * The tiles drawn again, once, and handed to every case on show: four
+     * tiles are a few milliseconds, so this is done while the finger moves.
+     * The seals are told the look as well; one that is not on the screen
+     * works out its new shape only when it is next drawn.
+     */
     private void preview() {
-        int width = getResources().getDisplayMetrics().widthPixels;
-        int tile = Math.round((width - Round.dp(72f)) / 2f * 0.86f);
-        for (int i = 0; i < previews.length; i++) {
-            previews[i].setImageBitmap(Tile.render(faces[i], tile, look));
+        int tile = tileSide();
+        Bitmap[] stood = new Bitmap[faces.length];
+        for (int i = 0; i < faces.length; i++) {
+            stood[i] = stand(Tile.render(faces[i], tile, look));
         }
         int shape = shapeOf(look);
         String name = shape >= 0 ? shapeNames()[shape] : Words.s("tile");
-        named.setText(name + "  \u00b7  " + number(look.ratio, 2) + "  \u00b7  \u00d7" + number(look.zoom, 2));
+        String text = name + "  \u00b7  " + number(look.ratio, 2) + "  \u00b7  \u00d7" + number(look.zoom, 2);
+        for (Showcase shown : cases) {
+            for (int i = 0; i < shown.tiles.length; i++) {
+                shown.tiles[i].setImageBitmap(stood[i]);
+                shown.tiles[i].setMinimumHeight(stood[i].getHeight());
+            }
+            shown.label.setText(text);
+        }
         if (roundValue != null) {
             roundValue.setText(number(look.power, 1));
             wideValue.setText(number(look.ratio, 2));
@@ -510,6 +920,46 @@ public final class Tune extends Activity {
                 thickValue.setText(Math.round(look.width * 100f) + "%");
             }
         }
+        for (Cast.Seal seal : seals) {
+            seal.cast(look);
+        }
+    }
+
+    /** The width of a tile in the case: two to a row, with air around them. */
+    private int tileSide() {
+        int width = getResources().getDisplayMetrics().widthPixels;
+        return Math.round((width - Round.dp(76f)) / 2f * 0.84f);
+    }
+
+    /** How tall a tile stands in the case in the present look, its shadow included. */
+    private int stoodHeight() {
+        int h = Tile.height(tileSide(), look);
+        return h + Math.round(h * 0.18f);
+    }
+
+    /**
+     * A tile stood on the cloth of the case: under its foot, a soft pool of
+     * the shadow it throws, as a thing lit from above throws it.
+     */
+    private static Bitmap stand(Bitmap tile) {
+        int w = tile.getWidth();
+        int h = tile.getHeight();
+        int foot = Math.round(h * 0.18f);
+        Bitmap stood = Bitmap.createBitmap(w, h + foot, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(stood);
+        float cx = w / 2f;
+        float cy = h + foot * 0.05f;
+        float reach = w * 0.44f;
+        Paint shade = new Paint(Paint.ANTI_ALIAS_FLAG);
+        shade.setShader(new RadialGradient(cx, cy, reach, new int[] {0xA6000000, 0x40000000, 0x00000000},
+            new float[] {0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+        canvas.save();
+        canvas.scale(1f, 0.2f, cx, cy);
+        canvas.drawCircle(cx, cy, reach, shade);
+        canvas.restore();
+        canvas.drawBitmap(tile, 0f, 0f, null);
+        tile.recycle();
+        return stood;
     }
 
     private static String number(float value, int places) {
@@ -599,6 +1049,7 @@ public final class Tune extends Activity {
             public void picked(int which) {
                 look = look.rim(order[which]);
                 keepTile();
+                recast();
             }
         });
         card.addView(rims.view(), spaced(12));
@@ -626,6 +1077,7 @@ public final class Tune extends Activity {
                 public void picked(int which) {
                     look = look.window(which);
                     keepTile();
+                    recast();
                 }
             });
         card.addView(windows.view(), spaced(12));
@@ -637,6 +1089,7 @@ public final class Tune extends Activity {
                 public void picked(int which) {
                     look = look.gloss(which == 1);
                     keepTile();
+                    recast();
                 }
             });
         card.addView(lights.view(), spaced(12));
@@ -838,14 +1291,14 @@ public final class Tune extends Activity {
             public void moved(float value, boolean done) {
                 seed(value * 360f, Tone.rich(), false);
             }
-        }).large();
+        }).large().loupe();
         card.addView(hue, wideRow());
         card.addView(labelled(Words.s("richness"), null), spaced(12));
         rich = new Dial(this, Tone.rich(), new Dial.Moved() {
             public void moved(float value, boolean done) {
                 seed(Tone.hue(), value, false);
             }
-        }).large();
+        }).large().loupe();
         card.addView(rich, wideRow());
 
         if (Build.VERSION.SDK_INT >= 31) {
@@ -858,12 +1311,18 @@ public final class Tune extends Activity {
             });
             painters.add(new Runnable() {
                 public void run() {
+                    // Following the wallpaper, the chip is a plate; choosing by hand, glass.
                     boolean on = Keep.wall(Tune.this);
-                    int fill = on ? Tone.of(Tone.TERTIARY_CONTAINER) : 0x00000000;
-                    int ink = on ? Tone.of(Tone.ON_TERTIARY_CONTAINER) : Tone.of(Tone.ON_SURFACE);
-                    wall.setBackground(Round.touch(on ? Round.box(fill, Round.FULL)
-                        : Round.ring(fill, Round.FULL, Tone.of(Tone.OUTLINE)), ink, Round.FULL));
-                    wall.setTextColor(ink);
+                    int kind = Cast.metal(look.rim);
+                    if (on) {
+                        wall.setBackground(touch(new Cast.Plate(kind, Round.FULL, look.gloss), Cast.ink(kind),
+                            Round.FULL));
+                        Cast.engrave(wall, kind);
+                    } else {
+                        wall.setBackground(touch(new Cast.Pane(Round.FULL), Tone.of(Tone.ON_SURFACE),
+                            Round.FULL));
+                        plain(wall, Tone.of(Tone.ON_SURFACE));
+                    }
                 }
             });
             LinearLayout.LayoutParams chip = new LinearLayout.LayoutParams(
@@ -874,7 +1333,7 @@ public final class Tune extends Activity {
         return card;
     }
 
-    /** A colour role as a block of itself, with its ink on it. */
+    /** A colour role as a block of itself, a chip of enamel with its ink on it. */
     private TextView swatch(final int fill, final int ink) {
         final TextView made = Letter.set(new TextView(this), Letter.HEADLINE_S);
         made.setText("Aa");
@@ -882,7 +1341,7 @@ public final class Tune extends Activity {
         made.setPadding(Round.dp(16f), 0, Round.dp(16f), Round.dp(12f));
         painters.add(new Runnable() {
             public void run() {
-                made.setBackground(Round.box(Tone.of(fill), 24f));
+                made.setBackground(new Cast.Slab(Tone.of(fill), 24f));
                 made.setTextColor(Tone.of(ink));
             }
         });
@@ -957,7 +1416,7 @@ public final class Tune extends Activity {
         name.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
         painters.add(new Runnable() {
             public void run() {
-                name.setBackground(Round.box(Tone.of(Tone.SURFACE_HIGH), Round.FULL));
+                name.setBackground(new Cast.Pane(Round.FULL));
                 name.setTextColor(Tone.of(Tone.ON_SURFACE));
                 name.setHintTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
             }
@@ -1078,7 +1537,7 @@ public final class Tune extends Activity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.VERTICAL);
             row.setPadding(Round.dp(16f), Round.dp(10f), Round.dp(16f), Round.dp(10f));
-            row.setBackground(Round.touch(Round.box(Tone.of(Tone.SURFACE_HIGH), 20f),
+            row.setBackground(touch(new Cast.Slab(Tone.of(Tone.SURFACE_HIGH), 20f),
                 Tone.of(Tone.ON_SURFACE), 20f));
             row.setStateListAnimator(Give.press());
             TextView big = Letter.set(new TextView(this), Letter.TITLE_M);
@@ -1398,7 +1857,7 @@ public final class Tune extends Activity {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.VERTICAL);
             row.setPadding(Round.dp(16f), Round.dp(14f), Round.dp(16f), Round.dp(14f));
-            row.setBackground(Round.touch(Round.box(Tone.of(Tone.SURFACE_HIGH), 20f),
+            row.setBackground(touch(new Cast.Slab(Tone.of(Tone.SURFACE_HIGH), 20f),
                 Tone.of(Tone.ON_SURFACE), 20f));
             row.setStateListAnimator(give());
             TextView name = Letter.set(new TextView(this), Letter.TITLE_M);
@@ -1590,24 +2049,32 @@ public final class Tune extends Activity {
 
     // ------------------------------------------------------------ the way out
 
-    /** The system's choice of home screen, in the seed's own colour: the one door out. */
+    /**
+     * The system's choice of home screen: the one door out, and so a door
+     * plate, cut from the material, its words cut into it.
+     */
     private View way() {
         final LinearLayout made = new LinearLayout(this);
         made.setOrientation(LinearLayout.VERTICAL);
-        made.setPadding(Round.dp(24f), Round.dp(24f), Round.dp(24f), Round.dp(24f));
+        made.setPadding(Round.dp(24f), Round.dp(22f), Round.dp(24f), Round.dp(22f));
         made.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 chooseHome();
             }
         });
         made.setStateListAnimator(give());
-        made.addView(words(Letter.TITLE_L, Words.s("home_screen"), Tone.ON_PRIMARY_CONTAINER));
-        made.addView(words(Letter.BODY_M, Words.s("home_screen_what"), Tone.ON_PRIMARY_CONTAINER),
-            spaced(4));
+        final TextView name = Letter.serif(Letter.set(new TextView(this), Letter.HEADLINE_S));
+        name.setText(Words.s("home_screen"));
+        made.addView(name);
+        final TextView what = Letter.set(new TextView(this), Letter.BODY_M);
+        what.setText(Words.s("home_screen_what"));
+        made.addView(what, spaced(4));
         painters.add(new Runnable() {
             public void run() {
-                made.setBackground(Round.touch(Round.box(Tone.of(Tone.PRIMARY_CONTAINER), REST),
-                    Tone.of(Tone.ON_PRIMARY_CONTAINER), REST));
+                int kind = Cast.metal(look.rim);
+                made.setBackground(touch(new Cast.Plate(kind, REST, look.gloss), Cast.ink(kind), REST));
+                Cast.engrave(name, kind);
+                Cast.engrave(what, kind);
             }
         });
         cards.add(made);
@@ -1624,21 +2091,30 @@ public final class Tune extends Activity {
 
     // ------------------------------------------------------------ colour of it all
 
-    /** Every colour on the screen, from the seed as it is now. */
+    /**
+     * Every colour and every material on the screen, from the seed and the
+     * look as they are now. The room is lit again, every painter paints,
+     * every cap is cut again from the material and every groove shows what
+     * it chooses.
+     */
     private void paint() {
-        int ground = Tone.of(Tone.SURFACE);
-        getWindow().setStatusBarColor(ground);
-        getWindow().setNavigationBarColor(ground);
-        getWindow().getDecorView().setBackgroundColor(ground);
+        room.tint();
+        if (pageRoom != null) {
+            pageRoom.tint();
+        }
         for (Runnable painter : painters) {
             painter.run();
         }
+        int kind = Cast.metal(look.rim);
+        int scale = Tone.of(Tone.ON_SURFACE_VARIANT, 0.3f);
         // The dials exist only once their subject's screen has been opened.
-        int[] neutral = {Tone.of(Tone.SURFACE_HIGHEST), Tone.of(Tone.OUTLINE)};
+        int[] dark = {Tone.of(Tone.SURFACE_LOWEST), Tone.of(Tone.SURFACE_LOW)};
         for (Dial dial : new Dial[] {round, wide, close, thick}) {
             if (dial != null) {
-                dial.colours(neutral);
-                dial.ink(Tone.of(Tone.PRIMARY));
+                dial.colours(dark);
+                dial.ink(Cast.glow(kind));
+                dial.material(kind, look.gloss);
+                dial.marks(scale);
             }
         }
         if (hue != null) {
@@ -1647,7 +2123,9 @@ public final class Tune extends Activity {
                 circle[i] = Tone.at(72f, 44.0, i * 15f);
             }
             hue.colours(circle);
-            hue.ink(Tone.of(Tone.PRIMARY));
+            hue.ink(0);
+            hue.material(kind, look.gloss);
+            hue.marks(scale);
         }
         if (rich != null) {
             int[] way = new int[9];
@@ -1655,11 +2133,19 @@ public final class Tune extends Activity {
                 way[i] = Tone.at(72f, Tone.chromaOf(i / 8f), Tone.hue());
             }
             rich.colours(way);
-            rich.ink(Tone.of(Tone.PRIMARY));
+            rich.ink(0);
+            rich.material(kind, look.gloss);
+            rich.marks(scale);
         }
         for (Cards group : groups) {
             group.paint(false);
         }
+    }
+
+    /** The look has changed what everything is made of: cast it all again, and let the light show it. */
+    private void recast() {
+        paint();
+        sheen();
     }
 
     // ------------------------------------------------------------ parts
@@ -1675,18 +2161,33 @@ public final class Tune extends Activity {
         return made;
     }
 
-    /** A card for one subject, its name large at the top. */
+    /** Words in the ground's own ink, with no shadow of a cut about them. */
+    private static void plain(TextView view, int ink) {
+        view.setTextColor(ink);
+        view.setShadowLayer(0f, 0f, 0f, 0);
+    }
+
+    /**
+     * A press over anything drawn here, in its own ink, and in the shape
+     * of its box: the mask is given, so the press never reaches past a
+     * corner, whatever the thing under it draws.
+     */
+    private static RippleDrawable touch(Drawable under, int ink, float radius) {
+        int wash = (Math.round(255f * 0.12f) << 24) | (ink & 0x00FFFFFF);
+        return new RippleDrawable(ColorStateList.valueOf(wash), under, Round.box(0xFFFFFFFF, radius));
+    }
+
+    /** A card for one subject, its name large at the top, lying on the table. */
     private LinearLayout card(String name) {
         final LinearLayout made = new LinearLayout(this);
         made.setOrientation(LinearLayout.VERTICAL);
-        made.setPadding(Round.dp(20f), Round.dp(22f), Round.dp(20f), Round.dp(20f));
+        made.setPadding(Round.dp(20f), Round.dp(22f), Round.dp(20f), Round.dp(22f));
         made.addView(words(Letter.HEADLINE_S, name, Tone.ON_SURFACE));
         painters.add(new Runnable() {
             public void run() {
-                made.setBackground(Round.box(Tone.of(Tone.SURFACE_CONTAINER), REST));
+                made.setBackground(new Cast.Slab(Tone.of(Tone.SURFACE_CONTAINER), REST));
             }
         });
-        cards.add(made);
         return made;
     }
 
@@ -1703,26 +2204,42 @@ public final class Tune extends Activity {
         return row;
     }
 
+    /** The number a gauge stands at, in the light its groove is filled with. */
     private TextView value() {
-        return words(Letter.TITLE_M, "", Tone.PRIMARY);
+        final TextView made = Letter.serif(Letter.set(new TextView(this), Letter.TITLE_L));
+        painters.add(new Runnable() {
+            public void run() {
+                made.setTextColor(Cast.glow(Cast.metal(look.rim)));
+            }
+        });
+        return made;
     }
 
-    /** A button: filled in the seed's colour for the one thing most likely wanted, tonal for the rest. */
+    /**
+     * A button. The one thing most likely wanted is a plate of the
+     * material with its word cut in; the rest are glass, the word lit
+     * behind it.
+     */
     private TextView button(String text, final boolean filled, View.OnClickListener click) {
         final TextView made = Letter.set(new TextView(this), Letter.LABEL_L);
         made.setText(text);
         made.setGravity(Gravity.CENTER);
-        made.setPadding(Round.dp(20f), 0, Round.dp(20f), 0);
+        made.setPadding(Round.dp(22f), 0, Round.dp(22f), 0);
         made.setSingleLine(true);
         made.setEllipsize(TextUtils.TruncateAt.END);
         made.setOnClickListener(click);
         made.setStateListAnimator(give());
         painters.add(new Runnable() {
             public void run() {
-                int fill = Tone.of(filled ? Tone.PRIMARY : Tone.SECONDARY_CONTAINER);
-                int ink = Tone.of(filled ? Tone.ON_PRIMARY : Tone.ON_SECONDARY_CONTAINER);
-                made.setBackground(Round.touch(Round.box(fill, Round.FULL), ink, Round.FULL));
-                made.setTextColor(ink);
+                int kind = Cast.metal(look.rim);
+                if (filled) {
+                    made.setBackground(touch(new Cast.Plate(kind, Round.FULL, look.gloss), Cast.ink(kind),
+                        Round.FULL));
+                    Cast.engrave(made, kind);
+                } else {
+                    made.setBackground(touch(new Cast.Pane(Round.FULL), Tone.of(Tone.ON_SURFACE), Round.FULL));
+                    plain(made, Tone.of(Tone.ON_SURFACE));
+                }
             }
         });
         return made;
@@ -1778,8 +2295,11 @@ public final class Tune extends Activity {
     /**
      * A group of cards of which one is chosen, or none when the value lies
      * between the named ones. Each card is a picture of what it does and its
-     * name; the chosen one is filled with the seed's colour and squares its
-     * corners, the others round theirs back, both in motion.
+     * name. The chosen one is set: a rim of the material closes in around
+     * it, its face turns to glass and its sign lights in the colour the
+     * material gives what is seen through glass, while its corners square a
+     * little, as if pressed home. The one given up lets go of its rim and
+     * rounds its corners back. Both move together.
      */
     private final class Cards {
 
@@ -1787,8 +2307,10 @@ public final class Tune extends Activity {
         private final LinearLayout[] items;
         private final Sketch[] marks;
         private final TextView[] names;
-        private final GradientDrawable[] fills;
+        private final Cast.Setting[] settings;
         private final float[] corners;
+        private final float[] sets;
+        private final ValueAnimator[] moving;
         private final Picked picked;
         private int chosen;
 
@@ -1805,8 +2327,10 @@ public final class Tune extends Activity {
             LinearLayout line = null;
             items = new LinearLayout[labels.length];
             names = new TextView[labels.length];
-            fills = new GradientDrawable[labels.length];
+            settings = new Cast.Setting[labels.length];
             corners = new float[labels.length];
+            sets = new float[labels.length];
+            moving = new ValueAnimator[labels.length];
             for (int i = 0; i < labels.length; i++) {
                 final int which = i;
                 LinearLayout item = new LinearLayout(Tune.this);
@@ -1835,7 +2359,7 @@ public final class Tune extends Activity {
                 under.topMargin = Round.dp(8f);
                 item.addView(name, under);
                 corners[i] = i == chosen ? CHOSEN : REST;
-                fills[i] = Round.box(0, corners[i]);
+                sets[i] = i == chosen ? 1f : 0f;
                 if (i % perRow == 0) {
                     line = new LinearLayout(Tune.this);
                     line.setOrientation(LinearLayout.HORIZONTAL);
@@ -1861,53 +2385,90 @@ public final class Tune extends Activity {
             if (which != chosen) {
                 chosen = which;
                 paint(true);
+                items[which].performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
             }
         }
 
-        void paint(boolean moving) {
+        /**
+         * The cards in the colours and material of the moment. Called still,
+         * each card is cast anew; called moving, the cards keep what they
+         * are and only their rims and corners travel.
+         */
+        void paint(boolean move) {
+            int kind = Cast.metal(look.rim);
+            int glow = Cast.glow(kind);
             for (int i = 0; i < items.length; i++) {
                 boolean on = i == chosen;
-                int fill = Tone.of(on ? Tone.PRIMARY_CONTAINER : Tone.SURFACE_HIGH);
-                int ink = Tone.of(on ? Tone.ON_PRIMARY_CONTAINER : Tone.ON_SURFACE);
-                int quiet = Tone.of(on ? Tone.ON_PRIMARY_CONTAINER : Tone.ON_SURFACE_VARIANT, 0.45f);
-                fills[i].setColor(fill);
-                items[i].setBackground(Round.touch(fills[i], ink, REST));
-                names[i].setTextColor(ink);
-                marks[i].ink(on ? ink : Tone.of(Tone.ON_SURFACE_VARIANT), quiet);
+                if (!move || settings[i] == null) {
+                    settings[i] = new Cast.Setting(Tone.of(Tone.SURFACE_HIGH), kind, Round.px(corners[i]), sets[i]);
+                    items[i].setBackground(touch(settings[i], Tone.of(Tone.ON_SURFACE), REST));
+                }
+                plain(names[i], Tone.of(on ? Tone.ON_SURFACE : Tone.ON_SURFACE_VARIANT));
+                int quiet = on ? (glow & 0x00FFFFFF) | 0x73000000 : Tone.of(Tone.ON_SURFACE_VARIANT, 0.45f);
+                marks[i].ink(on ? glow : Tone.of(Tone.ON_SURFACE_VARIANT), quiet);
                 items[i].setSelected(on);
-                morph(i, on ? CHOSEN : REST, moving);
+                travel(i, on, move);
             }
         }
 
-        /** Corners from where they are to where they go: a pressed card squares, a released one rounds. */
-        private void morph(final int i, float to, boolean moving) {
-            if (!moving || corners[i] == to) {
-                corners[i] = to;
-                fills[i].setCornerRadius(Round.px(to));
+        /**
+         * A card to where it goes: a card set squares its corners and closes
+         * its rim in, one given up rounds them and lets it go. The movement
+         * speaks to the card by its place, not to one drawing, so a card
+         * cast anew half way through carries on from where the last left off.
+         */
+        private void travel(final int i, boolean on, boolean move) {
+            final float cornerTo = on ? CHOSEN : REST;
+            final float setTo = on ? 1f : 0f;
+            if (!move) {
+                if (moving[i] == null || !moving[i].isRunning()) {
+                    corners[i] = cornerTo;
+                    sets[i] = setTo;
+                }
+                settings[i].radius(Round.px(corners[i]));
+                settings[i].set(sets[i]);
                 return;
             }
-            ValueAnimator shift = ValueAnimator.ofFloat(corners[i], to);
-            shift.setDuration(Pace.GROW);
+            if (moving[i] != null) {
+                moving[i].cancel();
+            }
+            final float cornerFrom = corners[i];
+            final float setFrom = sets[i];
+            if (cornerFrom == cornerTo && setFrom == setTo) {
+                return;
+            }
+            ValueAnimator shift = ValueAnimator.ofFloat(0f, 1f);
+            shift.setDuration(on ? Pace.ARRIVE : Pace.GROW);
             shift.setInterpolator(Pace.EMPHASIS);
             shift.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
                 public void onAnimationUpdate(ValueAnimator a) {
-                    corners[i] = (Float) a.getAnimatedValue();
-                    fills[i].setCornerRadius(Round.px(corners[i]));
+                    float t = (Float) a.getAnimatedValue();
+                    corners[i] = cornerFrom + (cornerTo - cornerFrom) * t;
+                    sets[i] = setFrom + (setTo - setFrom) * t;
+                    settings[i].radius(Round.px(corners[i]));
+                    settings[i].set(sets[i]);
                 }
             });
+            moving[i] = shift;
             shift.start();
         }
     }
 
-    /** A count between a minus and a plus, the numeral large between them. */
     /** What a count says when a hand moves it: whether the new count may stand. */
     private interface Changed {
         boolean to(int value);
     }
 
+    /**
+     * A count: the numeral large behind a window of glass, between two
+     * coins of the material with a minus and a plus cut into them. A new
+     * count rolls into the window as on a counter, up for more, down for
+     * fewer; a count refused does not move, and the phone says no.
+     */
     private final class Stepper {
 
         final LinearLayout view;
+        private final FrameLayout window;
         private final TextView numeral;
         private final int least;
         private final int most;
@@ -1922,17 +2483,33 @@ public final class Tune extends Activity {
             view.setOrientation(LinearLayout.HORIZONTAL);
             view.setGravity(Gravity.CENTER_VERTICAL);
             view.setPadding(Round.dp(20f), Round.dp(12f), Round.dp(12f), Round.dp(12f));
-            view.addView(words(Letter.TITLE_M, name, Tone.ON_SURFACE_VARIANT),
-                new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            view.addView(key(Sketch.MINUS, -1), new LinearLayout.LayoutParams(Round.dp(56f), Round.dp(56f)));
-            numeral = words(Letter.DISPLAY_M, String.valueOf(start), Tone.ON_SURFACE);
+            TextView label = words(Letter.TITLE_L, name, Tone.ON_SURFACE_VARIANT);
+            Letter.serif(label);
+            view.addView(label, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            view.addView(key(Sketch.MINUS, -1), new LinearLayout.LayoutParams(Round.dp(52f), Round.dp(52f)));
+            window = new FrameLayout(Tune.this);
+            window.setClipToOutline(true);
+            window.setOutlineProvider(new ViewOutlineProvider() {
+                @Override
+                public void getOutline(View v, Outline outline) {
+                    outline.setRoundRect(0, 0, v.getWidth(), v.getHeight(), Round.px(16f));
+                }
+            });
+            numeral = Letter.set(new TextView(Tune.this), Letter.DISPLAY_M);
+            numeral.setText(String.valueOf(start));
             numeral.setGravity(Gravity.CENTER);
-            view.addView(numeral, new LinearLayout.LayoutParams(Round.dp(88f),
-                ViewGroup.LayoutParams.WRAP_CONTENT));
-            view.addView(key(Sketch.PLUS, 1), new LinearLayout.LayoutParams(Round.dp(56f), Round.dp(56f)));
+            window.addView(numeral, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT, Gravity.CENTER));
+            LinearLayout.LayoutParams glass = new LinearLayout.LayoutParams(Round.dp(84f), Round.dp(64f));
+            glass.leftMargin = Round.dp(8f);
+            glass.rightMargin = Round.dp(8f);
+            view.addView(window, glass);
+            view.addView(key(Sketch.PLUS, 1), new LinearLayout.LayoutParams(Round.dp(52f), Round.dp(52f)));
             painters.add(new Runnable() {
                 public void run() {
-                    view.setBackground(Round.box(Tone.of(Tone.SURFACE_HIGH), 24f));
+                    view.setBackground(new Cast.Slab(Tone.of(Tone.SURFACE_HIGH), 24f));
+                    window.setBackground(new Cast.Pane(16f));
+                    numeral.setTextColor(Cast.glow(Cast.metal(look.rim)));
                 }
             });
         }
@@ -1942,31 +2519,57 @@ public final class Tune extends Activity {
             final Sketch mark = new Sketch(Tune.this, kind);
             key.addView(mark, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            key.setStateListAnimator(give());
+            key.setStateListAnimator(Give.press());
             key.setContentDescription(step < 0 ? "\u2212" : "+");
             key.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     int next = Math.max(least, Math.min(most, value + step));
                     if (next == value || changed == null || !changed.to(next)) {
                         v.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
+                        refuse();
                         return;
                     }
                     value = next;
-                    numeral.setText(String.valueOf(value));
-                    numeral.setScaleX(1.14f);
-                    numeral.setScaleY(1.14f);
-                    numeral.animate().scaleX(1f).scaleY(1f).setDuration(Pace.GROW)
-                        .setInterpolator(Pace.EMPHASIS).start();
+                    roll(step);
                 }
             });
             painters.add(new Runnable() {
                 public void run() {
-                    key.setBackground(Round.touch(Round.box(Tone.of(Tone.SECONDARY_CONTAINER), Round.FULL),
-                        Tone.of(Tone.ON_SECONDARY_CONTAINER), Round.FULL));
-                    mark.ink(Tone.of(Tone.ON_SECONDARY_CONTAINER), 0);
+                    int metal = Cast.metal(look.rim);
+                    key.setBackground(touch(new Cast.Plate(metal, Round.FULL, look.gloss), Cast.ink(metal),
+                        Round.FULL));
+                    mark.ink(Cast.ink(metal), 0);
                 }
             });
             return key;
+        }
+
+        /** The old numeral leaves the window the way the count went, and the new one comes in behind it. */
+        private void roll(final int step) {
+            final String next = String.valueOf(value);
+            final float travel = Math.max(1f, window.getHeight() * 0.75f);
+            final float way = step > 0 ? 1f : -1f;
+            numeral.animate().cancel();
+            numeral.animate().translationY(-way * travel).alpha(0f).setStartDelay(0L).setDuration(90L)
+                .setInterpolator(Pace.AWAY).withEndAction(new Runnable() {
+                    public void run() {
+                        numeral.setText(next);
+                        numeral.setTranslationY(way * travel);
+                        numeral.animate().translationY(0f).alpha(1f).setDuration(Pace.GROW)
+                            .setInterpolator(new OvershootInterpolator(1.6f)).withEndAction(null).start();
+                    }
+                }).start();
+        }
+
+        /** A count that may not stand shakes its head in the window. */
+        private void refuse() {
+            numeral.animate().cancel();
+            numeral.setTranslationY(0f);
+            numeral.setAlpha(1f);
+            ObjectAnimator no = ObjectAnimator.ofFloat(numeral, View.TRANSLATION_X,
+                0f, Round.px(-7f), Round.px(6f), Round.px(-4f), Round.px(2f), 0f);
+            no.setDuration(Pace.ARRIVE);
+            no.start();
         }
     }
 }

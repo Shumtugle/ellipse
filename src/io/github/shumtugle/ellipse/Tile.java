@@ -312,8 +312,12 @@ final class Tile {
         }
     }
 
-    /** The rim's material, as paint over the tile's own box. */
-    private static void material(Paint paint, int kind, int width, int height) {
+    /**
+     * The rim's material, as paint over the tile's own box. Anything else
+     * cut from the same stuff, a plate in the settings or the cap of a
+     * dial, asks for its paint here, so there is one wood and one gold.
+     */
+    static void material(Paint paint, int kind, int width, int height) {
         switch (kind) {
             case Look.ACCENT:
                 paint.setColor(Tone.of(Tone.PRIMARY));

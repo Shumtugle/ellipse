@@ -62,8 +62,8 @@ final class Sketch extends View {
     static final int PALETTE = 38;
     static final int FORWARD = 39;
 
-    private static final int METAL = 0xFFC2C2C2;
-    private static final int GOLD = 0xFFC99A3E;
+    private Paint metal;
+    private Paint shine;
 
     private final int kind;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -193,33 +193,7 @@ final class Sketch extends View {
                     canvas.drawLine(w / 2f - radius * 0.5f, h / 2f + radius * 0.5f,
                         w / 2f + radius * 0.5f, h / 2f - radius * 0.5f, paint);
                 } else {
-                    int face;
-                    switch (rim) {
-                        case Tile.Look.METAL: face = METAL; break;
-                        case Tile.Look.GOLD: face = GOLD; break;
-                        case Tile.Look.WOOD: face = 0xFF7A4E30; break;
-                        case Tile.Look.BLING: face = 0xFF3A3024; break;
-                        case Tile.Look.BLACK: face = 0xFF1A1918; break;
-                        case Tile.Look.WHITE: face = 0xFFD6D6D6; break;
-                        default: face = Tone.of(Tone.PRIMARY); break;
-                    }
-                    fill(face);
-                    canvas.drawCircle(w / 2f, h / 2f, radius, paint);
-                    if (rim == Tile.Look.BLING) {
-                        fill(0xFFE8D7A8);
-                        for (int i = 0; i < 9; i++) {
-                            double a = i * 2.4;
-                            float d = radius * 0.62f * (float) Math.sqrt((i + 0.5) / 9.0);
-                            canvas.drawCircle(w / 2f + d * (float) Math.cos(a), h / 2f + d * (float) Math.sin(a),
-                                radius * 0.12f, paint);
-                        }
-                    }
-                    if (rim == Tile.Look.BLACK) {
-                        stroke(0x55FFFFFF, Round.px(1.2f));
-                        canvas.drawCircle(w / 2f, h / 2f, radius - Round.px(1f), paint);
-                    }
-                    fill(0x33FFFFFF);
-                    canvas.drawCircle(w / 2f - radius * 0.28f, h / 2f - radius * 0.28f, radius * 0.38f, paint);
+                    coin(canvas, w / 2f, h / 2f, radius);
                 }
                 break;
             }
@@ -617,6 +591,38 @@ final class Sketch extends View {
     }
 
     /** The outline of a phone standing upright, centred on a point. */
+    /**
+     * A rim is shown as a coin of its own material, cut from the same
+     * stuff the tiles are and lit the same way: the plate, the bevel, the
+     * line of its edge and the glaze across its top. Bling and steel show
+     * their grain; black, its thin bright ring.
+     */
+    private void coin(Canvas canvas, float cx, float cy, float radius) {
+        if (metal == null) {
+            metal = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+            shine = new Paint(Paint.ANTI_ALIAS_FLAG);
+        }
+        int side = Math.max(1, Math.round(radius * 2f));
+        android.graphics.Path disc = new android.graphics.Path();
+        disc.addCircle(radius, radius, radius, android.graphics.Path.Direction.CW);
+        canvas.save();
+        canvas.translate(cx - radius, cy - radius);
+        metal.setShader(null);
+        Tile.material(metal, rim, side, side);
+        canvas.drawPath(disc, metal);
+        shine.setShader(Cast.bevel(0f, side));
+        canvas.drawPath(disc, shine);
+        if (rim == Tile.Look.BLACK) {
+            stroke(0x55FFFFFF, Round.px(1.2f));
+            canvas.drawCircle(radius, radius, radius - Round.px(1.5f), paint);
+        }
+        shine.setShader(Cast.glazeLight(0f, side));
+        canvas.drawPath(Cast.glaze(disc, 0f, 0f, side, side), shine);
+        stroke(0x8C000000, Math.max(1f, Round.px(0.8f)));
+        canvas.drawCircle(radius, radius, radius - Round.px(0.4f), paint);
+        canvas.restore();
+    }
+
     private void screen(Canvas canvas, float cx, float cy, float tall) {
         float sw = tall * 0.56f;
         stroke(soft, Round.px(2f));
