@@ -1,0 +1,527 @@
+# a language for this home screen
+# fill the empty lines and load the file back
+
+module Русский
+
+# Settings
+settings	Настройки
+
+# Back
+back	Назад
+
+# Applications
+drawer	Приложения
+
+# Search
+search	Поиск
+
+# Tile
+tile	Плитка
+
+# Superellipse
+shape_superellipse	Суперэллипс
+
+# Squircle
+shape_squircle	Сквиркл
+
+# Circle
+shape_circle	Круг
+
+# Square
+shape_square	Квадрат
+
+# Roundness
+roundness	Округлость
+
+# Proportion
+proportion	Пропорция
+
+# Zoom
+zoom	Масштаб
+
+# Rim
+rim	Кромка
+
+# Metal
+rim_metal	Металл
+
+# Gold
+rim_gold	Золото
+
+# Wood
+rim_wood	Дерево
+
+# Bling
+rim_bling	Блёстки
+
+# Black
+rim_black	Чернь
+
+# Steel
+rim_white	Сталь
+
+# Accent
+rim_accent	Акцент
+
+# Bare
+rim_bare	Без кромки
+
+# Rim width
+rim_width	Толщина кромки
+
+# Window
+window	Окно
+
+# Tile
+window_follows	По плитке
+
+# Medallion
+window_round	Медальон
+
+# No mask
+window_raw	Без маски
+
+# Light
+light	Свет
+
+# Matte
+light_matte	Матовый
+
+# Gloss
+light_gloss	Глянец
+
+# Down
+way_down	Вниз
+
+# Across
+way_across	Вбок
+
+# Order
+order	Порядок
+
+# Name
+order_name	Имя
+
+# Installed
+order_installed	Установка
+
+# Updated
+order_updated	Обновление
+
+# Screens
+screens	Экраны
+
+# Columns
+columns	Колонки
+
+# Rows
+rows	Ряды
+
+# Turning
+turning	Листание
+
+# Ends
+turn_ends	С упором
+
+# Round
+turn_round	По кругу
+
+# Widgets
+widgets	Виджеты
+
+# Widget
+widget	Виджет
+
+# Tap to place
+tap_to_place	Коснись, чтобы поставить
+
+# No room for it on this screen.
+no_room	На этом экране ему нет места
+
+# Clock
+clock	Часы
+
+# Circle
+circle	Круг
+
+# Time
+time_part	Время
+
+# Date
+date_part	Дата
+
+# Window
+small_part	Окошко
+
+# Charge
+charge_part	Заряд
+
+# Headphones
+ears_part	Наушники
+
+# Shown
+shown	Показано
+
+# Hidden
+hidden	Скрыто
+
+# Dial
+state_dial	Циферблат
+
+# Application
+state_app	Приложение
+
+# None
+state_none	Нет
+
+# Row
+row	Ряд
+
+# Column
+column	Столбец
+
+# To the middle
+to_middle	По центру
+
+# A width of {w} cannot stand exactly in the middle of {n} columns: make it one wider or one narrower
+middle_cannot	Ширина {w} не встаёт ровно посередине {n} столбцов: сделай на один шире или уже
+
+# An application in the window
+window_app	В окошке — приложение
+
+# Immersion
+immersion	Погружение
+
+# Bars
+imm_bars	С панелями
+
+# No status
+imm_status	Без строки
+
+# No navigation
+imm_nav	Без навигации
+
+# Full
+imm_full	Полное
+
+# Inside the margins
+edge_inside	В полях
+
+# To the edge
+edge_glass	До края
+
+# Something stands in column {n}; move it first.
+column_taken	В колонке {n} что-то стоит — сначала переставь его
+
+# Something stands in row {n}; move it first.
+row_taken	В ряду {n} что-то стоит — сначала переставь его
+
+# Colour
+colour	Цвет
+
+# Hue
+hue	Оттенок
+
+# Richness
+richness	Насыщенность
+
+# From the wallpaper
+wallpaper	От обоев
+
+# Weather
+weather	Погода
+
+# Where I am
+here	Где я
+
+# A chosen city
+city_mode	Выбранный город
+
+# The weather follows the phone. A rough place is enough; the exact one is never asked for.
+here_what	Погода едет вместе с телефоном. Хватает примерного места, точное не спрашивается
+
+# The weather stays with one city, found by its name.
+city_what	Погода остаётся для одного города, найденного по имени
+
+# The place is not known yet
+here_none	Место пока не определено
+
+# No city chosen: the weather waits for one
+city_none	Город не выбран: погода ждёт
+
+# A city
+city	Город
+
+# Find
+find	Найти
+
+# Nothing found
+found_none	Ничего не нашлось
+
+# Headphones' charge
+ears	Заряд наушников
+
+# Shown on the clock while headphones that tell their charge are near. The system asks for leave once.
+ears_what	Виден на часах, пока рядом наушники, которые сообщают заряд. Система спросит разрешение один раз
+
+# Allow
+allow	Разрешить
+
+# Allowed
+allowed	Разрешено
+
+# Weather data by Open-Meteo.com
+weather_by	Данные о погоде: Open-Meteo.com
+
+# Places by GeoNames
+places_by	Места: GeoNames
+
+# Both under the CC BY 4.0 licence; shown rounded, as signs
+licence_by	Обе под лицензией CC BY 4.0; показаны округлёнными, знаками
+
+# Nothing yet: the weather has not been asked for
+none	Пока пусто: погоду ещё не спрашивали
+
+# Feels like
+feels	Ощущается как
+
+# Dry
+dry	Сухо
+
+# Raining
+raining	Идёт дождь
+
+# Snowing
+snowing	Идёт снег
+
+# Rain in
+rain_in	Дождь через
+
+# Snow in
+snow_in	Снег через
+
+# min
+min	мин
+
+# Wind
+wind	Ветер
+
+# m/s
+ms	м/с
+
+# Humidity
+wet	Влажность
+
+# Pressure
+press	Давление
+
+# UV index
+sun	УФ-индекс
+
+# Harmless
+uv_low	Неопасно
+
+# Take care
+uv_mid	Осторожно
+
+# Seek shade
+uv_high	В тень
+
+# Air
+air	Воздух
+
+# No pollen today
+no_pollen	Сегодня пыльцы нет
+
+# Alder
+alder	Ольха
+
+# Birch
+birch	Берёза
+
+# Grass
+grass	Злаки
+
+# Mugwort
+mugwort	Полынь
+
+# Daylight
+daylight	Световой день
+
+# Geomagnetic activity
+geomagnetic	Геомагнитная активность
+
+# Aurora likely
+aurora	Северное сияние
+
+# Aurora possible
+maybe	Возможно сияние
+
+# Quiet
+quiet	Спокойно
+
+# Today
+today	Сегодня
+
+# Sunday
+sunday	Воскресенье
+
+# Monday
+monday	Понедельник
+
+# Tuesday
+tuesday	Вторник
+
+# Wednesday
+wednesday	Среда
+
+# Thursday
+thursday	Четверг
+
+# Friday
+friday	Пятница
+
+# Saturday
+saturday	Суббота
+
+# Weather and air by Open-Meteo.com, CC BY 4.0, rounded and drawn as signs. Geomagnetic index by NOAA SWPC, public domain.
+sky_sources	Погода и воздух — Open-Meteo.com, CC BY 4.0, округлены и нарисованы знаками. Геомагнитный индекс — NOAA SWPC, общественное достояние.
+
+# Layout
+layout	Раскладка
+
+# Export
+export	Экспорт
+
+# Import
+import	Импорт
+
+# Files
+files	Файлы
+
+# Folder
+folder	Папка
+
+# Choose a folder
+folder_choose	Выбрать папку
+
+# Not chosen: every file asks where it goes
+folder_none	Не выбрана: каждый файл спросит, куда
+
+# Written to the folder: {n}
+saved_in	Записано в папку: {n}
+
+# A layout, a language module, or another home screen's backup
+import_what	Раскладка, языковой модуль или копия другого лаунчера
+
+# Read from another home screen: {n} screens.
+foreign_read	Прочитано из другого лаунчера, экранов: {n}
+
+# The folder holds nothing to read.
+folder_empty	В папке нечего читать
+
+# That file is not something Ellipse reads.
+not_readable	Этот файл Ellipse не читает
+
+# The layout, the settings and the language are written.
+exported	Раскладка, настройки и язык записаны
+
+# The layout is read: {n} screens.
+imported	Раскладка прочитана, экранов: {n}
+
+# That file is not a layout.
+not_a_layout	Этот файл — не раскладка
+
+# Language
+language	Язык
+
+# English lives inside; every other language is a module
+language_what	Английский живёт внутри, любой другой язык — модуль
+
+# English
+english	Английский
+
+# {n} of {m} words
+words_of	{n} из {m} слов
+
+# Load a module
+module_load	Загрузить модуль
+
+# Save the template
+module_save	Сохранить шаблон
+
+# Use English
+use_english	Вернуть английский
+
+# The language is taken.
+module_taken	Язык принят
+
+# That file is not a language module.
+module_bad	Это не языковой модуль
+
+# The template is written.
+module_saved	Шаблон сохранён
+
+# It could not be written.
+unsaved	Сохранить не удалось
+
+# Home screen
+home_screen	Домашний экран
+
+# Which home screen the phone uses
+home_screen_what	Какой домашний экран использует телефон
+
+# About
+about	Сведения
+
+# Shortcuts come when Ellipse is the phone's home screen
+shortcuts_home	Ярлыки появятся, когда Ellipse станет главным экраном
+
+# Screens inside
+screens_of	Экраны внутри
+
+# A press opens one; a long press sets it on a screen. Not every screen opens alone.
+screens_note	Касание открывает, долгое нажатие ставит на экран. Не каждый экран открывается сам по себе
+
+# This screen does not open from outside.
+no_entry	Этот экран не открывается снаружи
+
+# Remove
+remove	Убрать
+
+# Door
+put_door	Дверь
+
+# Add screen
+add_screen	Новый экран
+
+# Remove screen
+remove_screen	Убрать экран
+
+# Main screen
+main_screen	Главный экран
+
+# Screen {n}
+screen_n	Экран {n}
+
+# Width
+width	Ширина
+
+# Height
+height	Высота
+
+# Recent
+recent	Недавние
+
+# New
+fresh	Новые
+
+# new
+tag_new	новое
+
+# updated
+tag_updated	обновлено
+
+# Nothing opened or installed lately.
+fresh_empty	Недавно ничего не открывалось и не ставилось
+

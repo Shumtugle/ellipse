@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The cloth under the emblem. Every colour of the screens themselves
+         is grown at run time from one seed. -->
+    <color name="cloth">#FF17110B</color>
+    <color name="metal">#FFC2C2C2</color>
+    <color name="gold">#FFC99A3E</color>
+    <color name="gold_light">#FFF1D9A2</color>
+    <color name="sun">#FFF4EEE2</color>
+</resources>

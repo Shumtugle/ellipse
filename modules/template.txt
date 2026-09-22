@@ -1,0 +1,527 @@
+# a language for this home screen
+# fill the empty lines and load the file back
+
+module untitled
+
+# Settings
+settings	
+
+# Back
+back	
+
+# Applications
+drawer	
+
+# Search
+search	
+
+# Tile
+tile	
+
+# Superellipse
+shape_superellipse	
+
+# Squircle
+shape_squircle	
+
+# Circle
+shape_circle	
+
+# Square
+shape_square	
+
+# Roundness
+roundness	
+
+# Proportion
+proportion	
+
+# Zoom
+zoom	
+
+# Rim
+rim	
+
+# Metal
+rim_metal	
+
+# Gold
+rim_gold	
+
+# Wood
+rim_wood	
+
+# Bling
+rim_bling	
+
+# Black
+rim_black	
+
+# Steel
+rim_white	
+
+# Accent
+rim_accent	
+
+# Bare
+rim_bare	
+
+# Rim width
+rim_width	
+
+# Window
+window	
+
+# Tile
+window_follows	
+
+# Medallion
+window_round	
+
+# No mask
+window_raw	
+
+# Light
+light	
+
+# Matte
+light_matte	
+
+# Gloss
+light_gloss	
+
+# Down
+way_down	
+
+# Across
+way_across	
+
+# Order
+order	
+
+# Name
+order_name	
+
+# Installed
+order_installed	
+
+# Updated
+order_updated	
+
+# Screens
+screens	
+
+# Columns
+columns	
+
+# Rows
+rows	
+
+# Turning
+turning	
+
+# Ends
+turn_ends	
+
+# Round
+turn_round	
+
+# Widgets
+widgets	
+
+# Widget
+widget	
+
+# Tap to place
+tap_to_place	
+
+# No room for it on this screen.
+no_room	
+
+# Clock
+clock	
+
+# Circle
+circle	
+
+# Time
+time_part	
+
+# Date
+date_part	
+
+# Window
+small_part	
+
+# Charge
+charge_part	
+
+# Headphones
+ears_part	
+
+# Shown
+shown	
+
+# Hidden
+hidden	
+
+# Dial
+state_dial	
+
+# Application
+state_app	
+
+# None
+state_none	
+
+# Row
+row	
+
+# Column
+column	
+
+# To the middle
+to_middle	
+
+# A width of {w} cannot stand exactly in the middle of {n} columns: make it one wider or one narrower
+middle_cannot	
+
+# An application in the window
+window_app	
+
+# Immersion
+immersion	
+
+# Bars
+imm_bars	
+
+# No status
+imm_status	
+
+# No navigation
+imm_nav	
+
+# Full
+imm_full	
+
+# Inside the margins
+edge_inside	
+
+# To the edge
+edge_glass	
+
+# Something stands in column {n}; move it first.
+column_taken	
+
+# Something stands in row {n}; move it first.
+row_taken	
+
+# Colour
+colour	
+
+# Hue
+hue	
+
+# Richness
+richness	
+
+# From the wallpaper
+wallpaper	
+
+# Weather
+weather	
+
+# Where I am
+here	
+
+# A chosen city
+city_mode	
+
+# The weather follows the phone. A rough place is enough; the exact one is never asked for.
+here_what	
+
+# The weather stays with one city, found by its name.
+city_what	
+
+# The place is not known yet
+here_none	
+
+# No city chosen: the weather waits for one
+city_none	
+
+# A city
+city	
+
+# Find
+find	
+
+# Nothing found
+found_none	
+
+# Headphones' charge
+ears	
+
+# Shown on the clock while headphones that tell their charge are near. The system asks for leave once.
+ears_what	
+
+# Allow
+allow	
+
+# Allowed
+allowed	
+
+# Weather data by Open-Meteo.com
+weather_by	
+
+# Places by GeoNames
+places_by	
+
+# Both under the CC BY 4.0 licence; shown rounded, as signs
+licence_by	
+
+# Nothing yet: the weather has not been asked for
+none	
+
+# Feels like
+feels	
+
+# Dry
+dry	
+
+# Raining
+raining	
+
+# Snowing
+snowing	
+
+# Rain in
+rain_in	
+
+# Snow in
+snow_in	
+
+# min
+min	
+
+# Wind
+wind	
+
+# m/s
+ms	
+
+# Humidity
+wet	
+
+# Pressure
+press	
+
+# UV index
+sun	
+
+# Harmless
+uv_low	
+
+# Take care
+uv_mid	
+
+# Seek shade
+uv_high	
+
+# Air
+air	
+
+# No pollen today
+no_pollen	
+
+# Alder
+alder	
+
+# Birch
+birch	
+
+# Grass
+grass	
+
+# Mugwort
+mugwort	
+
+# Daylight
+daylight	
+
+# Geomagnetic activity
+geomagnetic	
+
+# Aurora likely
+aurora	
+
+# Aurora possible
+maybe	
+
+# Quiet
+quiet	
+
+# Today
+today	
+
+# Sunday
+sunday	
+
+# Monday
+monday	
+
+# Tuesday
+tuesday	
+
+# Wednesday
+wednesday	
+
+# Thursday
+thursday	
+
+# Friday
+friday	
+
+# Saturday
+saturday	
+
+# Weather and air by Open-Meteo.com, CC BY 4.0, rounded and drawn as signs. Geomagnetic index by NOAA SWPC, public domain.
+sky_sources	
+
+# Layout
+layout	
+
+# Export
+export	
+
+# Import
+import	
+
+# Files
+files	
+
+# Folder
+folder	
+
+# Choose a folder
+folder_choose	
+
+# Not chosen: every file asks where it goes
+folder_none	
+
+# Written to the folder: {n}
+saved_in	
+
+# A layout, a language module, or another home screen's backup
+import_what	
+
+# Read from another home screen: {n} screens.
+foreign_read	
+
+# The folder holds nothing to read.
+folder_empty	
+
+# That file is not something Ellipse reads.
+not_readable	
+
+# The layout, the settings and the language are written.
+exported	
+
+# The layout is read: {n} screens.
+imported	
+
+# That file is not a layout.
+not_a_layout	
+
+# Language
+language	
+
+# English lives inside; every other language is a module
+language_what	
+
+# English
+english	
+
+# {n} of {m} words
+words_of	
+
+# Load a module
+module_load	
+
+# Save the template
+module_save	
+
+# Use English
+use_english	
+
+# The language is taken.
+module_taken	
+
+# That file is not a language module.
+module_bad	
+
+# The template is written.
+module_saved	
+
+# It could not be written.
+unsaved	
+
+# Home screen
+home_screen	
+
+# Which home screen the phone uses
+home_screen_what	
+
+# About
+about	
+
+# Shortcuts come when Ellipse is the phone's home screen
+shortcuts_home	
+
+# Screens inside
+screens_of	
+
+# A press opens one; a long press sets it on a screen. Not every screen opens alone.
+screens_note	
+
+# This screen does not open from outside.
+no_entry	
+
+# Remove
+remove	
+
+# Door
+put_door	
+
+# Add screen
+add_screen	
+
+# Remove screen
+remove_screen	
+
+# Main screen
+main_screen	
+
+# Screen {n}
+screen_n	
+
+# Width
+width	
+
+# Height
+height	
+
+# Recent
+recent	
+
+# New
+fresh	
+
+# new
+tag_new	
+
+# updated
+tag_updated	
+
+# Nothing opened or installed lately.
+fresh_empty	
+

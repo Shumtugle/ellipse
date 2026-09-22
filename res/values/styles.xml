@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Clear glass over the wallpaper. The bars are drawn over the screen;
+         the screen keeps its own room for them. -->
+    <style name="Ground" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+
+    <!-- The settings: an opaque room. Its colours are grown at run time; this
+         is only what shows before the first frame. -->
+    <style name="Room" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/cloth</item>
+        <item name="android:colorBackground">@color/cloth</item>
+        <item name="android:statusBarColor">@color/cloth</item>
+        <item name="android:navigationBarColor">@color/cloth</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
