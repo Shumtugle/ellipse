@@ -101,6 +101,59 @@ final class Dial extends View {
         return this;
     }
 
+    private final Paint plain = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    /**
+     * The dial as the default draws it, the design system's own slider:
+     * a track parted by a slim upright handle, the part before it in the
+     * scheme's first colour and the part after in a quieter one, with a
+     * stop at the far end. A dial of colours shows its colours along both
+     * parts. The handle narrows under the finger.
+     */
+    private void slider(Canvas canvas, float h, float from, float to, float x) {
+        float tall = Round.px(16f);
+        float top = (h - tall) / 2f;
+        float outer = tall / 2f;
+        float inner = Round.px(2f);
+        float gap = Round.px(6f);
+        float handle = Round.px(4f) - Round.px(2f) * lift;
+        float high = Round.px(44f);
+        boolean coloured = light == 0;
+        plain.setStyle(Paint.Style.FILL);
+        plain.setShader(coloured ? new android.graphics.LinearGradient(from, 0f, to, 0f, colours.length > 1
+            ? colours : new int[] {colours[0], colours[0]}, null, Shader.TileMode.CLAMP) : null);
+        float before = x - handle / 2f - gap;
+        if (before > from - outer + inner) {
+            if (!coloured) {
+                plain.setColor(Tone.of(Tone.PRIMARY));
+            }
+            canvas.drawPath(track(from - outer, top, before, top + tall, outer, inner), plain);
+        }
+        float after = x + handle / 2f + gap;
+        if (after < to + outer - inner) {
+            if (!coloured) {
+                plain.setColor(Tone.of(Tone.SECONDARY_CONTAINER));
+            }
+            canvas.drawPath(track(after, top, to + outer, top + tall, inner, outer), plain);
+            if (!coloured) {
+                plain.setColor(Tone.of(Tone.PRIMARY));
+                canvas.drawCircle(to, h / 2f, Round.px(2f), plain);
+            }
+        }
+        plain.setShader(null);
+        plain.setColor(coloured ? Tone.of(Tone.ON_SURFACE) : Tone.of(Tone.PRIMARY));
+        canvas.drawRoundRect(x - handle / 2f, (h - high) / 2f, x + handle / 2f, (h + high) / 2f,
+            handle / 2f, handle / 2f, plain);
+    }
+
+    /** A piece of track: its left corners one round, its right another. */
+    private static android.graphics.Path track(float l, float t, float r, float b, float left, float right) {
+        android.graphics.Path path = new android.graphics.Path();
+        float[] radii = {left, left, right, right, right, right, left, left};
+        path.addRoundRect(new android.graphics.RectF(l, t, r, b), radii, android.graphics.Path.Direction.CW);
+        return path;
+    }
+
     /** What the groove shows: the colours a value gives, from the start to the end. */
     void colours(int[] stops) {
         colours = stops;
@@ -282,6 +335,10 @@ final class Dial extends View {
         float from = inset();
         float to = getWidth() - inset();
         float x = from + (to - from) * value;
+        if (Cast.flat) {
+            slider(canvas, h, from, to, x);
+            return;
+        }
         float tall = Round.px(grooveTall);
         float top = (h - tall) / 2f;
         float r = tall / 2f;

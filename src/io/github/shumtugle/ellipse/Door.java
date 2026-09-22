@@ -40,21 +40,22 @@ final class Door {
     static final int DISC_DARK = 10;
     static final int SQUIRCLE = 11;
     static final int COLOURS = 12;
+    static final int DISC_BLUE = 13;
 
     /** The face a door wears until the owner chooses another. */
-    static final int DEFAULT = DISC_LIGHT;
+    static final int DEFAULT = DISC_BLUE;
 
     /**
      * The faces in the order they are offered: the whole icons first, then
      * the marks. A face keeps its number whatever its place here, because
      * the number is what is written down.
      */
-    static final int[] ORDER = {DISC_LIGHT, DISC_DARK, SQUIRCLE, COLOURS, DOTS, FOUR, RING, ARCH, RISE, STAR,
+    static final int[] ORDER = {DISC_BLUE, DISC_LIGHT, DISC_DARK, SQUIRCLE, COLOURS, DOTS, FOUR, RING, ARCH, RISE, STAR,
         KEYHOLE, GLASS};
 
     /** Whether a number written down is a face there still is. */
     static boolean known(int face) {
-        return face >= DOTS && face <= COLOURS;
+        return face >= DOTS && face <= DISC_BLUE;
     }
 
     /** The dictionary's name of a face. */
@@ -71,6 +72,7 @@ final class Door {
             case DISC_DARK: return "door_disc_dark";
             case SQUIRCLE: return "door_squircle";
             case COLOURS: return "door_colours";
+            case DISC_BLUE: return "door_disc_blue";
             default: return "door_disc_light";
         }
     }
@@ -215,7 +217,7 @@ final class Door {
 
     /** Whether a face is a whole icon with a shape of its own, rather than a mark behind glass. */
     static boolean whole(int face) {
-        return face >= DISC_LIGHT && face <= COLOURS;
+        return face >= DISC_LIGHT && face <= DISC_BLUE;
     }
 
     /**
@@ -231,6 +233,9 @@ final class Door {
                 break;
             case DISC_DARK:
                 disc(canvas, paint, cx, cy, side, true);
+                break;
+            case DISC_BLUE:
+                blue(canvas, paint, cx, cy, side);
                 break;
             case SQUIRCLE:
                 squircle(canvas, paint, cx, cy, side);
@@ -286,6 +291,33 @@ final class Door {
                     canvas.drawCircle(x, y, dot, paint);
                     paint.setStyle(Paint.Style.FILL);
                 }
+            }
+        }
+    }
+
+    /** A disc of clear sky blue, its six dots raised in white. */
+    private static void blue(Canvas canvas, Paint paint, float cx, float cy, float side) {
+        float r = side * 0.48f;
+        paint.setColor(0xFF3F86E6);
+        paint.setShadowLayer(side * 0.016f, 0f, side * 0.01f, 0x59000000);
+        canvas.drawCircle(cx, cy, r, paint);
+        paint.clearShadowLayer();
+        paint.setShader(new RadialGradient(cx, cy - r * 0.6f, r * 1.7f,
+            new int[] {0xFF9CCBFF, 0xFF4C93EE, 0xFF2A66C8}, new float[] {0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+        canvas.drawCircle(cx, cy, r, paint);
+        rim(canvas, paint, cx, cy, r, side, true);
+        float across = r * 0.38f;
+        float down = r * 0.2f;
+        float dot = r * 0.11f;
+        for (int row = -1; row <= 1; row += 2) {
+            for (int col = -1; col <= 1; col++) {
+                float x = cx + col * across;
+                float y = cy + row * down;
+                paint.setShadowLayer(dot * 0.5f, 0f, dot * 0.25f, 0x59102850);
+                paint.setShader(new RadialGradient(x, y - dot * 0.4f, dot * 1.4f, 0xFFFFFFFF, 0xFFE3EEFB,
+                    Shader.TileMode.CLAMP));
+                canvas.drawCircle(x, y, dot, paint);
+                paint.clearShadowLayer();
             }
         }
     }

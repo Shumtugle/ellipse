@@ -537,6 +537,9 @@ parts	Части
 # Choose the application
 choose_app	Выбрать приложение
 
+# Blue disc
+door_disc_blue	Голубой диск
+
 # Light disc
 door_disc_light	Светлый диск
 

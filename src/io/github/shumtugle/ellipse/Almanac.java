@@ -225,8 +225,17 @@ final class Almanac extends View {
         }
         float inset = Round.px(4f);
         Path plate = Tile.curve(inset, inset, w - 2f * inset, h - 2f * inset, Math.max(6f, look.power * 1.6f));
-        boolean material = look.rim != Tile.Look.BARE;
-        if (material) {
+        // The default draws the clock the design system's way: a card of the
+        // surface, the dial on a scalloped face, the windows each in a
+        // container of its own colour, all flat.
+        boolean flat = Cast.flat;
+        boolean material = !flat && look.rim != Tile.Look.BARE;
+        if (flat) {
+            paint.setShader(null);
+            paint.setColor(Tone.of(Tone.SURFACE_CONTAINER));
+            float corner = Math.min(Round.px(28f), (h - 2f * inset) / 2f);
+            canvas.drawRoundRect(inset, inset, w - inset, h - inset, corner, corner, paint);
+        } else if (material) {
             canvas.save();
             canvas.translate(0f, 0f);
             Tile.plate(canvas, plate, look.rim, w, h);
@@ -236,9 +245,15 @@ final class Almanac extends View {
             paint.setColor(0x80000000);
             canvas.drawPath(plate, paint);
         }
-        int accent = Tile.accentOf(look.rim);
+        int accent = flat ? Tone.of(Tone.PRIMARY) : Tile.accentOf(look.rim);
         int ink = 0xFFF4ECDD;
         int quiet = 0xB3F4ECDD;
+        int dialInk = flat ? Tone.of(Tone.ON_PRIMARY_CONTAINER) : ink;
+        int dialQuiet = flat ? (dialInk & 0x00FFFFFF) | 0x99000000 : quiet;
+        int timeInk = flat ? Tone.of(Tone.ON_SECONDARY_CONTAINER) : ink;
+        int timeQuiet = flat ? (timeInk & 0x00FFFFFF) | 0xB3000000 : quiet;
+        final int pillInk = flat ? Tone.of(Tone.ON_TERTIARY_CONTAINER) : ink;
+        final int pillMark = flat ? pillInk : Tile.accentOf(look.rim);
         edge.setStrokeWidth(Math.max(1f, w * 0.0025f));
 
         // What is shown decides how the room is shared. The round window
@@ -296,28 +311,28 @@ final class Almanac extends View {
         // The round window: the dial, or the weather large.
         if (round) {
             float side = dialBox.width();
-            pane(canvas, dialBox, true);
+            pane(canvas, dialBox, true, Tone.PRIMARY_CONTAINER);
             if (WEATHER.equals(big)) {
-                Sky.draw(canvas, weather, dialBox.centerX(), dialBox.centerY() - side * 0.08f, side * 0.5f, ink);
+                Sky.draw(canvas, weather, dialBox.centerX(), dialBox.centerY() - side * 0.08f, side * 0.5f, dialInk);
                 words.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
                 words.setTextSize(side * 0.2f);
-                words.setColor(ink);
+                words.setColor(dialInk);
                 words.setTextAlign(Paint.Align.CENTER);
                 canvas.drawText(Sky.degrees(weather), dialBox.centerX(), dialBox.centerY() + side * 0.34f, words);
             } else {
-                dial(canvas, dialBox, ink, quiet, accent);
+                dial(canvas, dialBox, dialInk, dialQuiet, accent);
             }
         }
 
         // The long window: the hour in figures, the date under it; or either alone, larger.
         if (long_) {
-            pane(canvas, timeBox, false);
+            pane(canvas, timeBox, false, Tone.SECONDARY_CONTAINER);
             Date now = new Date();
             words.setTextAlign(Paint.Align.CENTER);
             if (time) {
                 String hour = android.text.format.DateFormat.getTimeFormat(getContext()).format(now);
                 words.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
-                words.setColor(ink);
+                words.setColor(timeInk);
                 float share = date ? 0.5f : 0.62f;
                 words.setTextSize(fit(hour, timeBox.width() * 0.84f, timeBox.height() * share));
                 Paint.FontMetrics f = words.getFontMetrics();
@@ -329,7 +344,7 @@ final class Almanac extends View {
                 String day = new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(
                     Locale.getDefault(), "EEEdMMMM"), Locale.getDefault()).format(now);
                 words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
-                words.setColor(quiet);
+                words.setColor(timeQuiet);
                 words.setTextSize(fit(day, timeBox.width() * 0.84f, timeBox.height() * 0.17f));
                 canvas.drawText(day, timeBox.centerX(), timeBox.top + timeBox.height() * 0.84f, words);
             } else if (date) {
@@ -339,7 +354,7 @@ final class Almanac extends View {
                     Locale.getDefault(), "dMMMM"), Locale.getDefault()).format(now);
                 String weekday = new SimpleDateFormat("EEEE", Locale.getDefault()).format(now);
                 words.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
-                words.setColor(ink);
+                words.setColor(timeInk);
                 words.setTextSize(fit(leaf, timeBox.width() * 0.84f, timeBox.height() * 0.36f));
                 canvas.drawText(leaf, timeBox.centerX(), timeBox.top + timeBox.height() * 0.52f, words);
                 words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
@@ -351,11 +366,11 @@ final class Almanac extends View {
 
         // The small windows: the weather or the chosen application, the charges.
         if (!smallBox.isEmpty()) {
-            pane(canvas, smallBox, false);
+            pane(canvas, smallBox, false, Tone.TERTIARY_CONTAINER);
             if (WEATHER.equals(small)) {
-                pill(canvas, smallBox, Sky.degrees(weather), ink, new Mark() {
+                pill(canvas, smallBox, Sky.degrees(weather), pillInk, new Mark() {
                     public void draw(Canvas c, float cx, float cy, float s) {
-                        Sky.draw(c, weather, cx, cy, s, Tile.accentOf(look.rim));
+                        Sky.draw(c, weather, cx, cy, s, pillMark);
                     }
                 });
             } else if (chosen != null) {
@@ -366,18 +381,18 @@ final class Almanac extends View {
             }
         }
         if (!chargeBox.isEmpty()) {
-            pane(canvas, chargeBox, false);
-            pill(canvas, chargeBox, charge >= 0 ? charge + "%" : "\u2013", ink, new Mark() {
+            pane(canvas, chargeBox, false, Tone.TERTIARY_CONTAINER);
+            pill(canvas, chargeBox, charge >= 0 ? charge + "%" : "\u2013", pillInk, new Mark() {
                 public void draw(Canvas c, float cx, float cy, float s) {
-                    battery(c, cx, cy, s, charge, charging, Tile.accentOf(look.rim));
+                    battery(c, cx, cy, s, charge, charging, pillMark);
                 }
             });
         }
         if (!earsBox.isEmpty()) {
-            pane(canvas, earsBox, false);
-            pill(canvas, earsBox, ears + "%", ink, new Mark() {
+            pane(canvas, earsBox, false, Tone.TERTIARY_CONTAINER);
+            pill(canvas, earsBox, ears + "%", pillInk, new Mark() {
                 public void draw(Canvas c, float cx, float cy, float s) {
-                    headphones(c, cx, cy, s, Tile.accentOf(look.rim));
+                    headphones(c, cx, cy, s, pillMark);
                 }
             });
         }
@@ -387,8 +402,23 @@ final class Almanac extends View {
         }
     }
 
-    /** A pane of dark glass, round or long, with the thin line of its cut. */
-    private void pane(Canvas canvas, RectF box, boolean round) {
+    /**
+     * A pane of dark glass, round or long, with the thin line of its cut;
+     * drawn flat, a container of one of the scheme's colours, the round one
+     * scalloped like a clock's face.
+     */
+    private void pane(Canvas canvas, RectF box, boolean round, int role) {
+        if (Cast.flat) {
+            glass.setShader(null);
+            glass.setColor(Tone.of(role));
+            if (round) {
+                canvas.drawPath(Cast.cookie(box.centerX(), box.centerY(), box.width() / 2f, 12, 0.07f), glass);
+            } else {
+                float r = Math.min(box.height() / 2f, Round.px(24f));
+                canvas.drawRoundRect(box, r, r, glass);
+            }
+            return;
+        }
         glass.setShader(new RadialGradient(box.centerX(), box.top + box.height() * 0.35f,
             Math.max(box.width(), box.height()) * 0.8f, 0xE62A2520, 0xF20C0B0A, Shader.TileMode.CLAMP));
         if (round) {

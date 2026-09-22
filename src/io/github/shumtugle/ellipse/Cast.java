@@ -46,6 +46,60 @@ final class Cast {
     private Cast() {
     }
 
+    // ------------------------------------------------------------ flat
+
+    /**
+     * The default's way: the design system's own. While it holds, every
+     * solid here is a plain shape in a colour of the scheme's roles, with
+     * the corners of the shape scale; no material, no light, no glass. It
+     * is told once, as a screen is built.
+     */
+    static boolean flat;
+
+    private static final Paint FLAT = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    /** A plain rounded box of one colour, filling the bounds. */
+    private static void flatBox(Canvas canvas, Rect b, float radius, int colour) {
+        FLAT.setShader(null);
+        FLAT.setStyle(Paint.Style.FILL);
+        FLAT.setColor(colour);
+        float r = Math.max(0f, Math.min(radius, Math.min(b.width(), b.height()) / 2f));
+        canvas.drawRoundRect(b.left, b.top, b.right, b.bottom, r, r, FLAT);
+    }
+
+    /** One colour turning into another, a share of the way. */
+    static int mix(int from, int to, float share) {
+        float t = Math.max(0f, Math.min(1f, share));
+        int a = Math.round(((from >>> 24) & 255) + (((to >>> 24) & 255) - ((from >>> 24) & 255)) * t);
+        int r = Math.round(((from >> 16) & 255) + (((to >> 16) & 255) - ((from >> 16) & 255)) * t);
+        int g = Math.round(((from >> 8) & 255) + (((to >> 8) & 255) - ((from >> 8) & 255)) * t);
+        int b = Math.round((from & 255) + ((to & 255) - (from & 255)) * t);
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    }
+
+    /**
+     * A round shape with soft scallops about its edge, the kind the
+     * design system gives a clock's face: so many lobes, so deep a share
+     * of the radius.
+     */
+    static Path cookie(float cx, float cy, float r, int lobes, float depth) {
+        Path path = new Path();
+        int steps = lobes * 24;
+        for (int i = 0; i <= steps; i++) {
+            double a = Math.PI * 2 * i / steps;
+            float reach = r * (1f - depth * 0.5f * (1f - (float) Math.cos(lobes * a)));
+            float x = cx + (float) Math.sin(a) * reach;
+            float y = cy - (float) Math.cos(a) * reach;
+            if (i == 0) {
+                path.moveTo(x, y);
+            } else {
+                path.lineTo(x, y);
+            }
+        }
+        path.close();
+        return path;
+    }
+
     /**
      * Bare tiles have no material of their own, but a plate in the settings
      * has to be made of something: it is made of the seed's colour.
@@ -69,6 +123,9 @@ final class Cast {
 
     /** The ink of words and marks cut into a material. */
     static int ink(int kind) {
+        if (flat) {
+            return Tone.of(Tone.ON_PRIMARY);
+        }
         if (kind == Tile.Look.ACCENT) {
             return Tone.of(Tone.ON_PRIMARY);
         }
@@ -77,6 +134,9 @@ final class Cast {
 
     /** The colour of a sign seen through the glass of a window in the material. */
     static int glow(int kind) {
+        if (flat) {
+            return Tone.of(Tone.PRIMARY);
+        }
         return kind == Tile.Look.ACCENT ? Tone.of(Tone.PRIMARY) : Tile.accentOf(kind);
     }
 
@@ -87,6 +147,10 @@ final class Cast {
      */
     static void engrave(TextView view, int kind) {
         view.setTextColor(ink(kind));
+        if (flat) {
+            view.setShadowLayer(0f, 0f, 0f, 0);
+            return;
+        }
         view.setShadowLayer(0.01f, 0f, Round.px(1f), light(kind) ? 0x80FFFFFF : 0x99000000);
     }
 
@@ -193,6 +257,10 @@ final class Cast {
 
         @Override
         public void draw(Canvas canvas) {
+            if (flat) {
+                flatBox(canvas, getBounds(), Round.px(radius), Tone.of(Tone.PRIMARY));
+                return;
+            }
             if (shape == null) {
                 return;
             }
@@ -249,6 +317,10 @@ final class Cast {
 
         @Override
         public void draw(Canvas canvas) {
+            if (flat) {
+                flatBox(canvas, getBounds(), Round.px(radius), Tone.of(Tone.SURFACE_HIGHEST));
+                return;
+            }
             if (shape == null) {
                 return;
             }
@@ -298,6 +370,10 @@ final class Cast {
 
         @Override
         public void draw(Canvas canvas) {
+            if (flat) {
+                flatBox(canvas, getBounds(), Round.px(radius), fill);
+                return;
+            }
             if (shape == null) {
                 return;
             }
@@ -384,6 +460,10 @@ final class Cast {
 
         @Override
         public void draw(Canvas canvas) {
+            if (Cast.flat) {
+                flatBox(canvas, getBounds(), radius, mix(this.flat, Tone.of(Tone.SECONDARY_CONTAINER), set));
+                return;
+            }
             if (w <= 0 || h <= 0) {
                 return;
             }
@@ -544,6 +624,15 @@ final class Cast {
 
         @Override
         public void draw(Canvas canvas) {
+            if (flat) {
+                if (layer == BACK) {
+                    Rect f = getBounds();
+                    FLAT.setShader(null);
+                    FLAT.setColor(Tone.of(Tone.SECONDARY_CONTAINER));
+                    canvas.drawCircle(f.exactCenterX(), f.exactCenterY(), Math.min(f.width(), f.height()) * 0.47f, FLAT);
+                }
+                return;
+            }
             if (dirty) {
                 shape();
                 dirty = false;
@@ -637,6 +726,9 @@ final class Cast {
 
         @Override
         public void draw(Canvas canvas) {
+            if (flat) {
+                return;
+            }
             if (shape == null) {
                 return;
             }
@@ -722,6 +814,10 @@ final class Cast {
 
         @Override
         public void draw(Canvas canvas) {
+            if (flat) {
+                flatBox(canvas, getBounds(), Round.px(28f), Tone.of(Tone.SURFACE_CONTAINER));
+                return;
+            }
             if (outer == null) {
                 return;
             }
@@ -820,6 +916,10 @@ final class Cast {
 
         @Override
         public void draw(Canvas canvas) {
+            if (flat) {
+                flatBox(canvas, getBounds(), 0f, Tone.of(Tone.SURFACE));
+                return;
+            }
             Rect b = getBounds();
             canvas.save();
             canvas.translate(b.left, b.top);

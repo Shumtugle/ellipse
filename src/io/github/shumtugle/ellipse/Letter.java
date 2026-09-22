@@ -96,6 +96,10 @@ public final class Letter {
 
     /** Words on a lower rung set in the book face all the same: numbers of rooms, names on plates. */
     public static <T extends TextView> T serif(T view) {
+        if (Cast.flat) {
+            // The default speaks the system's own sans.
+            return view;
+        }
         face(DISPLAY_L);
         view.setTypeface(serif);
         return view;

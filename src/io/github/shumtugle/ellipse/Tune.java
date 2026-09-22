@@ -160,6 +160,8 @@ public final class Tune extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         Fault.watch(this);
+        Keep.catchUp(this);
+        Cast.flat = Keep.flat(this);
         Round.measure(this);
         Tone.read(this);
         Words.load(this);
@@ -1045,6 +1047,9 @@ public final class Tune extends Activity {
      * the shadow it throws, as a thing lit from above throws it.
      */
     private static Bitmap stand(Bitmap tile) {
+        if (Cast.flat) {
+            return tile;
+        }
         int w = tile.getWidth();
         int h = tile.getHeight();
         int foot = Math.round(h * 0.18f);

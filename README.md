@@ -133,8 +133,12 @@ and never by its name; the weather following the phone, which is asked
 once, at the first start, whether it may;
 icons in the system's own shape with no plate over them, colour from the
 wallpaper, the drawer scrolling down in the order of names, screens that
-stop at their ends. What was the owner's own, its layout with it, is set
-aside whole and comes back with the same switch.
+stop at their ends. The default is drawn the design system's own way:
+the settings, the clock and the shelf flat, in the colours of the scheme's
+roles and the corners of its shape scale, the titles in the system's sans,
+the dials as its sliders, the clock's face scalloped; and the door a blue
+disc. What was the owner's own, its layout with it, is set aside whole and
+comes back with the same switch.
 
 **The dock.** One row along the foot, on a shelf of its own apart from the
 ground, the grid's own columns standing under the grid, the same whichever

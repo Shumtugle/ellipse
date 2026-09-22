@@ -196,6 +196,7 @@ public final class Keep {
         o.put("immersion", immersion(context));
         o.put("door", door(context));
         o.put("dock", dock(context));
+        o.put("flat", flat(context));
         return o;
     }
 
@@ -207,7 +208,7 @@ public final class Keep {
                 edit.putFloat(key, (float) o.optDouble(key));
             }
         }
-        for (String key : new String[] {"wall", "across", "edge", "endless", "gloss", "dock"}) {
+        for (String key : new String[] {"wall", "across", "edge", "endless", "gloss", "dock", "flat"}) {
             if (o.has(key)) {
                 edit.putBoolean(key, o.optBoolean(key));
             }
@@ -248,6 +249,7 @@ public final class Keep {
         o.put("immersion", BARS);
         o.put("door", Door.DEFAULT);
         o.put("dock", true);
+        o.put("flat", true);
         return o;
     }
 
@@ -314,6 +316,36 @@ public final class Keep {
             Sky.follow(context, true);
             kept.edit().putBoolean("ask_place", true).apply();
         }
+    }
+
+    // ---------------------------------------------------------------- flat
+
+    /**
+     * Whether the settings, the clock and the shelves are drawn the design
+     * system's own way, flat in the colours of its roles, rather than cut
+     * from the tiles' material. The default is drawn so.
+     */
+    static boolean flat(Context context) {
+        return store(context).getBoolean("flat", false);
+    }
+
+    /**
+     * A phone that stood on the default before the default was drawn flat,
+     * or before its door was blue, takes both up, once.
+     */
+    static void catchUp(Context context) {
+        SharedPreferences kept = store(context);
+        if (kept.getInt("caught", 0) >= 1) {
+            return;
+        }
+        SharedPreferences.Editor edit = kept.edit().putInt("caught", 1);
+        if (onDefault(context)) {
+            edit.putBoolean("flat", true);
+            if (kept.getInt("door", Door.DEFAULT) == Door.DISC_LIGHT) {
+                edit.putInt("door", Door.DEFAULT);
+            }
+        }
+        edit.apply();
     }
 
     // ---------------------------------------------------------------- dock

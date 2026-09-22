@@ -537,6 +537,9 @@ parts
 # Choose the application
 choose_app	
 
+# Blue disc
+door_disc_blue	
+
 # Light disc
 door_disc_light	
 
