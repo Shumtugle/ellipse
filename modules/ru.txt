@@ -555,8 +555,8 @@ face_cookie	Печенье
 # Like the tile
 face_tile	Как плитка
 
-# Corners
-corners	Углы
+# Frame
+frame	Рамка
 
 # As everywhere
 ink_same	Как везде

@@ -67,8 +67,8 @@ final class Almanac extends View {
     private float veil;
     /** The shape of the round window: as the style has it, or as the owner asks. */
     private String face = AUTO;
-    /** The corners of the plate, as a power; nothing follows the tiles. */
-    private float corner;
+    /** How wide the frame about the windows is; below zero it follows the tiles' own rim. */
+    private float frame = -1f;
     /** A colour of the owner's own for the hands, the marks and the figures, as a hue; below zero, none. */
     private int hue = -1;
     private String big = DIAL;
@@ -165,7 +165,7 @@ final class Almanac extends View {
             veil = 0f;
         }
         face = part(options, "face", AUTO);
-        corner = number(options, "corner", 0f);
+        frame = number(options, "frame", -1f);
         hue = Math.round(number(options, "ink", -1f));
         big = part(options, "big", DIAL);
         String kept = part(options, "small", WEATHER);
@@ -266,7 +266,7 @@ final class Almanac extends View {
         }
         float inset = Round.px(4f);
         Path plate = Tile.curve(inset, inset, w - 2f * inset, h - 2f * inset,
-            corner > 0f ? corner : Math.max(6f, look.power * 1.6f));
+            Math.max(6f, look.power * 1.6f));
         // The default draws the clock the design system's way: a card of the
         // surface, the dial on a scalloped face, the windows each in a
         // container of its own colour, all flat.
@@ -344,7 +344,8 @@ final class Almanac extends View {
         // nothing beside it, stands in the middle; the long window takes the
         // upper part of what is left, the small windows the lower; either
         // takes all of it when the other is not there.
-        float pad = Math.max(Round.px(12f), look.width * h * 1.2f);
+        float pad = frame >= 0f ? Round.px(4f) + frame * Round.px(40f)
+            : Math.max(Round.px(12f), look.width * h * 1.2f);
         float gap = Round.px(10f);
         boolean round = !NONE.equals(big);
         boolean long_ = time || date;

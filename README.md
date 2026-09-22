@@ -42,7 +42,11 @@ thing's own hue: the card starts as the thing's outline and opens into
 itself. At its head, the name and what is done to the thing itself; under
 it, tiles two to a row. For an application, the shortcuts it offers into
 itself, marked in the card's own ink, and the screens inside it; a press
-opens one, a long press lifts it onto a screen. For a widget or the clock,
+opens one, a long press lifts it onto a screen. A widget or the clock lifted also wears a frame with a handle on each of
+its four sides: a handle drawn outwards takes another row or column of the
+grid, drawn inwards gives one back, and the thing is laid out again under
+the finger. A handle that cannot move, because the cells beyond it are
+taken or the grid ends there, does not move. For a widget or the clock,
 its width, its height, its row and its column, each between a minus and a
 plus, and a way to the middle of its row. The clock's card and the door's
 lead to their settings. A long press on bare ground
@@ -55,8 +59,8 @@ the flat way only where they have none of their own; of glass, a breath of
 smoke over the table with the light along its upper edge and its windows
 cut a little darker than itself; or flat, in the colours of the scheme
 whatever else stands. Its plate can also be let go by degrees, until
-nothing is left of it and the windows stand on the table alone; its corners
-are its own, from a soft box to a square; its round window is cut as a
+nothing is left of it and the windows stand on the table alone; the frame about its
+windows is as wide or as narrow as asked, from a hairline to a broad band; its round window is cut as a
 circle, a squircle, a scalloped face or the tile's own shape; and its
 hands, marks and figures can take a colour of the owner's choosing, red if
 red is wanted, rather than the one everything else is drawn in. Set to run

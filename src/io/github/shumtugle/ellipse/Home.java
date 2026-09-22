@@ -108,6 +108,8 @@ public final class Home extends Activity {
     private boolean docked;
     private Sheet dock;
     private int dockHigh;
+    /** The frame around a widget or the clock while its card is open. */
+    private Grip grip;
     /** Whether the card about a fall has been offered in this life of the screen. */
     private boolean told;
     /** The request that asks where the phone is, at the first start. */
@@ -683,7 +685,7 @@ public final class Home extends Activity {
             final String subject = Layout.CLOCK.equals(item.kind) ? "clock" : "drawer";
             offer.tool(Sketch.GEAR, Words.s("settings"), new Runnable() {
                 public void run() {
-                    stage.closeOffer();
+                    closeCard();
                     startActivity(new Intent(Home.this, Tune.class).putExtra(Tune.SUBJECT, subject));
                 }
             });
@@ -1383,6 +1385,7 @@ public final class Home extends Activity {
                 shift(item, 1, 0, place);
             }
         });
+        gripFor(item);
         final Offer.Count[] counts = new Offer.Count[2];
         counts[0] = offer.count(Words.s("width"), String.valueOf(item.w), new Runnable() {
             public void run() {
@@ -1490,7 +1493,7 @@ public final class Home extends Activity {
     private Stage.Carrier carrier(final Load load) {
         return new Stage.Carrier() {
             public void moved() {
-                stage.closeOffer();
+                closeCard();
                 if (stage.isOpen()) {
                     stage.close(true);
                 }
@@ -1515,6 +1518,68 @@ public final class Home extends Activity {
                 }
             }
         };
+    }
+
+    /** The card closed, and with it the frame around whatever it was about. */
+    private void closeCard() {
+        stage.closeOffer();
+        ungrip();
+    }
+
+    private void ungrip() {
+        if (grip != null) {
+            stage.removeView(grip);
+            grip = null;
+        }
+    }
+
+    /**
+     * The frame around a widget or the clock: its four handles take and
+     * give back rows and columns under the finger, and the thing is laid
+     * out again at once. What the card counts in numbers, this does by hand.
+     */
+    private void gripFor(final Layout.Item item) {
+        ungrip();
+        final int page = layout.screenOf(item);
+        if (page < 0) {
+            return;
+        }
+        grip = new Grip(this, new Grip.Hand() {
+            public boolean set(int x, int y, int w, int h) {
+                if (x < 0 || y < 0 || x + w > layout.columns || y + h > layout.rows
+                    || !layout.free(page, x, y, w, h, item)) {
+                    return false;
+                }
+                item.x = x;
+                item.y = y;
+                item.w = w;
+                item.h = h;
+                build();
+                return true;
+            }
+
+            public void done() {
+                layout.save(Home.this);
+            }
+
+            public void away() {
+                ungrip();
+            }
+        });
+        stage.addView(grip, new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        fitGrip(item);
+    }
+
+    /** The frame told where the grid lies and which of its cells the thing takes. */
+    private void fitGrip(Layout.Item item) {
+        if (grip == null) {
+            return;
+        }
+        float bottom = barBottom + dockHigh + (docked ? DOCK_GAP : 0);
+        float high = (stage.getHeight() - barTop - bottom) / (float) layout.rows;
+        grip.fit(Round.dp(4f), barTop, cellW, high, layout.columns, layout.rows,
+            item.x, item.y, item.w, item.h);
     }
 
     /** The picture a thing is carried as: its tile if it is one, else the view as it stands. */
@@ -1952,7 +2017,7 @@ public final class Home extends Activity {
             }
             closed = true;
         }
-        stage.closeOffer();
+        closeCard();
         if (stage.isOpen()) {
             stage.close(seen);
             if (!seen) {
@@ -1981,7 +2046,7 @@ public final class Home extends Activity {
         } else if (stage.isOpen()) {
             stage.close(true);
         } else if (stage.offering()) {
-            stage.closeOffer();
+            closeCard();
         } else if (!stage.carrying()) {
             openFresh();
         }

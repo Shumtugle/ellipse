@@ -1446,23 +1446,22 @@ public final class Tune extends Activity {
             });
         card.addView(cuts.view(), spaced(12));
 
-        card.addView(labelled(Words.s("corners"), null), spaced(20));
-        float bent = 0f;
+        card.addView(labelled(Words.s("frame"), null), spaced(20));
+        float rim = 0.25f;
         try {
-            String said = item.options.get("corner");
-            bent = said == null ? 0f : Float.parseFloat(said);
+            String said = item.options.get("frame");
+            rim = said == null ? 0.25f : Math.max(0f, Math.min(1f, Float.parseFloat(said)));
         } catch (NumberFormatException none) {
-            bent = 0f;
+            rim = 0.25f;
         }
-        card.addView(new Dial(this, bent <= 0f ? 1f : Math.max(0f, Math.min(1f, (bent - 2f) / 14f)),
-            new Dial.Moved() {
-                public void moved(float value, boolean done) {
-                    item.options.put("corner", String.valueOf(Math.round(2f + value * 14f)));
-                    if (done) {
-                        keepClocks();
-                    }
+        card.addView(new Dial(this, rim, new Dial.Moved() {
+            public void moved(float value, boolean done) {
+                item.options.put("frame", String.valueOf(Math.round(value * 100f) / 100f));
+                if (done) {
+                    keepClocks();
                 }
-            }).large(), wideRow());
+            }
+        }).large(), wideRow());
 
         card.addView(labelled(Words.s("colour"), null), spaced(20));
         final String[] inks = {Words.s("ink_same"), Words.s("ink_own")};

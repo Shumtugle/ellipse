@@ -555,8 +555,8 @@ face_cookie
 # Like the tile
 face_tile	
 
-# Corners
-corners	
+# Frame
+frame	
 
 # As everywhere
 ink_same	
