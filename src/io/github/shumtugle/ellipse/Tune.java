@@ -1259,15 +1259,19 @@ public final class Tune extends Activity {
         card.addView(order.view(), spaced(12));
 
         card.addView(words(Letter.TITLE_S, Words.s("put_door"), Tone.ON_SURFACE_VARIANT), spaced(24));
-        String[] faces = new String[Door.NAMES.length];
-        Sketch[] fronts = new Sketch[Door.NAMES.length];
+        String[] faces = new String[Door.ORDER.length];
+        Sketch[] fronts = new Sketch[Door.ORDER.length];
+        int worn = 0;
         for (int i = 0; i < faces.length; i++) {
-            faces[i] = Words.s(Door.NAMES[i]);
-            fronts[i] = new Sketch(this, Sketch.DOOR).door(i);
+            faces[i] = Words.s(Door.name(Door.ORDER[i]));
+            fronts[i] = new Sketch(this, Sketch.DOOR).door(Door.ORDER[i]);
+            if (Door.ORDER[i] == Keep.door(this)) {
+                worn = i;
+            }
         }
-        Cards doors = new Cards(faces, fronts, Keep.door(this), 112, 3, new Picked() {
+        Cards doors = new Cards(faces, fronts, worn, 112, 3, new Picked() {
             public void picked(int which) {
-                Keep.saveDoor(Tune.this, which);
+                Keep.saveDoor(Tune.this, Door.ORDER[which]);
             }
         });
         card.addView(doors.view(), spaced(12));

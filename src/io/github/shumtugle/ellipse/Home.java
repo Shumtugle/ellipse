@@ -457,7 +457,8 @@ public final class Home extends Activity {
             view = widget(item);
         } else if (Layout.DOOR.equals(item.kind)) {
             int face = Keep.door(this);
-            view = Things.tile(this, icons, null, "door:" + face, tile, Door.face(this, face, Cast.metal(look.rim)));
+            view = Things.tile(this, icons, null, "door:" + face, tile,
+                Door.face(face, Cast.metal(look.rim), look.window == Tile.Look.RAW));
             view.setContentDescription(Words.s("drawer"));
             view.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {

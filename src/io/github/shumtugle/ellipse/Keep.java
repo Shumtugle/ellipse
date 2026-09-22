@@ -246,7 +246,7 @@ public final class Keep {
         o.put("endless", false);
         o.put("order", BY_NAME);
         o.put("immersion", BARS);
-        o.put("door", Door.OWN);
+        o.put("door", Door.DEFAULT);
         o.put("dock", true);
         return o;
     }
@@ -312,9 +312,10 @@ public final class Keep {
 
     // ---------------------------------------------------------------- door
 
-    /** Which face the door to the drawer wears: this home screen's own sign, or a mark behind glass. */
+    /** Which face the door to the drawer wears: a whole icon of its own, or a mark behind glass. */
     static int door(Context context) {
-        return store(context).getInt("door", Door.OWN);
+        int face = store(context).getInt("door", Door.DEFAULT);
+        return Door.known(face) ? face : Door.DEFAULT;
     }
 
     static void saveDoor(Context context, int face) {

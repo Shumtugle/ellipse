@@ -537,8 +537,17 @@ parts	Части
 # Choose the application
 choose_app	Выбрать приложение
 
-# Its own sign
-door_own	Свой знак
+# Light disc
+door_disc_light	Светлый диск
+
+# Dark disc
+door_disc_dark	Тёмный диск
+
+# Light squircle
+door_squircle	Светлый сквиркл
+
+# Nine colours
+door_colours	Девять красок
 
 # Nine dots
 door_dots	Девять точек

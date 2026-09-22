@@ -537,8 +537,17 @@ parts
 # Choose the application
 choose_app	
 
-# Its own sign
-door_own	
+# Light disc
+door_disc_light	
+
+# Dark disc
+door_disc_dark	
+
+# Light squircle
+door_squircle	
+
+# Nine colours
+door_colours	
 
 # Nine dots
 door_dots	

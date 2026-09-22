@@ -74,7 +74,6 @@ final class Sketch extends View {
     private int rim;
     private int bars;
     private int face;
-    private android.graphics.drawable.Drawable own;
     private int ink = 0xFFFFFFFF;
     private int soft = 0x66FFFFFF;
 
@@ -127,15 +126,8 @@ final class Sketch extends View {
         switch (kind) {
             case DOOR: {
                 float side = Math.min(w, h);
-                if (face == Door.OWN) {
-                    if (own == null) {
-                        own = getContext().getApplicationInfo().loadIcon(getContext().getPackageManager());
-                    }
-                    int draw = Math.round(side * 0.92f);
-                    int left = Math.round((w - draw) / 2f);
-                    int top = Math.round((h - draw) / 2f);
-                    own.setBounds(left, top, left + draw, top + draw);
-                    own.draw(canvas);
+                if (Door.whole(face)) {
+                    Door.whole(canvas, paint, face, w / 2f, h / 2f, side);
                 } else if (face == Door.GLASS) {
                     float wide = side * 0.9f;
                     float tall = wide / Tile.Look.MEASURED.ratio;

@@ -113,9 +113,12 @@ and, on Android 12 and later, blur; going back folds the screen into the
 tile again. Tile, screens, clock, drawer, colour, weather, files, language.
 
 The clock's circle, its small window and its parts are chosen in the
-settings, and so is the face of the door to the drawer: the home screen's
-own sign, or a mark behind the glass of its window, nine dots, four tiles,
-the ellipse, an arch, a rise, a star, a keyhole, or the bare glass alone.
+settings, and so is the face of the door to the drawer: a whole icon of
+the kind such a door has long worn, a light disc or a dark one with six
+dots, a light squircle, or a pale plate with nine dots round the circle of
+hues, standing as it is with no mask and behind glass in a window; or a
+mark behind the glass of its window, nine dots, four tiles, the ellipse,
+an arch, a rise, a star, a keyhole, or the bare glass alone.
 The card of the clock or of the door on a screen opens their subject
 straight away, and going back from it goes back to the screen.
 
