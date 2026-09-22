@@ -92,6 +92,11 @@ buttons do the same, less.
 **Immersion.** The home screen keeps both of the system's bars, or puts
 away the top one, the bottom one, or both.
 
+With no mask on the tiles their shape is the system's own, so the settings
+say so and no shape of ours stands chosen; touching a shape, a dial or a
+rim puts the mask back on and the tile takes its own shape under the
+finger.
+
 **The settings.** A room where the tiles are kept. It is lit from above
 and goes dark towards the floor; at its head four of the owner's own tiles
 stand on cloth in a case under glass, with the name of their look on a

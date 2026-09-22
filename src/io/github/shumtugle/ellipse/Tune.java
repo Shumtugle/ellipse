@@ -138,6 +138,7 @@ public final class Tune extends Activity {
     private Showcase showcase;
     private Showcase pageCase;
     private Cards shapes;
+    private Cards windows;
     private Dial round;
     private Dial wide;
     private Dial close;
@@ -494,7 +495,9 @@ public final class Tune extends Activity {
                     "rim_black", "rim_white"};
                 String name = shape >= 0 ? shapeNames()[shape] : Words.s("tile");
                 if (look.window == Tile.Look.RAW) {
-                    return name + "  \u00b7  " + Words.s("window_raw");
+                    // No mask: the shape is the system's own, and nothing
+                    // said here about ours is on the screen to be seen.
+                    return Words.s("window_raw");
                 }
                 return name + "  \u00b7  " + Words.s(rims[Math.max(0, Math.min(rims.length - 1, look.rim))])
                     + (look.window == Tile.Look.MEDALLION ? "  \u00b7  " + Words.s("window_round") : "");
@@ -1045,7 +1048,9 @@ public final class Tune extends Activity {
         }
         int shape = shapeOf(look);
         String name = shape >= 0 ? shapeNames()[shape] : Words.s("tile");
-        String text = name + "  \u00b7  " + number(look.ratio, 2) + "  \u00b7  \u00d7" + number(look.zoom, 2);
+        String text = look.window == Tile.Look.RAW
+            ? Words.s("window_raw") + "  \u00b7  \u00d7" + number(look.zoom, 2)
+            : name + "  \u00b7  " + number(look.ratio, 2) + "  \u00b7  \u00d7" + number(look.zoom, 2);
         for (Showcase shown : cases) {
             for (int i = 0; i < shown.tiles.length; i++) {
                 shown.tiles[i].setImageBitmap(stood[i]);
@@ -1064,6 +1069,24 @@ public final class Tune extends Activity {
         for (Cast.Seal seal : seals) {
             seal.cast(look);
         }
+    }
+
+    /**
+     * A mask put back on. With none, the tile wears the shape the system
+     * gives each icon, and nothing chosen here about its own shape would be
+     * seen; so touching a shape, a dial or a rim puts the mask on and the
+     * tile takes its own shape again under the finger.
+     */
+    private void masked() {
+        if (look.window != Tile.Look.RAW) {
+            return;
+        }
+        look = look.window(Tile.Look.FOLLOWS);
+        if (windows != null) {
+            windows.select(Tile.Look.FOLLOWS);
+        }
+        recast();
+        restate();
     }
 
     /** The width of a tile in the case: two to a row, with air around them. */
@@ -1124,8 +1147,10 @@ public final class Tune extends Activity {
         for (int i = 0; i < SHAPES.length; i++) {
             silhouettes[i] = new Sketch(this, Sketch.SHAPE).shape(SHAPES[i][0], SHAPES[i][1]);
         }
-        shapes = new Cards(shapeNames(), silhouettes, shapeOf(look), 112, new Picked() {
+        shapes = new Cards(shapeNames(), silhouettes,
+            look.window == Tile.Look.RAW ? -1 : shapeOf(look), 112, new Picked() {
             public void picked(int which) {
+                masked();
                 look = look.with(SHAPES[which][0], SHAPES[which][1]);
                 round.value(roundOf(look.power));
                 wide.value(wideOf(look.ratio));
@@ -1138,6 +1163,7 @@ public final class Tune extends Activity {
         card.addView(labelled(Words.s("roundness"), roundValue), spaced(24));
         round = new Dial(this, roundOf(look.power), new Dial.Moved() {
             public void moved(float value, boolean done) {
+                masked();
                 look = look.with(powerOf(value), look.ratio);
                 shapes.select(shapeOf(look));
                 preview();
@@ -1152,6 +1178,7 @@ public final class Tune extends Activity {
         card.addView(labelled(Words.s("proportion"), wideValue), spaced(12));
         wide = new Dial(this, wideOf(look.ratio), new Dial.Moved() {
             public void moved(float value, boolean done) {
+                masked();
                 look = look.with(look.power, ratioOf(value));
                 shapes.select(shapeOf(look));
                 preview();
@@ -1191,6 +1218,7 @@ public final class Tune extends Activity {
         }
         Cards rims = new Cards(rimNames, discs, at, 104, 4, new Picked() {
             public void picked(int which) {
+                masked();
                 look = look.rim(order[which]);
                 keepTile();
                 recast();
@@ -1203,6 +1231,7 @@ public final class Tune extends Activity {
         thick = new Dial(this, (look.width - Tile.Look.THINNEST)
             / (Tile.Look.THICKEST - Tile.Look.THINNEST), new Dial.Moved() {
                 public void moved(float value, boolean done) {
+                    masked();
                     look = look.width(Tile.Look.THINNEST + value * (Tile.Look.THICKEST - Tile.Look.THINNEST));
                     preview();
                     if (done) {
@@ -1213,15 +1242,21 @@ public final class Tune extends Activity {
         card.addView(thick, wideRow());
 
         card.addView(words(Letter.TITLE_S, Words.s("window"), Tone.ON_SURFACE_VARIANT), spaced(20));
-        Cards windows = new Cards(new String[] {Words.s("window_follows"), Words.s("window_round"),
+        windows = new Cards(new String[] {Words.s("window_follows"), Words.s("window_round"),
                 Words.s("window_raw")},
             new Sketch[] {new Sketch(this, Sketch.WINDOW_FOLLOWS), new Sketch(this, Sketch.WINDOW_ROUND),
                 new Sketch(this, Sketch.WINDOW_RAW)},
             look.window, 120, new Picked() {
                 public void picked(int which) {
                     look = look.window(which);
+                    if (which == Tile.Look.RAW) {
+                        shapes.select(-1);
+                    } else {
+                        shapes.select(shapeOf(look));
+                    }
                     keepTile();
                     recast();
+                    restate();
                 }
             });
         card.addView(windows.view(), spaced(12));
