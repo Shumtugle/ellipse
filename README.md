@@ -55,7 +55,13 @@ the flat way only where they have none of their own; of glass, a breath of
 smoke over the table with the light along its upper edge and its windows
 cut a little darker than itself; or flat, in the colours of the scheme
 whatever else stands. Its plate can also be let go by degrees, until
-nothing is left of it and the windows stand on the table alone. Like the tiles, it is cut from the same plate as they are,
+nothing is left of it and the windows stand on the table alone; its corners
+are its own, from a soft box to a square; its round window is cut as a
+circle, a squircle, a scalloped face or the tile's own shape; and its
+hands, marks and figures can take a colour of the owner's choosing, red if
+red is wanted, rather than the one everything else is drawn in. Set to run
+to the edge, in the settings of the screens, a clock or a widget reaches
+the glass itself where it stands against the grid's end. Like the tiles, it is cut from the same plate as they are,
 in the same material, with the same glaze. A round window with a dial, or
 the weather large; a long window with the hour and the date; small windows
 with the weather or an application of the owner's choosing, the phone's

@@ -55,10 +55,22 @@ final class Almanac extends View {
     static final String GLASS = "glass";
     static final String FLAT = "flat";
 
+    /** The shapes a round window can be cut in. */
+    static final String AUTO = "auto";
+    static final String ROUND = "round";
+    static final String SQUIRCLE = "squircle";
+    static final String COOKIE = "cookie";
+
     private Tile.Look look;
     private String style = LIKE_TILE;
     /** How far the plate is let go: nothing at all at one, and only the windows are left standing. */
     private float veil;
+    /** The shape of the round window: as the style has it, or as the owner asks. */
+    private String face = AUTO;
+    /** The corners of the plate, as a power; nothing follows the tiles. */
+    private float corner;
+    /** A colour of the owner's own for the hands, the marks and the figures, as a hue; below zero, none. */
+    private int hue = -1;
     private String big = DIAL;
     private String small = WEATHER;
     private String app;
@@ -152,6 +164,9 @@ final class Almanac extends View {
         } catch (NumberFormatException none) {
             veil = 0f;
         }
+        face = part(options, "face", AUTO);
+        corner = number(options, "corner", 0f);
+        hue = Math.round(number(options, "ink", -1f));
         big = part(options, "big", DIAL);
         String kept = part(options, "small", WEATHER);
         app = options.get("app");
@@ -168,6 +183,16 @@ final class Almanac extends View {
         this.chosen = chosen;
         this.hand = hand;
         invalidate();
+    }
+
+    /** A number written down among a thing's options, or what stands instead of one. */
+    private static float number(java.util.Map<String, String> options, String key, float otherwise) {
+        try {
+            String said = options.get(key);
+            return said == null || said.length() == 0 ? otherwise : Float.parseFloat(said);
+        } catch (NumberFormatException none) {
+            return otherwise;
+        }
     }
 
     private static String part(java.util.Map<String, String> options, String key, String otherwise) {
@@ -240,7 +265,8 @@ final class Almanac extends View {
             return;
         }
         float inset = Round.px(4f);
-        Path plate = Tile.curve(inset, inset, w - 2f * inset, h - 2f * inset, Math.max(6f, look.power * 1.6f));
+        Path plate = Tile.curve(inset, inset, w - 2f * inset, h - 2f * inset,
+            corner > 0f ? corner : Math.max(6f, look.power * 1.6f));
         // The default draws the clock the design system's way: a card of the
         // surface, the dial on a scalloped face, the windows each in a
         // container of its own colour, all flat.
@@ -295,15 +321,22 @@ final class Almanac extends View {
         if (held >= 0) {
             canvas.restoreToCount(held);
         }
-        int accent = flat ? Tone.of(Tone.PRIMARY) : glass ? 0xFFF4ECDD : Tile.accentOf(look.rim);
-        int ink = 0xFFF4ECDD;
-        int quiet = 0xB3F4ECDD;
-        int dialInk = flat ? Tone.of(Tone.ON_PRIMARY_CONTAINER) : ink;
-        int dialQuiet = flat ? (dialInk & 0x00FFFFFF) | 0x99000000 : quiet;
-        int timeInk = flat ? Tone.of(Tone.ON_SECONDARY_CONTAINER) : ink;
-        int timeQuiet = flat ? (timeInk & 0x00FFFFFF) | 0xB3000000 : quiet;
-        final int pillInk = flat ? Tone.of(Tone.ON_TERTIARY_CONTAINER) : ink;
-        final int pillMark = flat ? pillInk : glass ? ink : Tile.accentOf(look.rim);
+        // A colour of the owner's own, if one is asked for, stands in place
+        // of every ink: the hands, the marks, the figures and what is drawn
+        // beside them all take it, and what is second takes it quieter.
+        boolean own = hue >= 0;
+        int tint = own ? Tone.at(90f, 40.0, hue) : 0;
+        int softer = own ? (tint & 0x00FFFFFF) | 0xB3000000 : 0;
+        int accent = own ? Tone.at(74f, 62.0, hue)
+            : flat ? Tone.of(Tone.PRIMARY) : glass ? 0xFFF4ECDD : Tile.accentOf(look.rim);
+        int ink = own ? tint : 0xFFF4ECDD;
+        int quiet = own ? softer : 0xB3F4ECDD;
+        int dialInk = own ? tint : flat ? Tone.of(Tone.ON_PRIMARY_CONTAINER) : ink;
+        int dialQuiet = own ? softer : flat ? (dialInk & 0x00FFFFFF) | 0x99000000 : quiet;
+        int timeInk = own ? tint : flat ? Tone.of(Tone.ON_SECONDARY_CONTAINER) : ink;
+        int timeQuiet = own ? softer : flat ? (timeInk & 0x00FFFFFF) | 0xB3000000 : quiet;
+        final int pillInk = own ? tint : flat ? Tone.of(Tone.ON_TERTIARY_CONTAINER) : ink;
+        final int pillMark = own ? tint : flat ? pillInk : glass ? ink : Tile.accentOf(look.rim);
         edge.setStrokeWidth(Math.max(1f, w * 0.0025f));
 
         // What is shown decides how the room is shared. The round window
@@ -465,8 +498,9 @@ final class Almanac extends View {
             glass.setColor(0x59000000);
             edge.setColor(0x40FFFFFF);
             if (round) {
-                canvas.drawOval(box, glass);
-                canvas.drawOval(box, edge);
+                Path cut = window(box, false);
+                canvas.drawPath(cut, glass);
+                canvas.drawPath(cut, edge);
             } else {
                 float r = Math.min(box.height() / 2f, Round.px(24f));
                 canvas.drawRoundRect(box, r, r, glass);
@@ -479,7 +513,7 @@ final class Almanac extends View {
             glass.setShader(null);
             glass.setColor(Tone.of(role));
             if (round) {
-                canvas.drawPath(Cast.cookie(box.centerX(), box.centerY(), box.width() / 2f, 12, 0.07f), glass);
+                canvas.drawPath(window(box, true), glass);
             } else {
                 float r = Math.min(box.height() / 2f, Round.px(24f));
                 canvas.drawRoundRect(box, r, r, glass);
@@ -489,13 +523,36 @@ final class Almanac extends View {
         glass.setShader(new RadialGradient(box.centerX(), box.top + box.height() * 0.35f,
             Math.max(box.width(), box.height()) * 0.8f, 0xE62A2520, 0xF20C0B0A, Shader.TileMode.CLAMP));
         if (round) {
-            canvas.drawOval(box, glass);
-            canvas.drawOval(box, edge);
+            Path cut = window(box, false);
+            canvas.drawPath(cut, glass);
+            canvas.drawPath(cut, edge);
         } else {
             float r = Math.min(box.height() / 2f, Round.px(24f));
             canvas.drawRoundRect(box, r, r, glass);
             canvas.drawRoundRect(box, r, r, edge);
         }
+    }
+
+    /**
+     * The shape of the round window: a circle, a squircle, a scalloped
+     * face, or the tile's own shape; asked for nothing, a scalloped face
+     * where the clock is flat and a circle everywhere else.
+     */
+    private Path window(RectF box, boolean flat) {
+        String cut = AUTO.equals(face) ? (flat ? COOKIE : ROUND) : face;
+        float d = Math.min(box.width(), box.height());
+        if (COOKIE.equals(cut)) {
+            return Cast.cookie(box.centerX(), box.centerY(), d / 2f, 12, 0.07f);
+        }
+        if (SQUIRCLE.equals(cut)) {
+            return Tile.curve(box.centerX() - d / 2f, box.centerY() - d / 2f, d, d, 4f);
+        }
+        if (LIKE_TILE.equals(cut)) {
+            return Tile.curve(box.centerX() - d / 2f, box.centerY() - d / 2f, d, d, look.power);
+        }
+        Path oval = new Path();
+        oval.addOval(box, Path.Direction.CW);
+        return oval;
     }
 
     /** Something drawn in a small window beside its words. */

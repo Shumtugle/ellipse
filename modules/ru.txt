@@ -537,6 +537,33 @@ parts	Части
 # Choose the application
 choose_app	Выбрать приложение
 
+# Window
+face	Форма окна
+
+# As the style
+face_auto	Как стиль
+
+# Round
+face_round	Круг
+
+# Squircle
+face_squircle	Сквиркл
+
+# Scalloped
+face_cookie	Печенье
+
+# Like the tile
+face_tile	Как плитка
+
+# Corners
+corners	Углы
+
+# As everywhere
+ink_same	Как везде
+
+# Its own
+ink_own	Свой
+
 # Let go
 veil	Прозрачность
 

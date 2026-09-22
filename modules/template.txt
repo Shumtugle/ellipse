@@ -537,6 +537,33 @@ parts
 # Choose the application
 choose_app	
 
+# Window
+face	
+
+# As the style
+face_auto	
+
+# Round
+face_round	
+
+# Squircle
+face_squircle	
+
+# Scalloped
+face_cookie	
+
+# Like the tile
+face_tile	
+
+# Corners
+corners	
+
+# As everywhere
+ink_same	
+
+# Its own
+ink_own	
+
 # Let go
 veil	
 

@@ -65,6 +65,7 @@ final class Sketch extends View {
     static final int SUN = 41;
     static final int MOON = 42;
     static final int AUTO = 43;
+    static final int COOKIE = 44;
 
     private Paint metal;
     private Paint shine;
@@ -127,6 +128,11 @@ final class Sketch extends View {
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);
         switch (kind) {
+            case COOKIE: {
+                stroke(ink, line);
+                canvas.drawPath(Cast.cookie(w / 2f, h / 2f, Math.min(w, h) * 0.34f, 12, 0.07f), paint);
+                break;
+            }
             case SUN: {
                 float r = Math.min(w, h) * 0.18f;
                 stroke(ink, line);
