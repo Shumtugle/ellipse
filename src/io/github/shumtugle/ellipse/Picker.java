@@ -47,8 +47,7 @@ final class Picker extends FrameLayout {
 
     /** Three across and four down, as a page of the drawer. */
     private static final int COLUMNS = 3;
-    private static final int ROWS = 3;
-    private static final float GRID_HIGH = 430f;
+    private static final int ROWS = 4;
 
     private final Hand hand;
     private final LinearLayout sheet;
@@ -99,8 +98,9 @@ final class Picker extends FrameLayout {
         sheet.addView(field, spaced(4));
 
         spread = new Spread(context);
-        sheet.addView(spread, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-            Round.dp(GRID_HIGH)));
+        // The sheet is drawn up the whole way, and the leaves take whatever
+        // is left under its head: the names then stand whole.
+        sheet.addView(spread, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
 
         final PackageManager pm = context.getPackageManager();
         all = new ArrayList<AppWidgetProviderInfo>(offered);
@@ -125,9 +125,9 @@ final class Picker extends FrameLayout {
             }
         });
 
-        LayoutParams place = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT,
+        LayoutParams place = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT,
             Gravity.BOTTOM);
-        place.topMargin = top + Round.dp(24f);
+        place.topMargin = top + Round.dp(12f);
         sheet.setPadding(Round.dp(16f), Round.dp(12f), Round.dp(16f), bottom + Round.dp(16f));
         addView(sheet, place);
     }
@@ -254,14 +254,12 @@ final class Picker extends FrameLayout {
 
         final ImageView picture = new ImageView(getContext());
         picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        picture.setAdjustViewBounds(true);
-        picture.setMaxHeight(Round.dp(76f));
         GradientDrawable ground = Round.box(Tone.of(Tone.SURFACE_HIGHEST), 16f);
         picture.setBackground(ground);
         picture.setPadding(Round.dp(8f), Round.dp(8f), Round.dp(8f), Round.dp(8f));
-        picture.setMinimumHeight(Round.dp(68f));
+        // The picture takes whatever the cell has left over from the names.
         made.addView(picture, new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         final Context context = getContext();
         final int dpi = App.dpi(context);
         painter.execute(new Runnable() {
