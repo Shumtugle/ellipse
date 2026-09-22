@@ -158,9 +158,9 @@ final class Forecast extends FrameLayout {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final int ink = 0xFFF4ECDD;
-        private final int quiet = 0xB3F4ECDD;
-        private final int faint = 0x66F4ECDD;
+        private final int ink;
+        private final int quiet;
+        private final int faint;
         private final int accent;
         private Sky.Whole w = new Sky.Whole();
         private float arrived = 1f;
@@ -193,7 +193,13 @@ final class Forecast extends FrameLayout {
             this.look = look;
             this.top = top;
             this.bottom = bottom;
-            accent = Tile.accentOf(look.rim);
+            // Drawn flat, the weather takes the scheme's own colours: plain
+            // containers, ink of the surface, the seed's colour for what asks
+            // to be read first.
+            ink = Cast.flat ? Tone.of(Tone.ON_SURFACE) : 0xFFF4ECDD;
+            quiet = Cast.flat ? Tone.of(Tone.ON_SURFACE_VARIANT) : 0xB3F4ECDD;
+            faint = Cast.flat ? (Tone.of(Tone.ON_SURFACE_VARIANT) & 0x00FFFFFF) | 0x80000000 : 0x66F4ECDD;
+            accent = Cast.flat ? Tone.of(Tone.PRIMARY) : Tile.accentOf(look.rim);
             edge.setStyle(Paint.Style.STROKE);
             edge.setColor(0x66000000);
             edge.setStrokeWidth(Math.max(1f, Round.px(0.8f)));
@@ -547,7 +553,11 @@ final class Forecast extends FrameLayout {
             Path shape = new Path();
             float r = Round.px(30f);
             shape.addRoundRect(box, r, r, Path.Direction.CW);
-            if (look.rim != Tile.Look.BARE) {
+            if (Cast.flat) {
+                paint.setShader(null);
+                paint.setColor(Tone.of(Tone.SURFACE_CONTAINER));
+                canvas.drawPath(shape, paint);
+            } else if (look.rim != Tile.Look.BARE) {
                 canvas.save();
                 canvas.translate(box.left, box.top);
                 Path local = new Path();
@@ -562,7 +572,7 @@ final class Forecast extends FrameLayout {
         }
 
         private void glaze(Canvas canvas, RectF box) {
-            if (look.gloss && look.rim != Tile.Look.BARE) {
+            if (!Cast.flat && look.gloss && look.rim != Tile.Look.BARE) {
                 Path shape = new Path();
                 float r = Round.px(30f);
                 shape.addRoundRect(box, r, r, Path.Direction.CW);
@@ -572,6 +582,19 @@ final class Forecast extends FrameLayout {
 
         /** A pane of dark glass, with the thin line of its cut. */
         private void pane(Canvas canvas, RectF box, boolean round, float alpha) {
+            if (Cast.flat) {
+                // A container of the surface, its corners full: the shape
+                // scale's own, and the same by day as by night.
+                paint.setShader(null);
+                paint.setColor(withAlpha(Tone.of(round ? Tone.SURFACE_HIGH : Tone.SURFACE_HIGHEST), alpha));
+                if (round) {
+                    canvas.drawOval(box, paint);
+                } else {
+                    float full = Math.min(box.height() / 2f, Round.px(28f));
+                    canvas.drawRoundRect(box, full, full, paint);
+                }
+                return;
+            }
             paint.setShader(new RadialGradient(box.centerX(), box.top + box.height() * 0.35f,
                 Math.max(box.width(), box.height()) * 0.8f, withAlpha(0xE62A2520, alpha),
                 withAlpha(0xF20C0B0A, alpha), Shader.TileMode.CLAMP));

@@ -276,19 +276,20 @@ final class Door {
                     paint.setShader(new RadialGradient(x, y - dot * 0.4f, dot * 1.4f, 0xFFFFFFFF, 0xFFDCE0E5,
                         Shader.TileMode.CLAMP));
                 } else {
-                    // Sunk into the plate: shaded at the top, where the lip hides the light,
-                    // and caught by it along the lower edge.
-                    paint.setShader(new LinearGradient(0f, y - dot, 0f, y + dot, 0xFF83868C, 0xFFC4C7CB,
+                    // Sunk into the plate: dark at the top, where the lip
+                    // hides the light, and caught by it along the lower edge.
+                    // Shallower than this and the holes are not there at all.
+                    paint.setShader(new LinearGradient(0f, y - dot, 0f, y + dot, 0xFF5E6166, 0xFFA7ABB1,
                         Shader.TileMode.CLAMP));
                 }
                 canvas.drawCircle(x, y, dot, paint);
                 paint.clearShadowLayer();
                 if (!dark) {
                     paint.setStyle(Paint.Style.STROKE);
-                    paint.setStrokeWidth(Math.max(1f, dot * 0.18f));
-                    paint.setShader(new LinearGradient(0f, y - dot, 0f, y + dot, 0x00FFFFFF, 0xE6FFFFFF,
-                        Shader.TileMode.CLAMP));
-                    canvas.drawCircle(x, y, dot, paint);
+                    paint.setStrokeWidth(Math.max(1f, dot * 0.22f));
+                    paint.setShader(new LinearGradient(0f, y - dot * 1.1f, 0f, y + dot * 1.1f, 0x00FFFFFF,
+                        0xFFFFFFFF, Shader.TileMode.CLAMP));
+                    canvas.drawCircle(x, y, dot * 1.02f, paint);
                     paint.setStyle(Paint.Style.FILL);
                 }
             }

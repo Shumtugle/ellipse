@@ -61,6 +61,11 @@ as the leaf of a calendar; the rest share the room.
 roughly, with the owner's leave; a phone that has gone further than a
 day's walk asks again at once. It is asked for when the home screen is
 looked at and what is known is half an hour old, never in the background.
+Drawn the default's way, the weather is flat as well: plates of the
+surface, its pills plain containers with the corners of the shape scale,
+its ink the scheme's own and the seed's colour for whatever asks to be
+read first.
+
 A press on the weather on the clock opens it whole, grown out of the pane
 that was pressed: this moment, with the next two hours in quarters; wind,
 humidity, pressure, the sun, the air, pollen, daylight and the magnetic
