@@ -537,6 +537,18 @@ parts	Части
 # Choose the application
 choose_app	Выбрать приложение
 
+# Made of
+style	Из чего
+
+# Like the tiles
+style_tile	Как плитка
+
+# Glass
+style_glass	Стекло
+
+# Flat
+style_flat	Плоский
+
 # Something broke
 fault	Сбой
 

@@ -92,7 +92,9 @@ final class Tile {
 
         Look(float power, float ratio, int rim, float zoom, float width, int window, boolean gloss) {
             this.power = Math.max(2f, power);
-            this.ratio = Math.max(1f, ratio);
+            // A tile may stand taller than it is wide as well as wider than
+            // it is tall; below a half or above two it is no longer a tile.
+            this.ratio = Math.max(0.5f, Math.min(2f, ratio));
             this.rim = rim;
             this.zoom = Math.max(1f, Math.min(CLOSEST, zoom));
             this.width = Math.max(THINNEST, Math.min(THICKEST, width));

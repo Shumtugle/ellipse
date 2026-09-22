@@ -97,6 +97,8 @@ public final class Tune extends Activity {
     private static final float MOST = 24f;
     /** The proportion dial runs from square to half as wide again as tall. */
     private static final float WIDEST = 1.5f;
+    /** A tile can stand taller than it is wide: the proportion runs from this to the widest. */
+    private static final float TALLEST = 0.7f;
 
     private static final int COLUMNS_LEAST = 4;
     private static final int COLUMNS_MOST = 7;
@@ -1289,11 +1291,11 @@ public final class Tune extends Activity {
     }
 
     private static float wideOf(float ratio) {
-        return (ratio - 1f) / (WIDEST - 1f);
+        return (ratio - TALLEST) / (WIDEST - TALLEST);
     }
 
     private static float ratioOf(float value) {
-        return 1f + value * (WIDEST - 1f);
+        return TALLEST + value * (WIDEST - TALLEST);
     }
 
     private static float zoomOf(float zoom) {
@@ -1388,7 +1390,23 @@ public final class Tune extends Activity {
             Letter.serif(where);
             card.addView(where, spaced(first ? 16 : 36));
         }
-        card.addView(words(Letter.TITLE_S, Words.s("circle"), Tone.ON_SURFACE_VARIANT), spaced(named ? 12 : 16));
+        card.addView(words(Letter.TITLE_S, Words.s("style"), Tone.ON_SURFACE_VARIANT), spaced(named ? 12 : 16));
+        final String[] styles = {Almanac.LIKE_TILE, Almanac.GLASS, Almanac.FLAT};
+        String worn = item.options.get("style");
+        int dressed = Almanac.GLASS.equals(worn) ? 1 : Almanac.FLAT.equals(worn) ? 2 : 0;
+        Cards made = new Cards(new String[] {Words.s("style_tile"), Words.s("style_glass"),
+                Words.s("style_flat")},
+            new Sketch[] {new Sketch(this, Sketch.SHAPE).shape(Tile.Look.MEASURED.power, Tile.Look.MEASURED.ratio),
+                new Sketch(this, Sketch.WINDOW_ROUND), new Sketch(this, Sketch.WINDOW_RAW)},
+            dressed, 112, new Picked() {
+                public void picked(int which) {
+                    item.options.put("style", styles[which]);
+                    keepClocks();
+                }
+            });
+        card.addView(made.view(), spaced(12));
+
+        card.addView(words(Letter.TITLE_S, Words.s("circle"), Tone.ON_SURFACE_VARIANT), spaced(20));
         final String[] bigs = {Almanac.DIAL, Almanac.WEATHER, Almanac.NONE};
         Cards big = new Cards(new String[] {Words.s("state_dial"), Words.s("weather"), Words.s("state_none")},
             new Sketch[] {new Sketch(this, Sketch.CLOCK), new Sketch(this, Sketch.WEATHER),

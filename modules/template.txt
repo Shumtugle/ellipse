@@ -537,6 +537,18 @@ parts
 # Choose the application
 choose_app	
 
+# Made of
+style	
+
+# Like the tiles
+style_tile	
+
+# Glass
+style_glass	
+
+# Flat
+style_flat	
+
 # Something broke
 fault	
 

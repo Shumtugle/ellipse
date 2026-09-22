@@ -50,7 +50,13 @@ final class Almanac extends View {
     static final String APP = "app";
     static final String NONE = "none";
 
+    /** How the clock is made: like the tiles, out of glass, or flat as the design system has it. */
+    static final String LIKE_TILE = "tile";
+    static final String GLASS = "glass";
+    static final String FLAT = "flat";
+
     private Tile.Look look;
+    private String style = LIKE_TILE;
     private String big = DIAL;
     private String small = WEATHER;
     private String app;
@@ -136,6 +142,7 @@ final class Almanac extends View {
      */
     void dress(Tile.Look look, java.util.Map<String, String> options, Bitmap chosen, Hand hand) {
         this.look = look;
+        style = part(options, "style", LIKE_TILE);
         big = part(options, "big", DIAL);
         String kept = part(options, "small", WEATHER);
         app = options.get("app");
@@ -228,9 +235,24 @@ final class Almanac extends View {
         // The default draws the clock the design system's way: a card of the
         // surface, the dial on a scalloped face, the windows each in a
         // container of its own colour, all flat.
-        boolean flat = Cast.flat;
-        boolean material = !flat && look.rim != Tile.Look.BARE;
-        if (flat) {
+        boolean glass = GLASS.equals(style);
+        boolean flat = FLAT.equals(style) || (!glass && Cast.flat);
+        boolean material = !flat && !glass && look.rim != Tile.Look.BARE;
+        if (glass) {
+            // A pane of smoked glass lying on the wallpaper, with the light
+            // caught along its upper edge: nothing of the table is hidden,
+            // only darkened.
+            paint.setShader(new RadialGradient(w * 0.5f, h * 0.2f, Math.max(w, h) * 0.9f,
+                0xB22C2620, 0xD90A0908, Shader.TileMode.CLAMP));
+            canvas.drawPath(plate, paint);
+            paint.setShader(null);
+            edge.setStyle(Paint.Style.STROKE);
+            edge.setStrokeWidth(Math.max(1f, Round.px(1f)));
+            edge.setShader(new LinearGradient(0f, inset, 0f, h - inset, 0x59FFFFFF, 0x0DFFFFFF,
+                Shader.TileMode.CLAMP));
+            canvas.drawPath(plate, edge);
+            edge.setShader(null);
+        } else if (flat) {
             paint.setShader(null);
             paint.setColor(Tone.of(Tone.SURFACE_CONTAINER));
             float corner = Math.min(Round.px(28f), (h - 2f * inset) / 2f);
@@ -245,7 +267,7 @@ final class Almanac extends View {
             paint.setColor(0x80000000);
             canvas.drawPath(plate, paint);
         }
-        int accent = flat ? Tone.of(Tone.PRIMARY) : Tile.accentOf(look.rim);
+        int accent = flat ? Tone.of(Tone.PRIMARY) : glass ? 0xFFF4ECDD : Tile.accentOf(look.rim);
         int ink = 0xFFF4ECDD;
         int quiet = 0xB3F4ECDD;
         int dialInk = flat ? Tone.of(Tone.ON_PRIMARY_CONTAINER) : ink;
@@ -253,7 +275,7 @@ final class Almanac extends View {
         int timeInk = flat ? Tone.of(Tone.ON_SECONDARY_CONTAINER) : ink;
         int timeQuiet = flat ? (timeInk & 0x00FFFFFF) | 0xB3000000 : quiet;
         final int pillInk = flat ? Tone.of(Tone.ON_TERTIARY_CONTAINER) : ink;
-        final int pillMark = flat ? pillInk : Tile.accentOf(look.rim);
+        final int pillMark = flat ? pillInk : glass ? ink : Tile.accentOf(look.rim);
         edge.setStrokeWidth(Math.max(1f, w * 0.0025f));
 
         // What is shown decides how the room is shared. The round window
@@ -408,7 +430,24 @@ final class Almanac extends View {
      * scalloped like a clock's face.
      */
     private void pane(Canvas canvas, RectF box, boolean round, int role) {
-        if (Cast.flat) {
+        if (GLASS.equals(style)) {
+            // Windows cut in the pane: a little darker than it, their cut
+            // catching the same light.
+            glass.setShader(null);
+            glass.setColor(0x4D000000);
+            edge.setColor(0x33FFFFFF);
+            if (round) {
+                canvas.drawOval(box, glass);
+                canvas.drawOval(box, edge);
+            } else {
+                float r = Math.min(box.height() / 2f, Round.px(24f));
+                canvas.drawRoundRect(box, r, r, glass);
+                canvas.drawRoundRect(box, r, r, edge);
+            }
+            edge.setColor(0x66000000);
+            return;
+        }
+        if (FLAT.equals(style) || (Cast.flat && LIKE_TILE.equals(style))) {
             glass.setShader(null);
             glass.setColor(Tone.of(role));
             if (round) {
