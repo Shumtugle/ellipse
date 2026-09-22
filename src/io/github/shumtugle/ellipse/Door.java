@@ -248,9 +248,10 @@ final class Door {
 
     /** A disc with six dots in two rows: light with the dots sunk into it, or dark with them raised in white. */
     private static void disc(Canvas canvas, Paint paint, float cx, float cy, float side, boolean dark) {
-        float r = side * 0.44f;
+        // As wide as the round icons beside it, with room left for no more than a breath of shadow.
+        float r = side * 0.48f;
         paint.setColor(dark ? 0xFF16181B : 0xFFF2F2F2);
-        paint.setShadowLayer(side * 0.04f, 0f, side * 0.028f, dark ? 0x73000000 : 0x4D000000);
+        paint.setShadowLayer(side * 0.016f, 0f, side * 0.01f, dark ? 0x73000000 : 0x40000000);
         canvas.drawCircle(cx, cy, r, paint);
         paint.clearShadowLayer();
         paint.setShader(new RadialGradient(cx, cy - r * 0.6f, r * 1.7f,
@@ -258,9 +259,9 @@ final class Door {
             new float[] {0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
         canvas.drawCircle(cx, cy, r, paint);
         rim(canvas, paint, cx, cy, r, side, dark);
-        float across = r * 0.4f;
-        float down = r * 0.21f;
-        float dot = r * 0.105f;
+        float across = r * 0.38f;
+        float down = r * 0.2f;
+        float dot = r * 0.11f;
         for (int row = -1; row <= 1; row += 2) {
             for (int col = -1; col <= 1; col++) {
                 float x = cx + col * across;
@@ -270,12 +271,21 @@ final class Door {
                     paint.setShader(new RadialGradient(x, y - dot * 0.4f, dot * 1.4f, 0xFFFFFFFF, 0xFFDCE0E5,
                         Shader.TileMode.CLAMP));
                 } else {
-                    // Sunk into the plate: shaded at the top, where the lip hides the light.
-                    paint.setShader(new LinearGradient(0f, y - dot, 0f, y + dot, 0xFFBDBFC2, 0xFFE6E7E9,
+                    // Sunk into the plate: shaded at the top, where the lip hides the light,
+                    // and caught by it along the lower edge.
+                    paint.setShader(new LinearGradient(0f, y - dot, 0f, y + dot, 0xFF83868C, 0xFFC4C7CB,
                         Shader.TileMode.CLAMP));
                 }
                 canvas.drawCircle(x, y, dot, paint);
                 paint.clearShadowLayer();
+                if (!dark) {
+                    paint.setStyle(Paint.Style.STROKE);
+                    paint.setStrokeWidth(Math.max(1f, dot * 0.18f));
+                    paint.setShader(new LinearGradient(0f, y - dot, 0f, y + dot, 0x00FFFFFF, 0xE6FFFFFF,
+                        Shader.TileMode.CLAMP));
+                    canvas.drawCircle(x, y, dot, paint);
+                    paint.setStyle(Paint.Style.FILL);
+                }
             }
         }
     }
@@ -296,12 +306,12 @@ final class Door {
 
     /** A soft white squircle, the dots in it dark and each lit round by a halo of the white. */
     private static void squircle(Canvas canvas, Paint paint, float cx, float cy, float side) {
-        float wide = side * 0.8f;
+        float wide = side * 0.94f;
         float l = cx - wide / 2f;
         float t = cy - wide / 2f;
         Path shape = Tile.curve(l, t, wide, wide, 4.5f);
         paint.setColor(0xFFF1F2F5);
-        paint.setShadowLayer(side * 0.045f, 0f, side * 0.03f, 0x40000000);
+        paint.setShadowLayer(side * 0.016f, 0f, side * 0.01f, 0x40000000);
         canvas.drawPath(shape, paint);
         paint.clearShadowLayer();
         paint.setShader(new LinearGradient(0f, t, 0f, t + wide, 0xFFFFFFFF, 0xFFE2E4E9, Shader.TileMode.CLAMP));
@@ -334,12 +344,12 @@ final class Door {
      * hue first, then round the circle of hues, each throwing a small shadow.
      */
     private static void colours(Canvas canvas, Paint paint, float cx, float cy, float side) {
-        float wide = side * 0.82f;
+        float wide = side * 0.94f;
         float l = cx - wide / 2f;
         float t = cy - wide / 2f;
         Path plate = Tile.curve(l, t, wide, wide, 5f);
         paint.setColor(0xFFF5F5F5);
-        paint.setShadowLayer(side * 0.04f, 0f, side * 0.028f, 0x40000000);
+        paint.setShadowLayer(side * 0.016f, 0f, side * 0.01f, 0x40000000);
         canvas.drawPath(plate, paint);
         paint.clearShadowLayer();
         paint.setShader(new LinearGradient(0f, t, 0f, t + wide, 0xFFFBFBFB, 0xFFEBEBEB, Shader.TileMode.CLAMP));

@@ -391,6 +391,11 @@ public final class Tune extends Activity {
                 Layout.stash(this);
                 Layout.fresh(this).save(this);
                 Keep.touch(this);
+                if (!Sky.mayLocate(this)) {
+                    // The answer rebuilds the room; nothing more to wait for here.
+                    requestPermissions(new String[] {android.Manifest.permission.ACCESS_COARSE_LOCATION}, HERE);
+                    return;
+                }
             } else {
                 Keep.toMine(this);
                 Layout.unstash(this);

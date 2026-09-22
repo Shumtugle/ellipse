@@ -267,8 +267,10 @@ public final class Keep {
     }
 
     static void toDefault(Context context, JSONObject mine) throws JSONException {
+        mine.put("here", Sky.here(context));
         store(context).edit().putString("mine", mine.toString()).apply();
         restore(context, defaults());
+        Sky.follow(context, true);
     }
 
     static void toMine(Context context) {
@@ -276,7 +278,18 @@ public final class Keep {
         store(context).edit().remove("mine").apply();
         if (mine != null) {
             restore(context, mine);
+            Sky.follow(context, mine.optBoolean("here", false));
         }
+    }
+
+    /** Whether the first start is still to ask where the phone is; asked once, it is not asked again. */
+    static boolean askPlace(Context context) {
+        SharedPreferences kept = store(context);
+        boolean ask = kept.getBoolean("ask_place", false);
+        if (ask) {
+            kept.edit().remove("ask_place").apply();
+        }
+        return ask;
     }
 
     /**
@@ -296,6 +309,10 @@ public final class Keep {
             } catch (JSONException none) {
                 // The code's own defaults stand.
             }
+            // The weather follows the phone, not a city typed in; the home
+            // screen asks once, at its first start, whether it may.
+            Sky.follow(context, true);
+            kept.edit().putBoolean("ask_place", true).apply();
         }
     }
 

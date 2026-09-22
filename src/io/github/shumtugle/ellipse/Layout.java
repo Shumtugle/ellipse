@@ -193,10 +193,11 @@ final class Layout {
 
     /**
      * The first layout of a new phone: the clock across the head of one
-     * screen, and in the dock the door, then whatever this phone calls,
-     * writes messages and keeps its people with, each found by the part it
-     * plays and not by its name. A phone without one of them, as a tablet
-     * may be, simply has one place fewer taken.
+     * screen and, low on it where the thumb is, what every phone of this
+     * kind is expected to have; in the dock the door, then whatever this
+     * phone calls, writes messages and keeps its people with. Each is found
+     * by the part it plays and never by its name, so a phone without one,
+     * as a tablet may be without calls, simply has a place fewer taken.
      */
     static Layout fresh(Context context) {
         Layout layout = new Layout();
@@ -206,17 +207,95 @@ final class Layout {
         screen.items.add(clock);
         layout.screens.add(screen);
         layout.dock.items.add(new Item(DOOR, 0, 0));
+
         List<String> taken = new ArrayList<String>();
-        String[] found = {dialer(context), messages(context), people(context)};
-        for (String component : found) {
-            if (component != null && !taken.contains(component) && taken.size() + 1 < layout.columns) {
+        // One after another, each asked with the ones before it already
+        // taken: where calls and contacts live in one application, the
+        // contacts are then its other door, or another application's.
+        for (int part = 0; part < 3 && taken.size() + 1 < layout.columns; part++) {
+            String component = part == 0 ? dialer(context) : part == 1 ? messages(context)
+                : role(context, taken, selector(android.content.Intent.CATEGORY_APP_CONTACTS),
+                    new android.content.Intent(android.content.Intent.ACTION_VIEW,
+                        android.provider.ContactsContract.Contacts.CONTENT_URI));
+            if (component != null && !taken.contains(component)) {
                 taken.add(component);
                 Item app = new Item(APP, taken.size(), 0);
                 app.component = component;
                 layout.dock.items.add(app);
             }
         }
+
+        List<String> found = new ArrayList<String>();
+        android.content.Intent[][] wanted = {
+            {new android.content.Intent(android.provider.MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)},
+            {selector(android.content.Intent.CATEGORY_APP_GALLERY)},
+            {selector(android.content.Intent.CATEGORY_APP_BROWSER),
+                new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://"))
+                    .addCategory(android.content.Intent.CATEGORY_BROWSABLE)},
+            {selector(android.content.Intent.CATEGORY_APP_MAPS)},
+            {selector(android.content.Intent.CATEGORY_APP_CALENDAR)},
+            {new android.content.Intent(android.provider.AlarmClock.ACTION_SHOW_ALARMS)},
+            {selector(android.content.Intent.CATEGORY_APP_MARKET)},
+            {new android.content.Intent(android.provider.Settings.ACTION_SETTINGS)},
+        };
+        for (android.content.Intent[] asked : wanted) {
+            String component = role(context, taken, asked);
+            if (component != null) {
+                taken.add(component);
+                found.add(component);
+            }
+        }
+        // Two rows at the foot of the screen; fewer than four found fill the lowest alone.
+        int low = layout.rows - 1;
+        int first = found.size() > layout.columns ? low - 1 : low;
+        for (int i = 0; i < found.size() && i < layout.columns * 2; i++) {
+            int row = first + i / layout.columns;
+            if (row > low) {
+                break;
+            }
+            Item app = new Item(APP, i % layout.columns, row);
+            app.component = found.get(i);
+            screen.items.add(app);
+        }
         return layout;
+    }
+
+    /** Asking by the part an application plays, the way applications say which part they play. */
+    private static android.content.Intent selector(String category) {
+        return new android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(category);
+    }
+
+    /**
+     * The application that plays a part: the one the phone would choose
+     * for the first way of asking, or else the first of those that answer
+     * any of them; never one already taken, never the system's chooser.
+     */
+    private static String role(Context context, List<String> taken, android.content.Intent... asked) {
+        android.content.pm.PackageManager pm = context.getPackageManager();
+        for (android.content.Intent intent : asked) {
+            try {
+                android.content.pm.ResolveInfo chosen = pm.resolveActivity(intent,
+                    android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+                if (chosen != null && chosen.activityInfo != null) {
+                    String door = front(context, chosen.activityInfo.packageName, chosen.activityInfo.name);
+                    if (door != null && !taken.contains(door)) {
+                        return door;
+                    }
+                }
+                for (android.content.pm.ResolveInfo one : pm.queryIntentActivities(intent, 0)) {
+                    if (one.activityInfo == null) {
+                        continue;
+                    }
+                    String door = front(context, one.activityInfo.packageName, one.activityInfo.name);
+                    if (door != null && !taken.contains(door)) {
+                        return door;
+                    }
+                }
+            } catch (RuntimeException none) {
+                // Asked another way, or not at all.
+            }
+        }
+        return null;
     }
 
     /** The phone's own application for calls: the one the system makes its default. */
@@ -233,22 +312,6 @@ final class Layout {
     private static String messages(Context context) {
         try {
             return front(context, android.provider.Telephony.Sms.getDefaultSmsPackage(context), null);
-        } catch (RuntimeException none) {
-            return null;
-        }
-    }
-
-    /** Whatever answers for the phone's people: its contacts. */
-    private static String people(Context context) {
-        try {
-            android.content.pm.ResolveInfo found = context.getPackageManager().resolveActivity(
-                android.content.Intent.makeMainSelectorActivity(android.content.Intent.ACTION_MAIN,
-                    android.content.Intent.CATEGORY_APP_CONTACTS),
-                android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
-            if (found == null || found.activityInfo == null) {
-                return null;
-            }
-            return front(context, found.activityInfo.packageName, found.activityInfo.name);
         } catch (RuntimeException none) {
             return null;
         }

@@ -108,6 +108,10 @@ public final class Home extends Activity {
     private boolean docked;
     private Sheet dock;
     private int dockHigh;
+    /** The request that asks where the phone is, at the first start. */
+    private static final int PLACE = 41;
+    /** Air between the dock's shelf and the bar at the foot. */
+    private static final int DOCK_GAP = Round.dp(8f);
     /** How much of the glass the keyboard takes, while it is up. */
     private int keyboard;
     /** How far the drawer was drawn last time it moved. */
@@ -263,6 +267,9 @@ public final class Home extends Activity {
         board.turnTo(state != null ? state.getInt("page", layout.home) : layout.home, false);
 
         read();
+        if (Keep.askPlace(this) && !Sky.mayLocate(this)) {
+            requestPermissions(new String[] {android.Manifest.permission.ACCESS_COARSE_LOCATION}, PLACE);
+        }
         doors.registerCallback(watch, new Handler(Looper.getMainLooper()));
     }
 
@@ -382,7 +389,7 @@ public final class Home extends Activity {
         board.removeAllViews();
         for (int s = 0; s < layout.screens.size(); s++) {
             Sheet sheet = new Sheet(this, layout.columns, layout.rows);
-            sheet.pad(barTop, barBottom + dockHigh);
+            sheet.pad(barTop, barBottom + dockHigh + (docked ? DOCK_GAP : 0));
             sheet.edge(edge);
             for (Layout.Item item : layout.screens.get(s).items) {
                 View view = make(item);
@@ -414,6 +421,15 @@ public final class Home extends Activity {
         }
         dock = new Sheet(this, layout.columns, 1);
         dock.pad(0, 0);
+        // A shelf apart from the ground: glass in a look of material, a pale
+        // tone of the surface with no mask, so the dock reads as its own.
+        float round = Math.min(Round.dp(32f), dockHigh / 2f);
+        android.graphics.drawable.Drawable shelf = look.window == Tile.Look.RAW
+            ? new Cast.Slab((Tone.of(Tone.SURFACE_CONTAINER) & 0x00FFFFFF) | 0xD9000000, round / Round.dp(1f))
+            : new Cast.Pane(round / Round.dp(1f));
+        int inset = Round.dp(10f);
+        dock.setBackground(new android.graphics.drawable.InsetDrawable(shelf, inset, Round.dp(3f), inset,
+            Round.dp(3f)));
         for (Layout.Item item : layout.dock.items) {
             View view = make(item);
             if (view != null) {
@@ -422,7 +438,7 @@ public final class Home extends Activity {
         }
         FrameLayout.LayoutParams foot = new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, dockHigh, android.view.Gravity.BOTTOM);
-        foot.bottomMargin = barBottom;
+        foot.bottomMargin = barBottom + DOCK_GAP;
         stage.addView(dock, 1, foot);
         echo(board.getScaleX(), board.getAlpha(), 0f);
     }
@@ -436,7 +452,7 @@ public final class Home extends Activity {
         dock.setScaleY(back);
         dock.setAlpha(alpha);
         // Drawn in towards the middle of the screens, not of itself, so it stays under them.
-        float apart = stage.getHeight() - barBottom - dockHigh / 2f - stage.getHeight() / 2f;
+        float apart = stage.getHeight() - barBottom - DOCK_GAP - dockHigh / 2f - stage.getHeight() / 2f;
         dock.setTranslationY(apart * (back - 1f));
         if (Build.VERSION.SDK_INT >= 31) {
             dock.setRenderEffect(blur < 0.5f ? null : android.graphics.RenderEffect
@@ -1813,6 +1829,27 @@ public final class Home extends Activity {
             return;
         }
         listen();
+    }
+
+    /**
+     * The answer to the first start's question. Allowed, the weather comes
+     * at once for where the phone is; refused, it waits for a city, and a
+     * press on it opens the weather's settings.
+     */
+    @Override
+    public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(request, permissions, results);
+        if (request != PLACE) {
+            return;
+        }
+        boolean granted = results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        Sky.follow(this, granted);
+        Sky.freshen(this, new Runnable() {
+            public void run() {
+                tellWeather();
+            }
+        });
+        tellWeather();
     }
 
     @Override
