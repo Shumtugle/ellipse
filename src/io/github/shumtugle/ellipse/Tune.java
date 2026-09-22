@@ -159,6 +159,7 @@ public final class Tune extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        Fault.watch(this);
         Round.measure(this);
         Tone.read(this);
         Words.load(this);
@@ -199,6 +200,9 @@ public final class Tune extends Activity {
         cases.add(showcase);
         column.addView(showcase.view, spaced(20));
         cards.add(showcase.view);
+        View choice = defaultSwitch();
+        column.addView(choice, spaced(20));
+        cards.add(choice);
         contents = new LinearLayout(this);
         contents.setOrientation(LinearLayout.VERTICAL);
         column.addView(contents, spaced(20));
@@ -344,6 +348,84 @@ public final class Tune extends Activity {
             place.topMargin = i == 0 ? 0 : Round.dp(8f);
             contents.addView(line, place);
             cards.add(line);
+        }
+    }
+
+    /**
+     * My own, or the default. The default is the home screen as the
+     * design system's own guidelines have it, and as a new phone first
+     * sees it. Going to it keeps what was mine, whole, to come back to.
+     */
+    private View defaultSwitch() {
+        boolean standard = Keep.onDefault(this);
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        Cards two = new Cards(new String[] {Words.s("look_mine"), Words.s("look_default")},
+            new Sketch[] {new Sketch(this, Sketch.SHAPE).shape(Tile.Look.MEASURED.power, Tile.Look.MEASURED.ratio),
+                new Sketch(this, Sketch.WINDOW_RAW)},
+            standard ? 1 : 0, 112, new Picked() {
+                public void picked(int which) {
+                    if ((which == 1) != Keep.onDefault(Tune.this)) {
+                        turnDefault(which == 1);
+                    }
+                }
+            });
+        made.addView(two.view());
+        if (standard && (grid.columns != Keep.DEFAULT_COLUMNS || grid.rows != Keep.DEFAULT_ROWS)) {
+            TextView kept = words(Letter.BODY_M, Words.s("grid_kept").replace("{c}", String.valueOf(grid.columns))
+                .replace("{r}", String.valueOf(grid.rows)), Tone.ON_SURFACE_VARIANT);
+            kept.setPadding(Round.dp(8f), 0, Round.dp(8f), 0);
+            made.addView(kept, spaced(10));
+        }
+        return made;
+    }
+
+    /**
+     * To the default, keeping mine; or back to mine. The grid follows only
+     * if everything on the screens still fits in it. Then the settings are
+     * read again from what is kept, and the room lights anew in its look.
+     */
+    private void turnDefault(boolean standard) {
+        try {
+            if (standard) {
+                org.json.JSONObject mine = Keep.export(this);
+                mine.put("columns", grid.columns);
+                mine.put("rows", grid.rows);
+                Keep.toDefault(this, mine);
+                fitGrid(Keep.DEFAULT_COLUMNS, Keep.DEFAULT_ROWS);
+            } else {
+                org.json.JSONObject mine = Keep.mine(this);
+                Keep.toMine(this);
+                if (mine != null) {
+                    fitGrid(mine.optInt("columns", grid.columns), mine.optInt("rows", grid.rows));
+                }
+            }
+        } catch (org.json.JSONException broken) {
+            root.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
+            return;
+        }
+        root.postDelayed(new Runnable() {
+            public void run() {
+                recreate();
+            }
+        }, Pace.ARRIVE);
+    }
+
+    /** The grid made so large, if everything on the screens still fits in it. */
+    private void fitGrid(int columns, int rows) {
+        int reach = 0;
+        int depth = 0;
+        for (Layout.Screen screen : grid.screens) {
+            for (Layout.Item item : screen.items) {
+                reach = Math.max(reach, item.x + item.w);
+                depth = Math.max(depth, item.y + item.h);
+            }
+        }
+        if (columns >= reach && rows >= depth && columns > 0 && rows > 0) {
+            grid.columns = columns;
+            grid.rows = rows;
+            grid.save(this);
+            Keep.touch(this);
         }
     }
 
@@ -2668,6 +2750,7 @@ public final class Tune extends Activity {
                 item.setStateListAnimator(give());
                 item.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
+                        v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
                         select(which);
                         Cards.this.picked.picked(which);
                     }
@@ -2718,17 +2801,23 @@ public final class Tune extends Activity {
             return this;
         }
 
+        /**
+         * A card chosen, or, for cards set each on its own, one turned over.
+         * Told none, as a dial is when its value has no name of its own, no
+         * card is chosen. The tick belongs to the finger, not to the choice:
+         * a choice made by a dial moving is felt through the dial.
+         */
         void select(int which) {
             if (ons != null) {
-                ons[which] = !ons[which];
-                paint(true);
-                items[which].performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                if (which >= 0 && which < ons.length) {
+                    ons[which] = !ons[which];
+                    paint(true);
+                }
                 return;
             }
             if (which != chosen) {
-                chosen = which;
+                chosen = which < 0 || which >= items.length ? -1 : which;
                 paint(true);
-                items[which].performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
             }
         }
 

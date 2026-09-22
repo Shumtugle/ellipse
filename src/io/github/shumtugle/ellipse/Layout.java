@@ -163,8 +163,8 @@ final class Layout {
         final List<Item> items = new ArrayList<Item>();
     }
 
-    int columns = 5;
-    int rows = 11;
+    int columns = Keep.DEFAULT_COLUMNS;
+    int rows = Keep.DEFAULT_ROWS;
     /** The screen Home returns to. */
     int home;
     final List<Screen> screens = new ArrayList<Screen>();
@@ -176,6 +176,11 @@ final class Layout {
         }
         ComponentName name = ComponentName.unflattenFromString(component);
         return name == null ? component : name.flattenToShortString();
+    }
+
+    /** Whether this phone has a layout written down yet. */
+    static boolean kept(Context context) {
+        return new File(context.getFilesDir(), FILE).exists();
     }
 
     /** The first layout of a new phone: one screen, and the door in the middle of its lowest row. */

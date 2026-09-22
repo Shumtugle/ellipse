@@ -219,6 +219,84 @@ public final class Keep {
         mark(edit, context);
     }
 
+    // ---------------------------------------------------------------- default
+
+    /** The grid of the default: four across and five down. */
+    static final int DEFAULT_COLUMNS = 4;
+    static final int DEFAULT_ROWS = 5;
+
+    /**
+     * The home screen as the design system's own guidelines have it, and
+     * as a new phone first sees it: icons in the system's own shape with
+     * no plate over them, colour taken from the wallpaper, the drawer
+     * scrolling down in the order of names, screens that stop at their
+     * ends, both of the system's bars kept, and the door wearing this home
+     * screen's own sign.
+     */
+    static JSONObject defaults() throws JSONException {
+        JSONObject o = new JSONObject();
+        o.put("wall", true);
+        o.put("window", Tile.Look.RAW);
+        o.put("rim", Tile.Look.ACCENT);
+        o.put("gloss", false);
+        o.put("zoom", 1.0);
+        o.put("across", false);
+        o.put("edge", false);
+        o.put("endless", false);
+        o.put("order", BY_NAME);
+        o.put("immersion", BARS);
+        o.put("door", Door.OWN);
+        return o;
+    }
+
+    /** Whether the default stands now; what was the owner's own is kept beside it. */
+    static boolean onDefault(Context context) {
+        return store(context).getString("mine", null) != null;
+    }
+
+    /** The owner's own settings, as they were when the default was put in their place. */
+    static JSONObject mine(Context context) {
+        String kept = store(context).getString("mine", null);
+        try {
+            return kept == null ? null : new JSONObject(kept);
+        } catch (JSONException broken) {
+            return null;
+        }
+    }
+
+    static void toDefault(Context context, JSONObject mine) throws JSONException {
+        store(context).edit().putString("mine", mine.toString()).apply();
+        restore(context, defaults());
+    }
+
+    static void toMine(Context context) {
+        JSONObject mine = mine(context);
+        store(context).edit().remove("mine").apply();
+        if (mine != null) {
+            restore(context, mine);
+        }
+    }
+
+    /**
+     * A phone that has never seen this home screen starts from the
+     * default; one that has keeps whatever it has, told or not.
+     */
+    static void settle(Context context) {
+        SharedPreferences kept = store(context);
+        if (kept.contains("settled")) {
+            return;
+        }
+        boolean fresh = kept.getAll().isEmpty() && !Layout.kept(context);
+        kept.edit().putBoolean("settled", true).apply();
+        if (fresh) {
+            try {
+                restore(context, defaults());
+            } catch (JSONException none) {
+                // The code's own defaults stand.
+            }
+        }
+    }
+
     // ---------------------------------------------------------------- door
 
     /** Which face the door to the drawer wears: this home screen's own sign, or a mark behind glass. */

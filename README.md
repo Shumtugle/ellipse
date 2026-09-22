@@ -119,6 +119,19 @@ the ellipse, an arch, a rise, a star, a keyhole, or the bare glass alone.
 The card of the clock or of the door on a screen opens their subject
 straight away, and going back from it goes back to the screen.
 
+**Default.** One switch at the head of the settings sets the home screen
+as the design system's own guidelines have it, and as a new phone first
+sees it: a grid four across and five down, icons in the system's own shape
+with no plate over them, colour from the wallpaper, the drawer scrolling
+down in the order of names, screens that stop at their ends. What was the
+owner's own is kept whole and comes back with the same switch; the grid
+follows only where everything on the screens still fits in it.
+
+**Falls.** When something in the home screen breaks, the trace is written
+at once, with the version, the phone, the settings and the last of the
+home screen's own log, and carried into the folder the owner gave, or,
+without one, into a folder of its own among the phone's downloads.
+
 **The file.** One readable text file carries the layout of the screens,
 every setting, and the language in use. It goes into a folder the owner
 gives once and comes back from a list of what lies there. The same import

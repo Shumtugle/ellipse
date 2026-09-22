@@ -207,6 +207,9 @@ public final class Words {
         "door_star",
         "door_keyhole",
         "door_glass",
+        "look_mine",
+        "look_default",
+        "grid_kept",
     };
 
     private static final String[] EN = {
@@ -397,6 +400,9 @@ public final class Words {
         "Star",
         "Keyhole",
         "Bare glass",
+        "My own",
+        "Default",
+        "The grid stays {c} × {r}: things stand beyond the fourth column or the fifth row.",
     };
 
     private static final Map<String, String> TABLE = new LinkedHashMap<String, String>();

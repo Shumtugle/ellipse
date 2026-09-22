@@ -146,6 +146,8 @@ public final class Home extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        Fault.watch(this);
+        Keep.settle(this);
         Round.measure(this);
         Tone.read(this);
         Words.load(this);
