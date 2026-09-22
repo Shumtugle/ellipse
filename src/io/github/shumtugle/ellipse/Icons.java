@@ -33,7 +33,12 @@ final class Icons {
 
     private final int dpi;
     private final Tile.Look look;
-    private final LruCache<String, Bitmap> kept;
+    /**
+     * Kept for the whole of the application's life, not for one home
+     * screen's: built anew — after a setting, or a turn of the phone — the
+     * tiles are there already, and nothing blinks while they are drawn.
+     */
+    private static LruCache<String, Bitmap> kept;
     private final ExecutorService hand = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private Bitmap empty;
@@ -41,13 +46,15 @@ final class Icons {
     Icons(Context context, Tile.Look look) {
         this.look = look;
         dpi = App.dpi(context);
-        int budget = (int) (Runtime.getRuntime().maxMemory() / 1024L / 6L);
-        kept = new LruCache<String, Bitmap>(budget) {
-            @Override
-            protected int sizeOf(String key, Bitmap tile) {
-                return tile.getByteCount() / 1024;
-            }
-        };
+        if (kept == null) {
+            int budget = (int) (Runtime.getRuntime().maxMemory() / 1024L / 6L);
+            kept = new LruCache<String, Bitmap>(budget) {
+                @Override
+                protected int sizeOf(String key, Bitmap tile) {
+                    return tile.getByteCount() / 1024;
+                }
+            };
+        }
     }
 
     /** An application's tile into a view. */

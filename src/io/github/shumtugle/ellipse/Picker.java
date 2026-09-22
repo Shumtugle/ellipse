@@ -45,8 +45,15 @@ final class Picker extends FrameLayout {
         int[] span(AppWidgetProviderInfo info);
     }
 
+    /** Three across and four down, as a page of the drawer. */
+    private static final int COLUMNS = 3;
+    private static final int ROWS = 4;
+    private static final float GRID_HIGH = 460f;
+
     private final Hand hand;
     private final LinearLayout sheet;
+    private Spread spread;
+    private List<AppWidgetProviderInfo> all;
     private final ExecutorService painter = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private boolean closing;
@@ -81,33 +88,47 @@ final class Picker extends FrameLayout {
         title.setPadding(Round.dp(8f), Round.dp(16f), Round.dp(8f), Round.dp(12f));
         sheet.addView(title);
 
-        ScrollView scroll = new ScrollView(context);
-        scroll.setVerticalScrollBarEnabled(false);
-        scroll.setOverScrollMode(OVER_SCROLL_NEVER);
-        LinearLayout list = new LinearLayout(context);
-        list.setOrientation(LinearLayout.VERTICAL);
-        list.setPadding(0, 0, 0, bottom + Round.dp(24f));
-        scroll.addView(list);
-        sheet.addView(scroll, new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        final android.widget.EditText field = new android.widget.EditText(context);
+        field.setSingleLine(true);
+        field.setHint(Words.s("search"));
+        field.setTextColor(Tone.of(Tone.ON_SURFACE));
+        field.setHintTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
+        field.setBackground(Round.box(Tone.of(Tone.SURFACE_HIGH), Round.FULL));
+        field.setPadding(Round.dp(20f), Round.dp(12f), Round.dp(20f), Round.dp(12f));
+        field.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        sheet.addView(field, spaced(4));
+
+        spread = new Spread(context);
+        sheet.addView(spread, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+            Round.dp(GRID_HIGH)));
 
         final PackageManager pm = context.getPackageManager();
-        List<AppWidgetProviderInfo> sorted = new ArrayList<AppWidgetProviderInfo>(offered);
+        all = new ArrayList<AppWidgetProviderInfo>(offered);
         final Collator order = Collator.getInstance();
         order.setStrength(Collator.PRIMARY);
-        Collections.sort(sorted, new Comparator<AppWidgetProviderInfo>() {
+        Collections.sort(all, new Comparator<AppWidgetProviderInfo>() {
             public int compare(AppWidgetProviderInfo a, AppWidgetProviderInfo b) {
                 int by = order.compare(owner(pm, a), owner(pm, b));
                 return by != 0 ? by : order.compare(a.loadLabel(pm), b.loadLabel(pm));
             }
         });
-        for (int i = 0; i < sorted.size(); i++) {
-            list.addView(entry(sorted.get(i), pm), spaced(i == 0 ? 0 : 12));
-        }
+        lay(all, pm);
+        field.addTextChangedListener(new android.text.TextWatcher() {
+            public void beforeTextChanged(CharSequence text, int from, int count, int after) {
+            }
+
+            public void onTextChanged(CharSequence text, int from, int before, int count) {
+                lay(sift(text.toString(), pm), pm);
+            }
+
+            public void afterTextChanged(android.text.Editable text) {
+            }
+        });
 
         LayoutParams place = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT,
             Gravity.BOTTOM);
-        place.topMargin = top + Round.dp(48f);
+        place.topMargin = top + Round.dp(24f);
+        sheet.setPadding(Round.dp(16f), Round.dp(12f), Round.dp(16f), bottom + Round.dp(16f));
         addView(sheet, place);
     }
 
@@ -127,11 +148,99 @@ final class Picker extends FrameLayout {
         return params;
     }
 
+    /** Those whose name, or their application's, holds what was typed. */
+    private List<AppWidgetProviderInfo> sift(String said, PackageManager pm) {
+        String looked = said.trim().toLowerCase(java.util.Locale.getDefault());
+        if (looked.length() == 0) {
+            return all;
+        }
+        List<AppWidgetProviderInfo> kept = new ArrayList<AppWidgetProviderInfo>();
+        for (AppWidgetProviderInfo one : all) {
+            String name = String.valueOf(one.loadLabel(pm)).toLowerCase(java.util.Locale.getDefault());
+            String from = owner(pm, one).toLowerCase(java.util.Locale.getDefault());
+            if (name.contains(looked) || from.contains(looked)) {
+                kept.add(one);
+            }
+        }
+        return kept;
+    }
+
+    /** The widgets laid out on leaves, three across and four down, turned by a finger. */
+    private void lay(List<AppWidgetProviderInfo> shown, PackageManager pm) {
+        spread.removeAllViews();
+        int each = COLUMNS * ROWS;
+        int leaves = Math.max(1, (shown.size() + each - 1) / each);
+        for (int leaf = 0; leaf < leaves; leaf++) {
+            LinearLayout page = new LinearLayout(getContext());
+            page.setOrientation(LinearLayout.VERTICAL);
+            for (int row = 0; row < ROWS; row++) {
+                LinearLayout across = new LinearLayout(getContext());
+                across.setOrientation(LinearLayout.HORIZONTAL);
+                for (int column = 0; column < COLUMNS; column++) {
+                    int at = leaf * each + row * COLUMNS + column;
+                    LinearLayout.LayoutParams place = new LinearLayout.LayoutParams(0,
+                        LinearLayout.LayoutParams.MATCH_PARENT, 1f);
+                    place.setMargins(Round.dp(4f), Round.dp(4f), Round.dp(4f), Round.dp(4f));
+                    if (at < shown.size()) {
+                        across.addView(entry(shown.get(at), pm), place);
+                    } else {
+                        across.addView(new View(getContext()), place);
+                    }
+                }
+                page.addView(across, new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+            }
+            spread.addView(page);
+        }
+        spread.rewind();
+        spread.requestLayout();
+    }
+
+    /** Leaves of widgets, turned sideways, counted by dots at their foot. */
+    private static final class Spread extends Leaves {
+
+        Spread(Context context) {
+            super(context);
+        }
+
+        @Override
+        int leaves() {
+            return getChildCount();
+        }
+
+        @Override
+        float dotsAt() {
+            return getHeight() - Round.px(16f);
+        }
+
+        @Override
+        protected void onMeasure(int widthSpec, int heightSpec) {
+            int width = MeasureSpec.getSize(widthSpec);
+            int height = MeasureSpec.getSize(heightSpec);
+            int room = Math.max(0, height - Round.dp(26f));
+            for (int i = 0; i < getChildCount(); i++) {
+                getChildAt(i).measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(room, MeasureSpec.EXACTLY));
+            }
+            setMeasuredDimension(width, height);
+        }
+
+        @Override
+        protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+            int width = getWidth();
+            int room = Math.max(0, getHeight() - Round.dp(26f));
+            for (int i = 0; i < getChildCount(); i++) {
+                getChildAt(i).layout(i * width, 0, (i + 1) * width, room);
+            }
+            settleAfterLayout();
+        }
+    }
+
     /** One widget: its picture on a card of its own, then its names and its size. */
     private View entry(final AppWidgetProviderInfo info, final PackageManager pm) {
         LinearLayout made = new LinearLayout(getContext());
         made.setOrientation(LinearLayout.VERTICAL);
-        made.setPadding(Round.dp(12f), Round.dp(12f), Round.dp(12f), Round.dp(14f));
+        made.setPadding(Round.dp(8f), Round.dp(8f), Round.dp(8f), Round.dp(10f));
         made.setBackground(Round.touch(Round.box(Tone.of(Tone.SURFACE_HIGH), 24f),
             Tone.of(Tone.ON_SURFACE), 24f));
         made.setOnClickListener(new OnClickListener() {
@@ -146,11 +255,11 @@ final class Picker extends FrameLayout {
         final ImageView picture = new ImageView(getContext());
         picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
         picture.setAdjustViewBounds(true);
-        picture.setMaxHeight(Round.dp(140f));
+        picture.setMaxHeight(Round.dp(64f));
         GradientDrawable ground = Round.box(Tone.of(Tone.SURFACE_HIGHEST), 16f);
         picture.setBackground(ground);
-        picture.setPadding(Round.dp(12f), Round.dp(12f), Round.dp(12f), Round.dp(12f));
-        picture.setMinimumHeight(Round.dp(96f));
+        picture.setPadding(Round.dp(8f), Round.dp(8f), Round.dp(8f), Round.dp(8f));
+        picture.setMinimumHeight(Round.dp(56f));
         made.addView(picture, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         final Context context = getContext();
@@ -175,17 +284,17 @@ final class Picker extends FrameLayout {
             }
         });
 
-        TextView name = Letter.set(new TextView(getContext()), Letter.TITLE_M);
+        TextView name = Letter.set(new TextView(getContext()), Letter.LABEL_L);
         name.setText(info.loadLabel(pm));
         name.setTextColor(Tone.of(Tone.ON_SURFACE));
         name.setSingleLine(true);
         name.setEllipsize(TextUtils.TruncateAt.END);
-        LinearLayout.LayoutParams namePlace = spaced(10);
+        LinearLayout.LayoutParams namePlace = spaced(8);
         made.addView(name, namePlace);
 
         int[] span = hand.span(info);
-        TextView about = Letter.set(new TextView(getContext()), Letter.BODY_M);
-        about.setText(owner(pm, info) + "  \u00b7  " + span[0] + " \u00d7 " + span[1]);
+        TextView about = Letter.set(new TextView(getContext()), Letter.LABEL_M);
+        about.setText(span[0] + " \u00d7 " + span[1]);
         about.setTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
         about.setSingleLine(true);
         about.setEllipsize(TextUtils.TruncateAt.END);
