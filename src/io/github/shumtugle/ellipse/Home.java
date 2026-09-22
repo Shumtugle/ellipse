@@ -1664,11 +1664,34 @@ public final class Home extends Activity {
         super.onResume();
         seen = true;
         if (Keep.stamp(this) != built) {
-            recreate();
-            return;
+            // A changed setting was throwing the whole screen away and
+            // building it from nothing. Only a new look or a new colour
+            // needs that much; everything else is put on where it stands.
+            Tile.Look now = Keep.tile(this);
+            float hue = Tone.hue();
+            float rich = Tone.rich();
+            Tone.read(this);
+            if (!now.same(look) || hue != Tone.hue() || rich != Tone.rich() || Cast.flat != Keep.flat(this)) {
+                recreate();
+                return;
+            }
+            refresh();
         }
     }
 
+
+    /** What a setting can change without the screen being made anew, read again and put on. */
+    private void refresh() {
+        built = Keep.stamp(this);
+        Words.load(this);
+        glass();
+        edge = Keep.edge(this);
+        docked = Keep.dock(this);
+        layout = Layout.load(this);
+        board.endless(Keep.endless(this));
+        sweep();
+        build();
+    }
 
     /** The day turning into the night under the home screen, while it stands. */
     @Override

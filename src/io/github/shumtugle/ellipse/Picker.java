@@ -47,8 +47,8 @@ final class Picker extends FrameLayout {
 
     /** Three across and four down, as a page of the drawer. */
     private static final int COLUMNS = 3;
-    private static final int ROWS = 4;
-    private static final float GRID_HIGH = 460f;
+    private static final int ROWS = 3;
+    private static final float GRID_HIGH = 430f;
 
     private final Hand hand;
     private final LinearLayout sheet;
@@ -255,11 +255,11 @@ final class Picker extends FrameLayout {
         final ImageView picture = new ImageView(getContext());
         picture.setScaleType(ImageView.ScaleType.FIT_CENTER);
         picture.setAdjustViewBounds(true);
-        picture.setMaxHeight(Round.dp(64f));
+        picture.setMaxHeight(Round.dp(76f));
         GradientDrawable ground = Round.box(Tone.of(Tone.SURFACE_HIGHEST), 16f);
         picture.setBackground(ground);
         picture.setPadding(Round.dp(8f), Round.dp(8f), Round.dp(8f), Round.dp(8f));
-        picture.setMinimumHeight(Round.dp(56f));
+        picture.setMinimumHeight(Round.dp(68f));
         made.addView(picture, new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         final Context context = getContext();
@@ -284,11 +284,12 @@ final class Picker extends FrameLayout {
             }
         });
 
-        TextView name = Letter.set(new TextView(getContext()), Letter.LABEL_L);
+        TextView name = Letter.set(new TextView(getContext()), Letter.TITLE_S);
         name.setText(info.loadLabel(pm));
         name.setTextColor(Tone.of(Tone.ON_SURFACE));
-        name.setSingleLine(true);
+        name.setMaxLines(2);
         name.setEllipsize(TextUtils.TruncateAt.END);
+        name.setGravity(Gravity.CENTER_HORIZONTAL);
         LinearLayout.LayoutParams namePlace = spaced(8);
         made.addView(name, namePlace);
 
@@ -297,6 +298,7 @@ final class Picker extends FrameLayout {
         about.setText(span[0] + " \u00d7 " + span[1]);
         about.setTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
         about.setSingleLine(true);
+        about.setGravity(Gravity.CENTER_HORIZONTAL);
         about.setEllipsize(TextUtils.TruncateAt.END);
         made.addView(about, spaced(2));
         return made;

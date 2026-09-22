@@ -39,7 +39,8 @@ final class Icons {
      * tiles are there already, and nothing blinks while they are drawn.
      */
     private static LruCache<String, Bitmap> kept;
-    private final ExecutorService hand = Executors.newSingleThreadExecutor();
+    /** Two hands rather than one: a screenful of tiles comes twice as fast. */
+    private final ExecutorService hand = Executors.newFixedThreadPool(2);
     private final Handler main = new Handler(Looper.getMainLooper());
     private Bitmap empty;
 
