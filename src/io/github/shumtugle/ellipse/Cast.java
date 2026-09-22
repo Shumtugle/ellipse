@@ -461,7 +461,21 @@ final class Cast {
         @Override
         public void draw(Canvas canvas) {
             if (Cast.flat) {
-                flatBox(canvas, getBounds(), radius, mix(this.flat, Tone.of(Tone.SECONDARY_CONTAINER), set));
+                // Chosen, a card is a container of the seed's own colour
+                // with a line of it about the edge: told by colour and by
+                // corner, the one as plain by day as by night.
+                Rect f = getBounds();
+                flatBox(canvas, f, radius, mix(this.flat, Tone.of(Tone.PRIMARY_CONTAINER), set));
+                if (set > 0f) {
+                    float line = Round.px(2f);
+                    float r = Math.max(0f, Math.min(radius, Math.min(f.width(), f.height()) / 2f));
+                    FLAT.setStyle(Paint.Style.STROKE);
+                    FLAT.setStrokeWidth(line);
+                    FLAT.setColor((Tone.of(Tone.PRIMARY) & 0x00FFFFFF) | (Math.round(255f * set) << 24));
+                    canvas.drawRoundRect(f.left + line / 2f, f.top + line / 2f, f.right - line / 2f,
+                        f.bottom - line / 2f, r, r, FLAT);
+                    FLAT.setStyle(Paint.Style.FILL);
+                }
                 return;
             }
             if (w <= 0 || h <= 0) {
@@ -867,8 +881,11 @@ final class Cast {
         /** Colours grown again from the seed. */
         void tint() {
             ground.setColor(Tone.of(Tone.SURFACE));
-            glow = Tone.at(17f, 4.0 + 10.0 * Tone.rich(), Tone.hue());
-            deep = Tone.of(Tone.SURFACE_LOWEST);
+            // By day the lamp is whiter than the walls and the floor a
+            // shade under them; by night both go the other way.
+            glow = Tone.at(Tone.night() ? 17f : 100f, (Tone.night() ? 4.0 : 2.0) + 10.0 * Tone.rich(), Tone.hue());
+            deep = Tone.night() ? Tone.of(Tone.SURFACE_LOWEST)
+                : Tone.at(88f, 4.0 + 8.0 * Tone.rich(), Tone.hue());
             shade();
             invalidateSelf();
         }

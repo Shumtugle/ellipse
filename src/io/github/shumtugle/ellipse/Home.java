@@ -1854,6 +1854,17 @@ public final class Home extends Activity {
         tellWeather();
     }
 
+    /** The day turning into the night under the home screen, while it stands. */
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration now) {
+        super.onConfigurationChanged(now);
+        boolean was = Tone.night();
+        Tone.read(this);
+        if (Tone.night() != was) {
+            recreate();
+        }
+    }
+
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);

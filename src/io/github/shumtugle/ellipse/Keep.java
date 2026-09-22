@@ -197,6 +197,7 @@ public final class Keep {
         o.put("door", door(context));
         o.put("dock", dock(context));
         o.put("flat", flat(context));
+        o.put("night", night(context));
         return o;
     }
 
@@ -213,7 +214,7 @@ public final class Keep {
                 edit.putBoolean(key, o.optBoolean(key));
             }
         }
-        for (String key : new String[] {"rim", "order", "immersion", "window", "door"}) {
+        for (String key : new String[] {"rim", "order", "immersion", "window", "door", "night"}) {
             if (o.has(key)) {
                 edit.putInt(key, o.optInt(key));
             }
@@ -250,6 +251,7 @@ public final class Keep {
         o.put("door", Door.DEFAULT);
         o.put("dock", true);
         o.put("flat", true);
+        o.put("night", PHONE);
         return o;
     }
 
@@ -316,6 +318,24 @@ public final class Keep {
             Sky.follow(context, true);
             kept.edit().putBoolean("ask_place", true).apply();
         }
+    }
+
+    // ---------------------------------------------------------------- day and night
+
+    /** The scheme follows the phone's own day and night. */
+    static final int PHONE = 0;
+    /** The scheme of the day stands whatever the phone does. */
+    static final int DAY = 1;
+    /** The scheme of the night stands whatever the phone does. */
+    static final int NIGHT = 2;
+
+    /** Which scheme the owner asks for: the phone's own, the day's, or the night's. */
+    static int night(Context context) {
+        return store(context).getInt("night", PHONE);
+    }
+
+    static void saveNight(Context context, int wish) {
+        mark(store(context).edit().putInt("night", wish), context);
     }
 
     // ---------------------------------------------------------------- flat

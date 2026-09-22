@@ -537,6 +537,18 @@ parts
 # Choose the application
 choose_app	
 
+# Theme
+theme	
+
+# As the phone
+theme_auto	
+
+# Light
+theme_light	
+
+# Dark
+theme_dark	
+
 # Blue disc
 door_disc_blue	
 

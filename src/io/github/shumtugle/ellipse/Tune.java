@@ -181,6 +181,7 @@ public final class Tune extends Activity {
         getWindow().setBackgroundDrawable(room);
         getWindow().setStatusBarColor(0x00000000);
         getWindow().setNavigationBarColor(0x00000000);
+        bars();
         if (Build.VERSION.SDK_INT >= 29) {
             getWindow().setStatusBarContrastEnforced(false);
             getWindow().setNavigationBarContrastEnforced(false);
@@ -414,6 +415,33 @@ public final class Tune extends Activity {
         }, Pace.ARRIVE);
     }
 
+    /** The marks of the system's bars, dark on a light room and light on a dark one. */
+    private void bars() {
+        if (Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowInsetsController told = getWindow().getInsetsController();
+            if (told != null) {
+                int light = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                    | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                told.setSystemBarsAppearance(Tone.night() ? 0 : light, light);
+            }
+        } else {
+            int flags = getWindow().getDecorView().getSystemUiVisibility();
+            int light = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+            getWindow().getDecorView().setSystemUiVisibility(Tone.night() ? flags & ~light : flags | light);
+        }
+    }
+
+    /** The day turning into the night under the room, while it stands open. */
+    @Override
+    public void onConfigurationChanged(android.content.res.Configuration now) {
+        super.onConfigurationChanged(now);
+        boolean was = Tone.night();
+        Tone.read(this);
+        if (Tone.night() != was) {
+            recreate();
+        }
+    }
+
     /** The lines of the contents told again how their subjects stand. */
     private void restate() {
         for (int i = 0; i < standings.length; i++) {
@@ -477,7 +505,9 @@ public final class Tune extends Activity {
                     + Words.s(orders[Math.max(0, Math.min(2, Keep.order(this)))]);
             }
             case 4:
-                return Keep.wall(this) ? Words.s("wallpaper") : Words.s("hue");
+                return (Keep.night(this) == Keep.PHONE ? Words.s("theme_auto")
+                    : Words.s(Keep.night(this) == Keep.DAY ? "theme_light" : "theme_dark")) + "  \u00b7  "
+                    + (Keep.wall(this) ? Words.s("wallpaper") : Words.s("hue"));
             case 5: {
                 if (Sky.here(this) && Sky.mayLocate(this)) {
                     return Words.s("here") + (Sky.city(this) != null ? "  \u00b7  " + Sky.city(this) : "");
@@ -923,8 +953,8 @@ public final class Tune extends Activity {
                 public void run() {
                     int kind = Cast.metal(look.rim);
                     view.setBackground(new Cast.Case(kind,
-                        Tone.at(7f, 3.0 + 6.0 * Tone.rich(), Tone.hue()),
-                        Tone.at(24f, 6.0 + 12.0 * Tone.rich(), Tone.hue())));
+                        Tone.at(Tone.night() ? 7f : 90f, 3.0 + 6.0 * Tone.rich(), Tone.hue()),
+                        Tone.at(Tone.night() ? 24f : 100f, 6.0 + 12.0 * Tone.rich(), Tone.hue())));
                     label.setBackground(new Cast.Plate(kind, Round.FULL, look.gloss));
                     Cast.engrave(label, kind);
                 }
@@ -1608,6 +1638,20 @@ public final class Tune extends Activity {
         roles.addView(swatch(Tone.SECONDARY_CONTAINER, Tone.ON_SECONDARY_CONTAINER), weighted(1f, 8));
         roles.addView(swatch(Tone.TERTIARY_CONTAINER, Tone.ON_TERTIARY_CONTAINER), weighted(1f, 8));
         card.addView(roles, spaced(16));
+
+        card.addView(words(Letter.TITLE_S, Words.s("theme"), Tone.ON_SURFACE_VARIANT), spaced(24));
+        Cards schemes = new Cards(new String[] {Words.s("theme_auto"), Words.s("theme_light"),
+            Words.s("theme_dark")},
+            new Sketch[] {new Sketch(this, Sketch.AUTO), new Sketch(this, Sketch.SUN),
+                new Sketch(this, Sketch.MOON)},
+            Keep.night(this), 112, new Picked() {
+                public void picked(int which) {
+                    Keep.saveNight(Tune.this, which);
+                    Tone.read(Tune.this);
+                    recreate();
+                }
+            });
+        card.addView(schemes.view(), spaced(12));
 
         card.addView(labelled(Words.s("hue"), null), spaced(20));
         hue = new Dial(this, Tone.hue() / 360f, new Dial.Moved() {

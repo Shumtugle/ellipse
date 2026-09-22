@@ -122,6 +122,14 @@ an arch, a rise, a star, a keyhole, or the bare glass alone.
 The card of the clock or of the door on a screen opens their subject
 straight away, and going back from it goes back to the screen.
 
+**Day and night.** One seed, two schemes. By night the grounds are dark
+and the ink light, by day the other way about, every role turned over
+about the middle of the tone scale; the room's lamp is whiter than its
+walls by day and the floor a shade under them. Which scheme stands is the
+phone's own choice, day by day, until the owner asks for one of them in
+the settings of colour, where the phone's own, the light and the dark
+stand side by side. The launcher turns with the phone as it turns.
+
 **Default.** One switch at the head of the settings sets the home screen
 as the design system's own guidelines have it, and as a new phone first
 sees it: a grid four across and five down, the clock across the head of

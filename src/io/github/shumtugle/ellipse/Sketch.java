@@ -62,6 +62,9 @@ final class Sketch extends View {
     static final int PALETTE = 38;
     static final int FORWARD = 39;
     static final int DOOR = 40;
+    static final int SUN = 41;
+    static final int MOON = 42;
+    static final int AUTO = 43;
 
     private Paint metal;
     private Paint shine;
@@ -124,6 +127,39 @@ final class Sketch extends View {
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);
         switch (kind) {
+            case SUN: {
+                float r = Math.min(w, h) * 0.18f;
+                stroke(ink, line);
+                canvas.drawCircle(w / 2f, h / 2f, r, paint);
+                for (int i = 0; i < 8; i++) {
+                    double a = Math.PI * i / 4;
+                    canvas.drawLine(w / 2f + (float) Math.cos(a) * r * 1.6f, h / 2f + (float) Math.sin(a) * r * 1.6f,
+                        w / 2f + (float) Math.cos(a) * r * 2.1f, h / 2f + (float) Math.sin(a) * r * 2.1f, paint);
+                }
+                break;
+            }
+            case MOON: {
+                float r = Math.min(w, h) * 0.3f;
+                android.graphics.Path moon = new android.graphics.Path();
+                moon.addCircle(w / 2f, h / 2f, r, android.graphics.Path.Direction.CW);
+                android.graphics.Path bite = new android.graphics.Path();
+                bite.addCircle(w / 2f + r * 0.66f, h / 2f - r * 0.52f, r * 0.92f, android.graphics.Path.Direction.CW);
+                moon.op(bite, android.graphics.Path.Op.DIFFERENCE);
+                fill(ink);
+                canvas.drawPath(moon, paint);
+                break;
+            }
+            case AUTO: {
+                float r = Math.min(w, h) * 0.3f;
+                android.graphics.Path half = new android.graphics.Path();
+                half.addArc(new RectF(w / 2f - r, h / 2f - r, w / 2f + r, h / 2f + r), 90f, 180f);
+                half.close();
+                fill(ink);
+                canvas.drawPath(half, paint);
+                stroke(ink, line);
+                canvas.drawCircle(w / 2f, h / 2f, r, paint);
+                break;
+            }
             case DOOR: {
                 float side = Math.min(w, h);
                 if (Door.whole(face)) {

@@ -537,6 +537,18 @@ parts	Части
 # Choose the application
 choose_app	Выбрать приложение
 
+# Theme
+theme	Тема
+
+# As the phone
+theme_auto	Как в телефоне
+
+# Light
+theme_light	Светлая
+
+# Dark
+theme_dark	Тёмная
+
 # Blue disc
 door_disc_blue	Голубой диск
 

@@ -18,8 +18,11 @@ import android.os.Build;
  * decided by tone alone and holds for every seed. When the screen cannot
  * show a colour, richness is given up, never tone and never hue.
  *
- * There is one scheme, the dark one. Depth is told by neighbouring tones of
- * the ground rather than by shadows.
+ * There are two schemes, one for the day and one for the night, the same
+ * seed in both: the tones turn over, light grounds against dark ink or
+ * dark grounds against light ink. Which of them stands is the phone's own
+ * choice unless the owner has made one. Depth is told by neighbouring
+ * tones of the ground rather than by shadows.
  */
 public final class Tone {
 
@@ -58,6 +61,7 @@ public final class Tone {
     private static final int[] roles = new int[ROLES];
     private static float hue = HUE;
     private static float rich = RICH;
+    private static boolean night = true;
 
     private Tone() {
     }
@@ -81,6 +85,11 @@ public final class Tone {
                 rich = seed[1];
             }
         }
+        int wish = Keep.night(context);
+        night = wish == Keep.NIGHT || (wish == Keep.PHONE
+            && (context.getResources().getConfiguration().uiMode
+                & android.content.res.Configuration.UI_MODE_NIGHT_MASK)
+                == android.content.res.Configuration.UI_MODE_NIGHT_YES);
         grow();
     }
 
@@ -98,6 +107,11 @@ public final class Tone {
         }
         float richness = (float) ((chroma - 12.0) / 60.0);
         return new float[] {(float) angle, Math.max(0f, Math.min(1f, richness))};
+    }
+
+    /** Whether the scheme of the night stands: dark grounds, light ink. */
+    public static boolean night() {
+        return night;
     }
 
     public static float hue() {
@@ -120,6 +134,10 @@ public final class Tone {
         double greyer = 4.0 + 9.0 * rich;
         float beside = (hue + 60f) % 360f;
 
+        if (!night) {
+            day(c, quiet, near, grey, greyer, beside);
+            return;
+        }
         roles[PRIMARY] = colour(80, c, hue);
         roles[ON_PRIMARY] = colour(20, c, hue);
         roles[PRIMARY_CONTAINER] = colour(30, c, hue);
@@ -149,6 +167,42 @@ public final class Tone {
         roles[INVERSE_SURFACE] = colour(90, grey, hue);
         roles[INVERSE_ON_SURFACE] = colour(20, grey, hue);
         roles[INVERSE_PRIMARY] = colour(40, c, hue);
+    }
+
+    /**
+     * The same seed by day: the grounds high and the ink low, the tones of
+     * each role turned over about the middle.
+     */
+    private static void day(double c, double quiet, double near, double grey, double greyer, float beside) {
+        roles[PRIMARY] = colour(40, c, hue);
+        roles[ON_PRIMARY] = colour(100, c, hue);
+        roles[PRIMARY_CONTAINER] = colour(90, c, hue);
+        roles[ON_PRIMARY_CONTAINER] = colour(10, c, hue);
+
+        roles[SECONDARY] = colour(40, quiet, hue);
+        roles[ON_SECONDARY] = colour(100, quiet, hue);
+        roles[SECONDARY_CONTAINER] = colour(90, quiet, hue);
+        roles[ON_SECONDARY_CONTAINER] = colour(10, quiet, hue);
+
+        roles[TERTIARY] = colour(40, near, beside);
+        roles[ON_TERTIARY] = colour(100, near, beside);
+        roles[TERTIARY_CONTAINER] = colour(90, near, beside);
+        roles[ON_TERTIARY_CONTAINER] = colour(10, near, beside);
+
+        roles[SURFACE] = colour(98, grey, hue);
+        roles[SURFACE_LOWEST] = colour(100, grey, hue);
+        roles[SURFACE_LOW] = colour(96, grey, hue);
+        roles[SURFACE_CONTAINER] = colour(94, grey, hue);
+        roles[SURFACE_HIGH] = colour(92, grey, hue);
+        roles[SURFACE_HIGHEST] = colour(90, grey, hue);
+        roles[SURFACE_BRIGHT] = colour(98, grey, hue);
+        roles[ON_SURFACE] = colour(10, grey, hue);
+        roles[ON_SURFACE_VARIANT] = colour(30, greyer, hue);
+        roles[OUTLINE] = colour(50, greyer, hue);
+        roles[OUTLINE_VARIANT] = colour(80, greyer, hue);
+        roles[INVERSE_SURFACE] = colour(20, grey, hue);
+        roles[INVERSE_ON_SURFACE] = colour(95, grey, hue);
+        roles[INVERSE_PRIMARY] = colour(80, c, hue);
     }
 
     /** The colour of a role, opaque. */
