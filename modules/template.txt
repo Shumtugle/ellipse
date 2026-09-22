@@ -558,6 +558,30 @@ face_tile
 # Frame
 frame	
 
+# Outline
+outline	
+
+# None
+outline_none	
+
+# Silver
+outline_silver	
+
+# Ground of the windows
+well	
+
+# How solid
+density	
+
+# Second hand
+second	
+
+# As everything
+second_same	
+
+# Red
+second_red	
+
 # As everywhere
 ink_same	
 

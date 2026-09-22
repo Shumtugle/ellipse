@@ -69,8 +69,14 @@ final class Almanac extends View {
     private String face = AUTO;
     /** How wide the frame about the windows is; below zero it follows the tiles' own rim. */
     private float frame = -1f;
-    /** A colour of the owner's own for the hands, the marks and the figures, as a hue; below zero, none. */
-    private int hue = -1;
+    /** A colour of the owner's own for the ground of the windows, as a hue; below zero, none. */
+    private int wellHue = -1;
+    /** How solid the windows are, from clear to opaque; below zero, as the style would have them. */
+    private float dense = -1f;
+    /** A hairline about the plate, as the tiles wear about their masks. */
+    private boolean outline;
+    /** A second hand in plain red, whatever else is drawn in. */
+    private boolean redSecond;
     private String big = DIAL;
     private String small = WEATHER;
     private String app;
@@ -166,7 +172,10 @@ final class Almanac extends View {
         }
         face = part(options, "face", AUTO);
         frame = number(options, "frame", -1f);
-        hue = Math.round(number(options, "ink", -1f));
+        wellHue = Math.round(number(options, "well", -1f));
+        dense = number(options, "dense", -1f);
+        outline = "silver".equals(options.get("line"));
+        redSecond = "red".equals(options.get("second"));
         big = part(options, "big", DIAL);
         String kept = part(options, "small", WEATHER);
         app = options.get("app");
@@ -321,22 +330,33 @@ final class Almanac extends View {
         if (held >= 0) {
             canvas.restoreToCount(held);
         }
-        // A colour of the owner's own, if one is asked for, stands in place
-        // of every ink: the hands, the marks, the figures and what is drawn
-        // beside them all take it, and what is second takes it quieter.
-        boolean own = hue >= 0;
-        int tint = own ? Tone.at(90f, 40.0, hue) : 0;
-        int softer = own ? (tint & 0x00FFFFFF) | 0xB3000000 : 0;
-        int accent = own ? Tone.at(74f, 62.0, hue)
-            : flat ? Tone.of(Tone.PRIMARY) : glass ? 0xFFF4ECDD : Tile.accentOf(look.rim);
-        int ink = own ? tint : 0xFFF4ECDD;
-        int quiet = own ? softer : 0xB3F4ECDD;
-        int dialInk = own ? tint : flat ? Tone.of(Tone.ON_PRIMARY_CONTAINER) : ink;
-        int dialQuiet = own ? softer : flat ? (dialInk & 0x00FFFFFF) | 0x99000000 : quiet;
-        int timeInk = own ? tint : flat ? Tone.of(Tone.ON_SECONDARY_CONTAINER) : ink;
-        int timeQuiet = own ? softer : flat ? (timeInk & 0x00FFFFFF) | 0xB3000000 : quiet;
-        final int pillInk = own ? tint : flat ? Tone.of(Tone.ON_TERTIARY_CONTAINER) : ink;
-        final int pillMark = own ? tint : flat ? pillInk : glass ? ink : Tile.accentOf(look.rim);
+        if (outline) {
+            // A hairline of silver about the plate, as a tile wears about
+            // its mask; drawn after the plate is let go, so it is still
+            // there when nothing else of the plate is.
+            edge.setStyle(Paint.Style.STROKE);
+            edge.setStrokeWidth(Math.max(1f, Round.px(1.2f)));
+            edge.setShader(new LinearGradient(0f, inset, 0f, h - inset, 0xCCFFFFFF, 0x3DFFFFFF,
+                Shader.TileMode.CLAMP));
+            canvas.drawPath(plate, edge);
+            edge.setShader(null);
+            edge.setColor(0x66000000);
+        }
+        // Windows of the owner's own colour carry their own ink: warm bone
+        // on a dark ground, near-black on a light one, whatever the style
+        // would otherwise have put on them.
+        boolean own = wellHue >= 0;
+        int over = Tone.night() ? 0xFFF4ECDD : 0xFF20201E;
+        int overQuiet = (over & 0x00FFFFFF) | 0xB3000000;
+        int accent = own ? over : flat ? Tone.of(Tone.PRIMARY) : glass ? 0xFFF4ECDD : Tile.accentOf(look.rim);
+        int ink = own ? over : 0xFFF4ECDD;
+        int quiet = own ? overQuiet : 0xB3F4ECDD;
+        int dialInk = own ? over : flat ? Tone.of(Tone.ON_PRIMARY_CONTAINER) : ink;
+        int dialQuiet = own ? overQuiet : flat ? (dialInk & 0x00FFFFFF) | 0x99000000 : quiet;
+        int timeInk = own ? over : flat ? Tone.of(Tone.ON_SECONDARY_CONTAINER) : ink;
+        int timeQuiet = own ? overQuiet : flat ? (timeInk & 0x00FFFFFF) | 0xB3000000 : quiet;
+        final int pillInk = own ? over : flat ? Tone.of(Tone.ON_TERTIARY_CONTAINER) : ink;
+        final int pillMark = own ? over : flat ? pillInk : glass ? ink : Tile.accentOf(look.rim);
         edge.setStrokeWidth(Math.max(1f, w * 0.0025f));
 
         // What is shown decides how the room is shared. The round window
@@ -492,7 +512,31 @@ final class Almanac extends View {
      * scalloped like a clock's face.
      */
     private void pane(Canvas canvas, RectF box, boolean round, int role) {
-        if (GLASS.equals(style)) {
+        boolean glassWay = GLASS.equals(style);
+        boolean flatWay = FLAT.equals(style) || (Cast.flat && LIKE_TILE.equals(style));
+        if (wellHue >= 0 || dense >= 0f) {
+            // The ground of the windows as the owner set it: a colour of
+            // their own or the near-black of glass, as clear or as solid as
+            // they asked, whatever the clock is made of.
+            int base = wellHue >= 0 ? Tone.at(Tone.night() ? 18f : 92f, 26.0, wellHue)
+                : flatWay ? Tone.of(role) : 0xFF0B0A09;
+            int solid = dense >= 0f ? Math.round(255f * dense) : glassWay ? 0x59 : 0xFF;
+            glass.setShader(null);
+            glass.setColor((base & 0x00FFFFFF) | (solid << 24));
+            edge.setColor(glassWay ? 0x40FFFFFF : 0x4D000000);
+            if (round) {
+                Path cut = window(box, flatWay);
+                canvas.drawPath(cut, glass);
+                canvas.drawPath(cut, edge);
+            } else {
+                float r = Math.min(box.height() / 2f, Round.px(24f));
+                canvas.drawRoundRect(box, r, r, glass);
+                canvas.drawRoundRect(box, r, r, edge);
+            }
+            edge.setColor(0x66000000);
+            return;
+        }
+        if (glassWay) {
             // Windows cut in the pane: a little darker than it, their cut
             // catching the same light.
             glass.setShader(null);
@@ -606,7 +650,7 @@ final class Almanac extends View {
         float hours = now.get(Calendar.HOUR) + minutes / 60f;
         hand(canvas, cx, cy, hours / 12f, r * 0.46f, r * 0.075f, ink);
         hand(canvas, cx, cy, minutes / 60f, r * 0.68f, r * 0.05f, ink);
-        hand(canvas, cx, cy, seconds / 60f, r * 0.76f, r * 0.018f, accent);
+        hand(canvas, cx, cy, seconds / 60f, r * 0.76f, r * 0.018f, redSecond ? 0xFFE02020 : accent);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(accent);
         canvas.drawCircle(cx, cy, r * 0.045f, paint);

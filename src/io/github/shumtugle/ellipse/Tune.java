@@ -1463,32 +1463,47 @@ public final class Tune extends Activity {
             }
         }).large(), wideRow());
 
-        card.addView(labelled(Words.s("colour"), null), spaced(20));
-        final String[] inks = {Words.s("ink_same"), Words.s("ink_own")};
-        int hueSaid = -1;
-        try {
-            String said = item.options.get("ink");
-            hueSaid = said == null ? -1 : Math.round(Float.parseFloat(said));
-        } catch (NumberFormatException none) {
-            hueSaid = -1;
-        }
-        final Cards[] inking = new Cards[1];
-        inking[0] = new Cards(inks, new Sketch[] {new Sketch(this, Sketch.CLOSE),
-            new Sketch(this, Sketch.PALETTE)}, hueSaid >= 0 ? 1 : 0, 104, new Picked() {
+        card.addView(words(Letter.TITLE_S, Words.s("outline"), Tone.ON_SURFACE_VARIANT), spaced(20));
+        Cards lines = new Cards(new String[] {Words.s("outline_none"), Words.s("outline_silver")},
+            new Sketch[] {new Sketch(this, Sketch.CLOSE), new Sketch(this, Sketch.RIM).rim(Tile.Look.METAL)},
+            "silver".equals(item.options.get("line")) ? 1 : 0, 104, new Picked() {
                 public void picked(int which) {
-                    if (which == 0) {
-                        item.options.remove("ink");
-                    } else if (item.options.get("ink") == null) {
-                        item.options.put("ink", String.valueOf(Math.round(Tone.hue())));
+                    if (which == 1) {
+                        item.options.put("line", "silver");
+                    } else {
+                        item.options.remove("line");
                     }
                     keepClocks();
                 }
             });
-        card.addView(inking[0].view(), spaced(12));
-        Dial paint = new Dial(this, (hueSaid < 0 ? Tone.hue() : hueSaid) / 360f, new Dial.Moved() {
+        card.addView(lines.view(), spaced(12));
+
+        card.addView(words(Letter.TITLE_S, Words.s("well"), Tone.ON_SURFACE_VARIANT), spaced(20));
+        int wellSaid = -1;
+        try {
+            String said = item.options.get("well");
+            wellSaid = said == null ? -1 : Math.round(Float.parseFloat(said));
+        } catch (NumberFormatException none) {
+            wellSaid = -1;
+        }
+        final Cards[] wells = new Cards[1];
+        wells[0] = new Cards(new String[] {Words.s("ink_same"), Words.s("ink_own")},
+            new Sketch[] {new Sketch(this, Sketch.CLOSE), new Sketch(this, Sketch.PALETTE)},
+            wellSaid >= 0 ? 1 : 0, 104, new Picked() {
+                public void picked(int which) {
+                    if (which == 0) {
+                        item.options.remove("well");
+                    } else if (item.options.get("well") == null) {
+                        item.options.put("well", String.valueOf(Math.round(Tone.hue())));
+                    }
+                    keepClocks();
+                }
+            });
+        card.addView(wells[0].view(), spaced(12));
+        Dial ground = new Dial(this, (wellSaid < 0 ? Tone.hue() : wellSaid) / 360f, new Dial.Moved() {
             public void moved(float value, boolean done) {
-                item.options.put("ink", String.valueOf(Math.round(value * 360f) % 360));
-                inking[0].select(1);
+                item.options.put("well", String.valueOf(Math.round(value * 360f) % 360));
+                wells[0].select(1);
                 if (done) {
                     keepClocks();
                 }
@@ -1496,10 +1511,42 @@ public final class Tune extends Activity {
         }).large();
         int[] wheel = new int[13];
         for (int i = 0; i < wheel.length; i++) {
-            wheel[i] = Tone.at(80f, 50.0, i * 30f % 360f);
+            wheel[i] = Tone.at(Tone.night() ? 30f : 88f, 30.0, i * 30f % 360f);
         }
-        paint.colours(wheel);
-        card.addView(paint, wideRow());
+        ground.colours(wheel);
+        card.addView(ground, wideRow());
+
+        card.addView(labelled(Words.s("density"), null), spaced(16));
+        float solid = 0.85f;
+        try {
+            String said = item.options.get("dense");
+            solid = said == null ? 0.85f : Math.max(0f, Math.min(1f, Float.parseFloat(said)));
+        } catch (NumberFormatException none) {
+            solid = 0.85f;
+        }
+        card.addView(new Dial(this, solid, new Dial.Moved() {
+            public void moved(float value, boolean done) {
+                item.options.put("dense", String.valueOf(Math.round(value * 100f) / 100f));
+                if (done) {
+                    keepClocks();
+                }
+            }
+        }).large(), wideRow());
+
+        card.addView(words(Letter.TITLE_S, Words.s("second"), Tone.ON_SURFACE_VARIANT), spaced(20));
+        Cards seconds = new Cards(new String[] {Words.s("second_same"), Words.s("second_red")},
+            new Sketch[] {new Sketch(this, Sketch.CLOCK), new Sketch(this, Sketch.PIN)},
+            "red".equals(item.options.get("second")) ? 1 : 0, 104, new Picked() {
+                public void picked(int which) {
+                    if (which == 1) {
+                        item.options.put("second", "red");
+                    } else {
+                        item.options.remove("second");
+                    }
+                    keepClocks();
+                }
+            });
+        card.addView(seconds.view(), spaced(12));
 
         card.addView(words(Letter.TITLE_S, Words.s("circle"), Tone.ON_SURFACE_VARIANT), spaced(20));
         final String[] bigs = {Almanac.DIAL, Almanac.WEATHER, Almanac.NONE};

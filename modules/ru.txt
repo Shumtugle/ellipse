@@ -558,6 +558,30 @@ face_tile	Как плитка
 # Frame
 frame	Рамка
 
+# Outline
+outline	Обводка
+
+# None
+outline_none	Нет
+
+# Silver
+outline_silver	Серебро
+
+# Ground of the windows
+well	Цвет полей
+
+# How solid
+density	Плотность
+
+# Second hand
+second	Секундная
+
+# As everything
+second_same	Как всё
+
+# Red
+second_red	Красная
+
 # As everywhere
 ink_same	Как везде
 
