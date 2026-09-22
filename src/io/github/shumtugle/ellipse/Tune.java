@@ -181,7 +181,6 @@ public final class Tune extends Activity {
         getWindow().setBackgroundDrawable(room);
         getWindow().setStatusBarColor(0x00000000);
         getWindow().setNavigationBarColor(0x00000000);
-        bars();
         if (Build.VERSION.SDK_INT >= 29) {
             getWindow().setStatusBarContrastEnforced(false);
             getWindow().setNavigationBarContrastEnforced(false);
@@ -237,6 +236,7 @@ public final class Tune extends Activity {
         root.addView(scroll, new FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        bars();
         paint();
         int reopen = state == null ? -1 : state.getInt("section", -1);
         direct = state != null && state.getBoolean("direct", false);
@@ -415,19 +415,25 @@ public final class Tune extends Activity {
         }, Pace.ARRIVE);
     }
 
-    /** The marks of the system's bars, dark on a light room and light on a dark one. */
+    /**
+     * The marks of the system's bars, dark on a light room and light on a
+     * dark one. Asked of the window before it has a decor view of its own,
+     * the platform falls; asked of the decor view, which makes one, it does
+     * not. So this is asked for once the screen has been set.
+     */
     private void bars() {
+        View decor = getWindow().getDecorView();
         if (Build.VERSION.SDK_INT >= 30) {
-            android.view.WindowInsetsController told = getWindow().getInsetsController();
+            android.view.WindowInsetsController told = decor.getWindowInsetsController();
             if (told != null) {
                 int light = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
                     | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
                 told.setSystemBarsAppearance(Tone.night() ? 0 : light, light);
             }
         } else {
-            int flags = getWindow().getDecorView().getSystemUiVisibility();
+            int flags = decor.getSystemUiVisibility();
             int light = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-            getWindow().getDecorView().setSystemUiVisibility(Tone.night() ? flags & ~light : flags | light);
+            decor.setSystemUiVisibility(Tone.night() ? flags & ~light : flags | light);
         }
     }
 

@@ -109,6 +109,10 @@ final class Fault {
         } finally {
             first.close();
         }
+        // Kept where the home screen itself can reach it, so the report can
+        // be handed on from the screen even if no folder can be written to.
+        context.getSharedPreferences(WAITING, Context.MODE_PRIVATE).edit()
+            .putString("last", text.toString()).apply();
 
         StringBuilder more = new StringBuilder();
         try {
@@ -165,6 +169,7 @@ final class Fault {
                     DocumentsContract.getTreeDocumentId(tree));
                 target = DocumentsContract.createDocument(resolver, parent, "text/plain", name);
             } else if (Build.VERSION.SDK_INT >= 29) {
+                // Nothing given: the phone's own downloads, in a folder of this one's name.
                 ContentValues values = new ContentValues();
                 values.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
                 values.put(MediaStore.MediaColumns.MIME_TYPE, "text/plain");
@@ -193,6 +198,16 @@ final class Fault {
         } catch (Exception refused) {
             return false;
         }
+    }
+
+    /** The last fall, as it was written, or none: kept until it is handed on or let go. */
+    static String last(Context context) {
+        String kept = context.getSharedPreferences(WAITING, Context.MODE_PRIVATE).getString("last", null);
+        return kept == null || kept.length() == 0 ? null : kept;
+    }
+
+    static void forget(Context context) {
+        context.getSharedPreferences(WAITING, Context.MODE_PRIVATE).edit().remove("last").apply();
     }
 
     /** The folder the owner gave, while this home screen may still write to it. */

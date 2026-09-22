@@ -537,6 +537,15 @@ parts
 # Choose the application
 choose_app	
 
+# Something broke
+fault	
+
+# Hand the report on
+fault_send	
+
+# Let it go
+fault_drop	
+
 # Theme
 theme	
 

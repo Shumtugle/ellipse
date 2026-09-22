@@ -108,6 +108,8 @@ public final class Home extends Activity {
     private boolean docked;
     private Sheet dock;
     private int dockHigh;
+    /** Whether the card about a fall has been offered in this life of the screen. */
+    private boolean told;
     /** The request that asks where the phone is, at the first start. */
     private static final int PLACE = 41;
     /** Air between the dock's shelf and the bar at the foot. */
@@ -405,6 +407,45 @@ public final class Home extends Activity {
         }
         board.turnTo(Math.min(page, layout.screens.size() - 1), false);
         shelve();
+        if (!told) {
+            told = true;
+            fallen();
+        }
+    }
+
+    /**
+     * After a fall: a card offering to hand the report on. What was written
+     * is kept until it is sent or let go, so a report is not lost when no
+     * folder can be written to.
+     */
+    private void fallen() {
+        final String report = Fault.last(this);
+        if (report == null || stage.getWidth() == 0) {
+            return;
+        }
+        Offer offer = new Offer(this, stage).title(Words.s("fault"));
+        offer.link(Sketch.INFO, Words.s("fault_send"), new Runnable() {
+            public void run() {
+                Intent send = new Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, getString(R.string.app_name))
+                    .putExtra(Intent.EXTRA_TEXT, report);
+                try {
+                    startActivity(Intent.createChooser(send, null));
+                    Fault.forget(Home.this);
+                } catch (ActivityNotFoundException none) {
+                    stage.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
+                }
+            }
+        });
+        offer.link(Sketch.CLOSE, Words.s("fault_drop"), new Runnable() {
+            public void run() {
+                Fault.forget(Home.this);
+            }
+        });
+        stage.offered(offer);
+        int cx = stage.getWidth() / 2;
+        int cy = stage.getHeight() / 3;
+        offer.show(new Rect(cx - Round.dp(24f), cy, cx + Round.dp(24f), cy + Round.dp(24f)));
     }
 
     /**

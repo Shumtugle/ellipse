@@ -159,7 +159,9 @@ screens.
 **Falls.** When something in the home screen breaks, the trace is written
 at once, with the version, the phone, the settings and the last of the
 home screen's own log, and carried into the folder the owner gave, or,
-without one, into a folder of its own among the phone's downloads.
+without one, into a folder of its own among the phone's downloads. The
+last of them is kept by the home screen as well, which offers, at its next
+start, to hand the report on wherever the owner likes.
 
 **The file.** One readable text file carries the layout of the screens,
 every setting, and the language in use. It goes into a folder the owner
