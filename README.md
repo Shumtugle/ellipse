@@ -121,11 +121,20 @@ straight away, and going back from it goes back to the screen.
 
 **Default.** One switch at the head of the settings sets the home screen
 as the design system's own guidelines have it, and as a new phone first
-sees it: a grid four across and five down, icons in the system's own shape
-with no plate over them, colour from the wallpaper, the drawer scrolling
-down in the order of names, screens that stop at their ends. What was the
-owner's own is kept whole and comes back with the same switch; the grid
-follows only where everything on the screens still fits in it.
+sees it: a grid four across and five down, the clock across the head of
+the first screen, and a dock holding the door, the phone's calls, its
+messages and its contacts, each found by the part it plays on that phone;
+icons in the system's own shape with no plate over them, colour from the
+wallpaper, the drawer scrolling down in the order of names, screens that
+stop at their ends. What was the owner's own, its layout with it, is set
+aside whole and comes back with the same switch.
+
+**The dock.** One row along the foot, the grid's own columns standing
+under the grid, the same whichever screen is in view. Anything one place
+large is carried into it and out of it like anywhere else; folders are
+made in it the same way. It steps back with the screens when the drawer
+or the weather opens over them. It is turned on in the settings of the
+screens.
 
 **Falls.** When something in the home screen breaks, the trace is written
 at once, with the version, the phone, the settings and the last of the

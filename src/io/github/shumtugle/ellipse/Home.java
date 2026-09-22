@@ -104,6 +104,10 @@ public final class Home extends Activity {
     private final Map<String, App> byKey = new HashMap<String, App>();
     private boolean seen;
     private boolean edge;
+    /** Whether the dock stands along the foot of the screens, and the dock itself while it does. */
+    private boolean docked;
+    private Sheet dock;
+    private int dockHigh;
     /** How much of the glass the keyboard takes, while it is up. */
     private int keyboard;
     /** How far the drawer was drawn last time it moved. */
@@ -161,6 +165,7 @@ public final class Home extends Activity {
         built = Keep.stamp(this);
         look = Keep.tile(this);
         edge = Keep.edge(this);
+        docked = Keep.dock(this);
         layout = Layout.load(this);
 
         doors = getSystemService(LauncherApps.class);
@@ -205,6 +210,7 @@ public final class Home extends Activity {
                     board.setRenderEffect(blur < 0.5f ? null : android.graphics.RenderEffect
                         .createBlurEffect(blur, blur, android.graphics.Shader.TileMode.CLAMP));
                 }
+                echo(back, 1f - 0.55f * shown, Round.px(22f) * shown);
                 drawer.corners(1f - shown);
                 if (shown > 0f && drawn == 0f) {
                     drawer.cascade();
@@ -359,7 +365,15 @@ public final class Home extends Activity {
         }
         almanacs.clear();
         float cellWidth = (width - 2f * Round.dp(4f)) / layout.columns;
-        float cellHeight = (height - barTop - barBottom) / (float) layout.rows;
+        float room = height - barTop - barBottom;
+        dockHigh = 0;
+        if (docked) {
+            // As tall as a tile and the air around it; never taller than a row of the grid.
+            float first = Math.min(cellWidth * ACROSS, room / layout.rows * DOWN * look.ratio);
+            dockHigh = Math.round(Math.min(room / (layout.rows + 1f),
+                Tile.height(Math.round(first), look) + Round.dp(28f)));
+        }
+        float cellHeight = (room - dockHigh) / (float) layout.rows;
         cellW = cellWidth;
         cellH = cellHeight;
         tile = Math.round(Math.min(cellWidth * ACROSS, cellHeight * DOWN * look.ratio));
@@ -368,7 +382,7 @@ public final class Home extends Activity {
         board.removeAllViews();
         for (int s = 0; s < layout.screens.size(); s++) {
             Sheet sheet = new Sheet(this, layout.columns, layout.rows);
-            sheet.pad(barTop, barBottom);
+            sheet.pad(barTop, barBottom + dockHigh);
             sheet.edge(edge);
             for (Layout.Item item : layout.screens.get(s).items) {
                 View view = make(item);
@@ -381,6 +395,53 @@ public final class Home extends Activity {
             board.addView(sheet);
         }
         board.turnTo(Math.min(page, layout.screens.size() - 1), false);
+        shelve();
+    }
+
+    /**
+     * The dock: one row of the grid's own columns, standing under them
+     * above the bar at the foot, the same whichever screen is in view. It
+     * lies over the screens and under the drawer, and steps back with the
+     * screens when anything opens over them.
+     */
+    private void shelve() {
+        if (dock != null) {
+            stage.removeView(dock);
+            dock = null;
+        }
+        if (!docked) {
+            return;
+        }
+        dock = new Sheet(this, layout.columns, 1);
+        dock.pad(0, 0);
+        for (Layout.Item item : layout.dock.items) {
+            View view = make(item);
+            if (view != null) {
+                dock.addView(view, new Sheet.Spot(item.x, 0, 1, 1));
+            }
+        }
+        FrameLayout.LayoutParams foot = new FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT, dockHigh, android.view.Gravity.BOTTOM);
+        foot.bottomMargin = barBottom;
+        stage.addView(dock, 1, foot);
+        echo(board.getScaleX(), board.getAlpha(), 0f);
+    }
+
+    /** The dock steps back as the screens do: as small, as dim, and as far out of focus. */
+    private void echo(float back, float alpha, float blur) {
+        if (dock == null) {
+            return;
+        }
+        dock.setScaleX(back);
+        dock.setScaleY(back);
+        dock.setAlpha(alpha);
+        // Drawn in towards the middle of the screens, not of itself, so it stays under them.
+        float apart = stage.getHeight() - barBottom - dockHigh / 2f - stage.getHeight() / 2f;
+        dock.setTranslationY(apart * (back - 1f));
+        if (Build.VERSION.SDK_INT >= 31) {
+            dock.setRenderEffect(blur < 0.5f ? null : android.graphics.RenderEffect
+                .createBlurEffect(blur, blur, android.graphics.Shader.TileMode.CLAMP));
+        }
     }
 
     private View make(final Layout.Item item) {
@@ -447,7 +508,7 @@ public final class Home extends Activity {
      */
     private void heal() {
         boolean mended = false;
-        for (Layout.Screen screen : layout.screens) {
+        for (Layout.Screen screen : layout.every()) {
             for (Layout.Item item : screen.items) {
                 if (Layout.APP.equals(item.kind)) {
                     String now = mend(item.component);
@@ -793,7 +854,7 @@ public final class Home extends Activity {
             return;
         }
         List<String> ids = new ArrayList<String>();
-        for (Layout.Screen screen : layout.screens) {
+        for (Layout.Screen screen : layout.every()) {
             for (Layout.Item item : screen.items) {
                 if (Layout.SHORTCUT.equals(item.kind) && pkg.equals(item.component) && item.shortcut != null
                     && !ids.contains(item.shortcut)) {
@@ -811,7 +872,7 @@ public final class Home extends Activity {
     /** Every package with shortcuts on the screens, pinned as the screens say. */
     private void pinAll() {
         java.util.Set<String> pkgs = new java.util.HashSet<String>();
-        for (Layout.Screen screen : layout.screens) {
+        for (Layout.Screen screen : layout.every()) {
             for (Layout.Item item : screen.items) {
                 if (Layout.SHORTCUT.equals(item.kind) && item.component != null) {
                     pkgs.add(item.component);
@@ -1077,6 +1138,7 @@ public final class Home extends Activity {
                 float back = 1f - 0.06f * open;
                 board.setScaleX(back);
                 board.setScaleY(back);
+                echo(back, 1f, Round.px(18f) * open);
                 if (Build.VERSION.SDK_INT >= 31) {
                     float blur = Round.px(18f) * open;
                     board.setRenderEffect(blur < 0.5f ? null : android.graphics.RenderEffect
@@ -1413,16 +1475,22 @@ public final class Home extends Activity {
         for (int i = 0; i < board.count(); i++) {
             board.sheet(i).carry(on, -1, 0, 0, 0);
         }
+        if (dock != null) {
+            dock.carry(on, -1, 0, 0, 0);
+        }
     }
 
     /** Where a carried thing would land if let go here: a block of cells, or a thing it would join. */
     private int[] target(Load load, float x, float y) {
+        if (dock != null && y >= dock.getTop()) {
+            return docking(load, x, y - dock.getTop());
+        }
         int page = board.page();
         int[] cell = board.cellAt(x, y);
         if (load.joins()) {
             Layout.Item under = layout.at(page, cell[0], cell[1]);
             if (under != null && under != load.item && joinable(under, load)) {
-                return new int[] {under.x, under.y, 1, 1, 1};
+                return new int[] {under.x, under.y, 1, 1, 1, page};
             }
         }
         int w = load.w();
@@ -1433,7 +1501,23 @@ public final class Home extends Activity {
         if (spot == null) {
             return null;
         }
-        return new int[] {spot[0], spot[1], w, h, 0};
+        return new int[] {spot[0], spot[1], w, h, 0, page};
+    }
+
+    /** Where a carried thing would land in the dock: only what is one place large stands there. */
+    private int[] docking(Load load, float x, float y) {
+        int[] cell = dock.cellAt(x, y);
+        if (load.joins()) {
+            Layout.Item under = layout.at(Layout.DOCK, cell[0], 0);
+            if (under != null && under != load.item && joinable(under, load)) {
+                return new int[] {under.x, 0, 1, 1, 1, Layout.DOCK};
+            }
+        }
+        if (load.w() != 1 || load.h() != 1) {
+            return null;
+        }
+        int[] spot = layout.nearest(Layout.DOCK, cell[0], 0, 1, 1, load.item);
+        return spot == null ? null : new int[] {spot[0], 0, 1, 1, 0, Layout.DOCK};
     }
 
     private boolean joinable(Layout.Item under, Load load) {
@@ -1447,11 +1531,19 @@ public final class Home extends Activity {
     private void hover(Load load, float x, float y) {
         int page = board.page();
         int[] t = target(load, x, y);
+        boolean docking = t != null && t[5] == Layout.DOCK;
         for (int i = 0; i < board.count(); i++) {
-            if (i == page && t != null) {
+            if (i == page && t != null && !docking) {
                 board.sheet(i).carry(true, t[0], t[1], t[2], t[3]);
             } else {
                 board.sheet(i).carry(true, -1, 0, 0, 0);
+            }
+        }
+        if (dock != null) {
+            if (docking) {
+                dock.carry(true, t[0], t[1], t[2], t[3]);
+            } else {
+                dock.carry(true, -1, 0, 0, 0);
             }
         }
         float edge = stage.getWidth() * 0.07f;
@@ -1486,6 +1578,7 @@ public final class Home extends Activity {
             build();
             return;
         }
+        page = t[5];
         if (t[4] == 1) {
             Layout.Item under = layout.at(page, t[0], t[1]);
             if (Layout.FOLDER.equals(under.kind)) {
@@ -1505,23 +1598,23 @@ public final class Home extends Activity {
             layout.remove(load.item);
             load.item.x = t[0];
             load.item.y = t[1];
-            layout.screens.get(page).items.add(load.item);
+            layout.screen(page).items.add(load.item);
         } else if (load.activity != null) {
             Layout.Item made = new Layout.Item(Layout.ACTIVITY, t[0], t[1]);
             made.component = load.activity;
             made.label = load.activityLabel;
-            layout.screens.get(page).items.add(made);
+            layout.screen(page).items.add(made);
         } else if (load.shortcutId != null) {
             Layout.Item made = new Layout.Item(Layout.SHORTCUT, t[0], t[1]);
             made.component = load.shortcutPkg;
             made.shortcut = load.shortcutId;
             made.label = load.shortcutLabel;
-            layout.screens.get(page).items.add(made);
+            layout.screen(page).items.add(made);
             pinFor(load.shortcutPkg);
         } else {
             Layout.Item made = new Layout.Item(Layout.APP, t[0], t[1]);
             made.component = load.component;
-            layout.screens.get(page).items.add(made);
+            layout.screen(page).items.add(made);
             if (load.folder != null) {
                 load.folder.apps.remove(load.component);
                 layout.settle(load.folder);
@@ -2036,6 +2129,17 @@ public final class Home extends Activity {
             for (Layout.Item item : screen.items) {
                 if (Layout.WIDGET.equals(item.kind) && item.id >= 0) {
                     used.add(item.id);
+                }
+            }
+        }
+        // The owner's own layout, set aside while the default stands, keeps its widgets alive.
+        Layout aside = Layout.stashed(this);
+        if (aside != null) {
+            for (Layout.Screen screen : aside.screens) {
+                for (Layout.Item item : screen.items) {
+                    if (Layout.WIDGET.equals(item.kind) && item.id >= 0) {
+                        used.add(item.id);
+                    }
                 }
             }
         }

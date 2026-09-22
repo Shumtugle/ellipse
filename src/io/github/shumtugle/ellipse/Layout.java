@@ -168,6 +168,14 @@ final class Layout {
     /** The screen Home returns to. */
     int home;
     final List<Screen> screens = new ArrayList<Screen>();
+    /**
+     * The dock: one row along the foot of every screen, as many places as
+     * the grid has columns and standing under them, holding what every
+     * screen shares. It is asked for by a place of its own in place of a
+     * screen's number.
+     */
+    final Screen dock = new Screen();
+    static final int DOCK = -2;
 
     /** A front door written the one way the platform writes it short, so two spellings match. */
     static String door(String component) {
@@ -183,13 +191,148 @@ final class Layout {
         return new File(context.getFilesDir(), FILE).exists();
     }
 
-    /** The first layout of a new phone: one screen, and the door in the middle of its lowest row. */
-    static Layout fresh() {
+    /**
+     * The first layout of a new phone: the clock across the head of one
+     * screen, and in the dock the door, then whatever this phone calls,
+     * writes messages and keeps its people with, each found by the part it
+     * plays and not by its name. A phone without one of them, as a tablet
+     * may be, simply has one place fewer taken.
+     */
+    static Layout fresh(Context context) {
         Layout layout = new Layout();
         Screen screen = new Screen();
-        screen.items.add(new Item(DOOR, layout.columns / 2, layout.rows - 1));
+        Item clock = new Item(CLOCK, 0, 0);
+        clock.w = layout.columns;
+        screen.items.add(clock);
         layout.screens.add(screen);
+        layout.dock.items.add(new Item(DOOR, 0, 0));
+        List<String> taken = new ArrayList<String>();
+        String[] found = {dialer(context), messages(context), people(context)};
+        for (String component : found) {
+            if (component != null && !taken.contains(component) && taken.size() + 1 < layout.columns) {
+                taken.add(component);
+                Item app = new Item(APP, taken.size(), 0);
+                app.component = component;
+                layout.dock.items.add(app);
+            }
+        }
         return layout;
+    }
+
+    /** The phone's own application for calls: the one the system makes its default. */
+    private static String dialer(Context context) {
+        try {
+            android.telecom.TelecomManager calls = context.getSystemService(android.telecom.TelecomManager.class);
+            return calls == null ? null : front(context, calls.getDefaultDialerPackage(), null);
+        } catch (RuntimeException none) {
+            return null;
+        }
+    }
+
+    /** The phone's default application for messages. */
+    private static String messages(Context context) {
+        try {
+            return front(context, android.provider.Telephony.Sms.getDefaultSmsPackage(context), null);
+        } catch (RuntimeException none) {
+            return null;
+        }
+    }
+
+    /** Whatever answers for the phone's people: its contacts. */
+    private static String people(Context context) {
+        try {
+            android.content.pm.ResolveInfo found = context.getPackageManager().resolveActivity(
+                android.content.Intent.makeMainSelectorActivity(android.content.Intent.ACTION_MAIN,
+                    android.content.Intent.CATEGORY_APP_CONTACTS),
+                android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+            if (found == null || found.activityInfo == null) {
+                return null;
+            }
+            return front(context, found.activityInfo.packageName, found.activityInfo.name);
+        } catch (RuntimeException none) {
+            return null;
+        }
+    }
+
+    /**
+     * The front door of a package, written as the layout writes one: the
+     * named activity if it is one of the package's front doors, else the
+     * first of them; none for the system's own chooser or a package
+     * without one.
+     */
+    private static String front(Context context, String pkg, String activity) {
+        if (pkg == null || "android".equals(pkg) || pkg.equals(context.getPackageName())) {
+            return null;
+        }
+        android.content.pm.LauncherApps doors = context.getSystemService(android.content.pm.LauncherApps.class);
+        if (doors == null) {
+            return null;
+        }
+        List<android.content.pm.LauncherActivityInfo> fronts = doors.getActivityList(pkg,
+            android.os.Process.myUserHandle());
+        if (fronts == null || fronts.isEmpty()) {
+            return null;
+        }
+        for (android.content.pm.LauncherActivityInfo one : fronts) {
+            if (one.getComponentName().getClassName().equals(activity)) {
+                return one.getComponentName().flattenToShortString();
+            }
+        }
+        return fronts.get(0).getComponentName().flattenToShortString();
+    }
+
+    /** Every place things stand: the screens, then the dock. */
+    List<Screen> every() {
+        List<Screen> all = new ArrayList<Screen>(screens);
+        all.add(dock);
+        return all;
+    }
+
+    /** A screen by its number, or the dock. */
+    Screen screen(int page) {
+        return page == DOCK ? dock : screens.get(page);
+    }
+
+    /** How many rows a place has: the dock has one. */
+    int rowsOf(int page) {
+        return page == DOCK ? 1 : rows;
+    }
+
+    // ------------------------------------------------------------ what was mine
+
+    /** The layout of the moment, set aside whole while the default stands in its place. */
+    static void stash(Context context) {
+        File file = new File(context.getFilesDir(), FILE);
+        File aside = new File(context.getFilesDir(), FILE + ".mine");
+        if (file.exists() && !aside.exists()) {
+            file.renameTo(aside);
+        }
+    }
+
+    /** The layout set aside, back in its place; the default it replaced goes. */
+    static void unstash(Context context) {
+        File aside = new File(context.getFilesDir(), FILE + ".mine");
+        if (aside.exists()) {
+            aside.renameTo(new File(context.getFilesDir(), FILE));
+        }
+    }
+
+    /** The layout set aside, if there is one: its widgets are kept alive while it waits. */
+    static Layout stashed(Context context) {
+        File aside = new File(context.getFilesDir(), FILE + ".mine");
+        if (!aside.exists()) {
+            return null;
+        }
+        try {
+            InputStream in = new FileInputStream(aside);
+            try {
+                return parse(read(in));
+            } finally {
+                in.close();
+            }
+        } catch (IOException | JSONException broken) {
+            return null;
+        }
     }
 
     // ------------------------------------------------------------ the file
@@ -197,7 +340,7 @@ final class Layout {
     static Layout load(Context context) {
         File file = new File(context.getFilesDir(), FILE);
         if (!file.exists()) {
-            return fresh();
+            return fresh(context);
         }
         try {
             InputStream in = new FileInputStream(file);
@@ -207,7 +350,7 @@ final class Layout {
                 in.close();
             }
         } catch (IOException | JSONException broken) {
-            return fresh();
+            return fresh(context);
         }
     }
 
@@ -247,6 +390,13 @@ final class Layout {
             list.put(s);
         }
         o.put("screens", list);
+        if (!dock.items.isEmpty()) {
+            JSONArray shelf = new JSONArray();
+            for (Item item : dock.items) {
+                shelf.put(item.json());
+            }
+            o.put("dock", shelf);
+        }
         return o.toString(1);
     }
 
@@ -277,6 +427,21 @@ final class Layout {
         if (layout.screens.isEmpty()) {
             layout.screens.add(new Screen());
         }
+        JSONArray shelf = o.optJSONArray("dock");
+        if (shelf != null) {
+            for (int k = 0; k < shelf.length(); k++) {
+                Item item = Item.from(shelf.getJSONObject(k));
+                // The dock holds only what is one place large.
+                if (CLOCK.equals(item.kind) || WIDGET.equals(item.kind)) {
+                    continue;
+                }
+                item.x = Math.max(0, Math.min(layout.columns - 1, item.x));
+                item.y = 0;
+                item.w = 1;
+                item.h = 1;
+                layout.dock.items.add(item);
+            }
+        }
         layout.home = Math.max(0, Math.min(layout.screens.size() - 1, o.optInt("home", 0)));
         return layout;
     }
@@ -295,7 +460,7 @@ final class Layout {
 
     /** The thing covering a cell, or none. */
     Item at(int screen, int cx, int cy) {
-        for (Item item : screens.get(screen).items) {
+        for (Item item : screen(screen).items) {
             if (item.covers(cx, cy)) {
                 return item;
             }
@@ -305,10 +470,10 @@ final class Layout {
 
     /** Whether a block of cells is empty, not counting one thing that is moving. */
     boolean free(int screen, int x, int y, int w, int h, Item moving) {
-        if (x < 0 || y < 0 || x + w > columns || y + h > rows) {
+        if (x < 0 || y < 0 || x + w > columns || y + h > rowsOf(screen)) {
             return false;
         }
-        for (Item item : screens.get(screen).items) {
+        for (Item item : screen(screen).items) {
             if (item == moving) {
                 continue;
             }
@@ -323,7 +488,7 @@ final class Layout {
     int[] nearest(int screen, int x, int y, int w, int h, Item moving) {
         int[] best = null;
         int bestDistance = Integer.MAX_VALUE;
-        for (int cy = 0; cy + h <= rows; cy++) {
+        for (int cy = 0; cy + h <= rowsOf(screen); cy++) {
             for (int cx = 0; cx + w <= columns; cx++) {
                 if (!free(screen, cx, cy, w, h, moving)) {
                     continue;
@@ -343,6 +508,7 @@ final class Layout {
         for (Screen screen : screens) {
             screen.items.remove(item);
         }
+        dock.items.remove(item);
     }
 
     int screenOf(Item item) {

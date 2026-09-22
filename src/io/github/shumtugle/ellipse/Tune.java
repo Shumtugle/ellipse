@@ -357,7 +357,7 @@ public final class Tune extends Activity {
      * sees it. Going to it keeps what was mine, whole, to come back to.
      */
     private View defaultSwitch() {
-        boolean standard = Keep.onDefault(this);
+        final boolean standard = Keep.onDefault(this);
         LinearLayout made = new LinearLayout(this);
         made.setOrientation(LinearLayout.VERTICAL);
         Cards two = new Cards(new String[] {Words.s("look_mine"), Words.s("look_default")},
@@ -371,19 +371,15 @@ public final class Tune extends Activity {
                 }
             });
         made.addView(two.view());
-        if (standard && (grid.columns != Keep.DEFAULT_COLUMNS || grid.rows != Keep.DEFAULT_ROWS)) {
-            TextView kept = words(Letter.BODY_M, Words.s("grid_kept").replace("{c}", String.valueOf(grid.columns))
-                .replace("{r}", String.valueOf(grid.rows)), Tone.ON_SURFACE_VARIANT);
-            kept.setPadding(Round.dp(8f), 0, Round.dp(8f), 0);
-            made.addView(kept, spaced(10));
-        }
         return made;
     }
 
     /**
-     * To the default, keeping mine; or back to mine. The grid follows only
-     * if everything on the screens still fits in it. Then the settings are
-     * read again from what is kept, and the room lights anew in its look.
+     * To the default, keeping mine; or back to mine. The default is whole:
+     * its settings and its own first layout, the clock at the head and the
+     * dock at the foot. Mine is set aside whole, the layout with it, and
+     * comes back as it was. Then the settings are read again from what is
+     * kept, and the room lights anew in its look.
      */
     private void turnDefault(boolean standard) {
         try {
@@ -392,13 +388,13 @@ public final class Tune extends Activity {
                 mine.put("columns", grid.columns);
                 mine.put("rows", grid.rows);
                 Keep.toDefault(this, mine);
-                fitGrid(Keep.DEFAULT_COLUMNS, Keep.DEFAULT_ROWS);
+                Layout.stash(this);
+                Layout.fresh(this).save(this);
+                Keep.touch(this);
             } else {
-                org.json.JSONObject mine = Keep.mine(this);
                 Keep.toMine(this);
-                if (mine != null) {
-                    fitGrid(mine.optInt("columns", grid.columns), mine.optInt("rows", grid.rows));
-                }
+                Layout.unstash(this);
+                Keep.touch(this);
             }
         } catch (org.json.JSONException broken) {
             root.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
@@ -409,24 +405,6 @@ public final class Tune extends Activity {
                 recreate();
             }
         }, Pace.ARRIVE);
-    }
-
-    /** The grid made so large, if everything on the screens still fits in it. */
-    private void fitGrid(int columns, int rows) {
-        int reach = 0;
-        int depth = 0;
-        for (Layout.Screen screen : grid.screens) {
-            for (Layout.Item item : screen.items) {
-                reach = Math.max(reach, item.x + item.w);
-                depth = Math.max(depth, item.y + item.h);
-            }
-        }
-        if (columns >= reach && rows >= depth && columns > 0 && rows > 0) {
-            grid.columns = columns;
-            grid.rows = rows;
-            grid.save(this);
-            Keep.touch(this);
-        }
     }
 
     /** The lines of the contents told again how their subjects stand. */
@@ -482,7 +460,8 @@ public final class Tune extends Activity {
             }
             case 1:
                 return grid.columns + " \u00d7 " + grid.rows + "  \u00b7  "
-                    + Words.s(Keep.endless(this) ? "turn_round" : "turn_ends");
+                    + Words.s(Keep.endless(this) ? "turn_round" : "turn_ends")
+                + (Keep.dock(this) ? "  \u00b7  " + Words.s("dock") : "");
             case 2:
                 return clockStanding();
             case 3: {
@@ -1558,6 +1537,17 @@ public final class Tune extends Activity {
                 }
             });
         card.addView(immersion.view(), spaced(12));
+
+        card.addView(words(Letter.TITLE_S, Words.s("dock"), Tone.ON_SURFACE_VARIANT), spaced(24));
+        Cards shelf = new Cards(new String[] {Words.s("state_none"), Words.s("dock_on")},
+            new Sketch[] {new Sketch(this, Sketch.CLOSE), new Sketch(this, Sketch.EDGE)},
+            Keep.dock(this) ? 1 : 0, 112, new Picked() {
+                public void picked(int which) {
+                    Keep.saveDock(Tune.this, which == 1);
+                    restate();
+                }
+            });
+        card.addView(shelf.view(), spaced(12));
         return card;
     }
 

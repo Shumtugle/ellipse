@@ -570,5 +570,8 @@ look_mine
 # Default
 look_default	
 
-# The grid stays {c} × {r}: things stand beyond the fourth column or the fifth row.
-grid_kept	
+# Dock
+dock	
+
+# Along the foot
+dock_on	

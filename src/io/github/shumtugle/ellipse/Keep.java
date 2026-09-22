@@ -195,6 +195,7 @@ public final class Keep {
         o.put("order", order(context));
         o.put("immersion", immersion(context));
         o.put("door", door(context));
+        o.put("dock", dock(context));
         return o;
     }
 
@@ -206,7 +207,7 @@ public final class Keep {
                 edit.putFloat(key, (float) o.optDouble(key));
             }
         }
-        for (String key : new String[] {"wall", "across", "edge", "endless", "gloss"}) {
+        for (String key : new String[] {"wall", "across", "edge", "endless", "gloss", "dock"}) {
             if (o.has(key)) {
                 edit.putBoolean(key, o.optBoolean(key));
             }
@@ -246,6 +247,7 @@ public final class Keep {
         o.put("order", BY_NAME);
         o.put("immersion", BARS);
         o.put("door", Door.OWN);
+        o.put("dock", true);
         return o;
     }
 
@@ -295,6 +297,17 @@ public final class Keep {
                 // The code's own defaults stand.
             }
         }
+    }
+
+    // ---------------------------------------------------------------- dock
+
+    /** Whether a dock stands along the foot of the screens. */
+    static boolean dock(Context context) {
+        return store(context).getBoolean("dock", false);
+    }
+
+    static void saveDock(Context context, boolean dock) {
+        mark(store(context).edit().putBoolean("dock", dock), context);
     }
 
     // ---------------------------------------------------------------- door

@@ -570,5 +570,8 @@ look_mine	Моё
 # Default
 look_default	По умолчанию
 
-# The grid stays {c} × {r}: things stand beyond the fourth column or the fifth row.
-grid_kept	Сетка осталась {c} × {r}: вещи стоят дальше четвёртого столбца или пятого ряда.
+# Dock
+dock	Док
+
+# Along the foot
+dock_on	Внизу
