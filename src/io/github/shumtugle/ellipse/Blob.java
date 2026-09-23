@@ -6,10 +6,9 @@ import android.graphics.Paint;
 import android.view.View;
 
 /**
- * The one round thing on the screen. It sits at the right end of the field
- * and will be the way into the menu, so it can afford to be large. Three
- * marks stand in it, one above the other; pressed, the button gives a little
- * and comes back when the finger lifts.
+ * The one round thing in the dock, and the way into every application.
+ * Six marks stand in it, two by three, a grid drawn small; pressed, the
+ * button gives a little and comes back when the finger lifts.
  */
 final class Blob extends View {
 
@@ -53,10 +52,12 @@ final class Blob extends View {
     protected void onDraw(Canvas canvas) {
         float centre = size / 2f;
         canvas.drawCircle(centre, centre, centre, fill);
-        float step = size * 0.17f;
-        float dot = size * 0.055f;
-        for (int i = -1; i <= 1; i++) {
-            canvas.drawCircle(centre, centre + step * i, dot, mark);
+        float across = size * 0.085f;
+        float down = size * 0.15f;
+        float dot = size * 0.048f;
+        for (int row = -1; row <= 1; row++) {
+            canvas.drawCircle(centre - across, centre + down * row, dot, mark);
+            canvas.drawCircle(centre + across, centre + down * row, dot, mark);
         }
     }
 }

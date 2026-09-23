@@ -16,7 +16,6 @@ import android.os.UserHandle;
 import android.provider.AlarmClock;
 import android.provider.MediaStore;
 import android.provider.Settings;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
@@ -24,7 +23,6 @@ import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -34,10 +32,9 @@ import java.util.Set;
 /**
  * The home screen, and in this version the whole application.
  *
- * One screen: the wallpaper in a rounded window, a grid of four by five
- * inside it, a dock of five under it, and the bar at the foot with the
- * search field and the round button. The field opens the list of every
- * application. What stands on the screen is what the
+ * One screen: the wallpaper in a rounded window with a grid of four by
+ * five inside it, and under it the bar, which is the dock: four places and
+ * the round button that opens the list of every application. What stands on the screen is what the
  * phone itself keeps for each everyday role; nothing is moved, nothing is
  * saved, nothing is set. Everything else arrives later, one thing at a time.
  */
@@ -46,11 +43,10 @@ public final class Home extends Activity {
     /** The grid, after the platform's own guidance for a first screen. */
     private static final int COLUMNS = 4;
     private static final int ROWS = 5;
-    private static final int DOCK = 5;
+    private static final int DOCK = 4;
 
     /** The words of this version; a dictionary arrives with the second language. */
-    private static final String SEARCH = "Search";
-    private static final String MENU = "Menu";
+    private static final String ALL = "All applications";
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final List<Cell> cells = new ArrayList<>();
@@ -64,9 +60,7 @@ public final class Home extends Activity {
     private Drawer drawer;
     private Grid grid;
     private Grid dock;
-    private FrameLayout shelf;
     private LinearLayout bar;
-    private TextView field;
     private Blob blob;
     private LauncherApps apps;
     private boolean away;
@@ -255,52 +249,31 @@ public final class Home extends Activity {
         stage.addView(grid, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        /* The dock is a strip of the same stuff as the bar, risen just over
-           it: five places, no names. */
-        shelf = new FrameLayout(this);
-        shelf.setBackground(Tone.box(Tone.container(), dp(30), dp(0.5f)));
-        shelf.setClipChildren(false);
-        dock = new Grid(this, DOCK, 1);
-        dock.setPadding(dp(6), 0, dp(6), 0);
-        shelf.addView(dock, new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        LinearLayout.LayoutParams shelfParams = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, Math.round(iconSize + dp(26)));
-        shelfParams.setMargins(dp(8), dp(8), dp(8), 0);
-        frame.addView(shelf, shelfParams);
-
+        /* The bar is the dock: four places in the pill at the foot, no
+           names, and the round button at its end is the way into every
+           application, marked with six dots, as a grid of them would be. */
         bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
         bar.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
-        bar.setPadding(dp(8), dp(14), dp(12), dp(14));
+        bar.setPadding(dp(4), dp(8), dp(10), dp(8));
+        bar.setClipChildren(false);
 
-        /* The field is the door to every application; the search is
-           where one would start looking for one anyway. */
-        field = new TextView(this);
-        field.setText("");
-        field.setHint(SEARCH);
-        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
-        field.setSingleLine(true);
-        field.setGravity(Gravity.CENTER_VERTICAL);
-        field.setPadding(dp(14), dp(10), dp(10), dp(10));
-        field.setClickable(true);
-        field.setOnClickListener(new View.OnClickListener() {
+        dock = new Grid(this, DOCK, 1);
+        bar.addView(dock, new LinearLayout.LayoutParams(0,
+            Math.round(iconSize + dp(16)), 1f));
+
+        blob = new Blob(this, iconSize);
+        blob.setContentDescription(ALL);
+        blob.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 drawer.rise();
             }
         });
-        bar.addView(field, new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
-        blob = new Blob(this, dp(56));
-        blob.setContentDescription(MENU);
-        blob.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                refuse(v);
-            }
-        });
-        bar.addView(blob);
+        LinearLayout.LayoutParams blobParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        blobParams.leftMargin = dp(4);
+        bar.addView(blob, blobParams);
 
         LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -328,11 +301,7 @@ public final class Home extends Activity {
     /** Everything that wears a colour, in the colours of the moment. */
     private void tint() {
         frame.tint();
-        shelf.setBackground(Tone.box(Tone.container(), dp(30), dp(0.5f)));
         bar.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
-        field.setTextColor(Tone.onSurface());
-        field.setHintTextColor(Tone.faint());
-        field.setBackground(Tone.touch(null, dp(26)));
         blob.tint();
         drawer.tint();
     }
@@ -344,15 +313,23 @@ public final class Home extends Activity {
         return new Intent[] {
             new Intent(Intent.ACTION_DIAL),
             category(Intent.CATEGORY_APP_MESSAGING),
-            new Intent(Intent.ACTION_VIEW, Uri.parse("https:")),
-            new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA),
-            category(Intent.CATEGORY_APP_GALLERY)
+            category(Intent.CATEGORY_APP_GALLERY),
+            new Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
         };
     }
 
-    /** The two rows of the grid nearest the dock, left to right. */
+    /**
+     * The rows of the grid nearest the dock, top to bottom, left to right;
+     * a null leaves its place empty.
+     */
     private static Intent[][] gridRoles() {
         return new Intent[][] {
+            {
+                new Intent(Intent.ACTION_VIEW, Uri.parse("https:")),
+                null,
+                null,
+                null
+            },
             {
                 category(Intent.CATEGORY_APP_CALENDAR),
                 new Intent(AlarmClock.ACTION_SHOW_ALARMS),
@@ -391,7 +368,9 @@ public final class Home extends Activity {
         int first = ROWS - rows.length;
         for (int r = 0; r < rows.length; r++) {
             for (int c = 0; c < rows[r].length; c++) {
-                place(grid, found.role(rows[r][c], taken), c, first + r, true);
+                if (rows[r][c] != null) {
+                    place(grid, found.role(rows[r][c], taken), c, first + r, true);
+                }
             }
         }
         drawer.fill(found.all());
