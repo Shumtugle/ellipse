@@ -1477,11 +1477,19 @@ public final class Home extends Activity {
             maxA = wide ? columns : block[2];
             maxD = tall ? rows : block[3];
             if (Build.VERSION.SDK_INT >= 31) {
+                /* The largest size is read generously: rounded up to whole
+                   places, and never smaller than the size the widget asks
+                   for at first. A widget whose largest size is less than
+                   one of our places, or less than the size it asked for,
+                   must still be able to grow back to where it began. */
+                int[] asked = widgetSpan(info);
                 if (wide && info.maxResizeWidth > 0) {
-                    maxA = Math.max(minA, Math.min(columns, (int) Math.floor(info.maxResizeWidth / cw)));
+                    maxA = Math.max(Math.max(minA, asked[0]),
+                        Math.min(columns, (int) Math.ceil(info.maxResizeWidth / cw)));
                 }
                 if (tall && info.maxResizeHeight > 0) {
-                    maxD = Math.max(minD, Math.min(rows, (int) Math.floor(info.maxResizeHeight / ch)));
+                    maxD = Math.max(Math.max(minD, asked[1]),
+                        Math.min(rows, (int) Math.ceil(info.maxResizeHeight / ch)));
                 }
             }
             minA = Math.min(minA, block[2]);
