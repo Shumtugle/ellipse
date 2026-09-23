@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The three points alone, for the phone's one-colour icons. -->
+<!-- The ellipse and the three points alone, for the phone's one-colour icons. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <group android:translateX="54" android:translateY="54" android:scaleX="0.6" android:scaleY="0.6">
-        <path android:fillColor="#FFFFFFFF" android:pathData="M-43.6,-2.1a9.6,9.6 0 1 0 19.2,0a9.6,9.6 0 1 0 -19.2,0z" />
-        <path android:fillColor="#FFFFFFFF" android:pathData="M-17.0,-1.5a9.0,9.0 0 1 0 18.0,0a9.0,9.0 0 1 0 -18.0,0z" />
-        <path android:fillColor="#FFFFFFFF" android:pathData="M23.5,17.0a16.5,16.5 0 1 0 33.0,0a16.5,16.5 0 1 0 -33.0,0z" />
+        <group android:translateX="-2" android:rotation="-14">
+            <path android:strokeColor="#FFFFFFFF" android:strokeWidth="2.4" android:strokeLineCap="round"
+                android:pathData="M41.36,2.95 A42,17 0 1 1 40.37,-4.69" />
+        </group>
+        <path android:fillColor="#FFFFFFFF" android:pathData="M-42.6,-3.5a7.6,7.6 0 1 0 15.2,0a7.6,7.6 0 1 0 -15.2,0z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M-19.3,-14.9a7.6,7.6 0 1 0 15.2,0a7.6,7.6 0 1 0 -15.2,0z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M24.5,22a15.5,15.5 0 1 0 31,0a15.5,15.5 0 1 0 -31,0z" />
     </group>
 </vector>

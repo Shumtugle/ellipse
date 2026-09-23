@@ -1,12 +1,13 @@
 """
 Draws the two icons of the home screen, each in two layers as the phone
 wants them: a round face of warm grey paper with a fine grain, and on it
-the thing itself with its own soft shadow.
+the thing itself, in ink.
 
-  launcher  three points of ink, two red on a ruled line and a larger gold
-            one slid below it and running off at the edge
-  settings  the head of a spanner, set off the middle, its handle running
-            out past the edge, the jaws worn bright where bolts have turned
+  launcher  an ellipse in one stroke of ink, two red points sitting on it
+            and a larger gold one slipped off it, running out past the edge
+  settings  the head of a spanner in the same ink, off the middle, its
+            handle running out past the edge, its jaws touched with gold,
+            and the ellipse drawn round it
 
 Drawn large and brought down for smooth edges. Run from this folder;
 writes the layers into the resources and round previews here.
@@ -80,112 +81,158 @@ def preview(back, front, name):
 
 GREY = (201, 198, 193)
 
-# ------------------------------------------------------------- launcher
+# ------------------------------------------------------------- the pen
 #
-# Not beads: ink. Each point is set down by a pen on paper, so its edge is
-# not a circle but wanders a little, the ink is thicker at the rim where it
-# dried, and the grain of the paper shows through it. Two stand on a faint
-# ruled line in red ink; the third, larger, in gold ink, has slid below the
-# line and runs off at the edge of the icon.
+# Everything is ink on paper: points set down by a pen, the edge of each
+# wandering a little, thicker at the rim where it dried, the grain of the
+# paper showing through; and lines drawn in one stroke, fine at the ends
+# where the pen came down and lifted, never quite closed.
 
 rng = np.random.default_rng(5)
-LINE = 7.5
-POINTS = [(-34, LINE - 9.6, 9.6, (150, 38, 30)), (-8, LINE - 9.0, 9.0, (150, 38, 30)),
-          (40, 17, 16.5, (178, 128, 40))]
-
-
-def blot(x, y, r, seed):
-    """An outline that wanders around a circle: a few slow waves and a little jitter."""
-    g = np.random.default_rng(seed)
-    waves = [(k, g.uniform(0.02, 0.06) / k ** 0.6, g.uniform(0, 2 * math.pi)) for k in (2, 3, 5, 7)]
-    pts = []
-    for i in range(180):
-        a = 2 * math.pi * i / 180
-        k = 1 + sum(amp * math.sin(n * a + ph) for n, amp, ph in waves) + g.normal(0, 0.006)
-        pts.append(px(x + math.cos(a) * r * k, y + math.sin(a) * r * k))
-    return pts
-
-
 grain = Image.fromarray(np.clip(rng.normal(200, 40, (N // 4, N // 4)), 0, 255).astype(np.uint8), "L")
 grain = grain.resize((N, N), Image.BILINEAR).filter(ImageFilter.GaussianBlur(1.5))
+INK = (43, 49, 64)
 
-front = Image.new("RGBA", (N, N), (0, 0, 0, 0))
-# the ruled line, in soft pencil, fainter at its ends
-rule = Image.new("L", (N, N), 0)
-ImageDraw.Draw(rule).line([px(-70, LINE + 0.4), px(70, LINE - 0.2)], fill=255, width=int(0.9 * U))
-fade = Image.new("L", (N, N), 0)
-ImageDraw.Draw(fade).ellipse((C - 58 * U, C - 58 * U, C + 58 * U, C + 58 * U), fill=255)
-rule = ImageChops.multiply(rule, fade.filter(ImageFilter.GaussianBlur(14 * U)))
-front = Image.alpha_composite(front, solid(rule.point(lambda v: int(v * 0.32)), (96, 92, 88, 255)))
-for i, (x, y, r, colour) in enumerate(POINTS):
-    one = Image.new("L", (N, N), 0)
-    ImageDraw.Draw(one).polygon(blot(x, y, r, 40 + i), fill=255)
-    one = one.filter(ImageFilter.GaussianBlur(0.35 * U))
-    # the paper shows through: the ink is a touch uneven, never a flat fill
-    body = ImageChops.multiply(one, grain.point(lambda v: 205 + v * 50 // 255))
+
+def turned(x, y, angle):
+    a = math.radians(angle)
+    return (x * math.cos(a) - y * math.sin(a), x * math.sin(a) + y * math.cos(a))
+
+
+def wander(pts, seed, amount):
+    """An outline that wanders around its true shape: a few slow waves and a little jitter."""
+    g = np.random.default_rng(seed)
+    waves = [(k, g.uniform(0.3, 1.0) / k ** 0.6, g.uniform(0, 2 * math.pi)) for k in (2, 3, 5)]
+    out = []
+    n = len(pts)
+    cx = sum(p[0] for p in pts) / n
+    cy = sum(p[1] for p in pts) / n
+    for i, (x, y) in enumerate(pts):
+        a = 2 * math.pi * i / n
+        k = amount * (sum(amp * math.sin(m * a + ph) for m, amp, ph in waves) + g.normal(0, 0.12))
+        dx, dy = x - cx, y - cy
+        d = math.hypot(dx, dy) or 1
+        out.append((x + dx / d * k, y + dy / d * k))
+    return out
+
+
+def inked(front, shape, colour, rim=0.72):
+    """A shape filled with ink: uneven with the paper's grain, darker where it dried at the rim."""
+    body = ImageChops.multiply(shape, grain.point(lambda v: 205 + v * 50 // 255))
     front = Image.alpha_composite(front, solid(body, colour + (255,)))
-    # where ink dries, it gathers at the rim
-    rim = ImageChops.subtract(one, one.filter(ImageFilter.MinFilter(int(1.6 * U) | 1)))
-    rim = rim.filter(ImageFilter.GaussianBlur(0.5 * U))
-    darker = tuple(int(c * 0.72) for c in colour)
-    front = Image.alpha_composite(front, solid(rim.point(lambda v: int(v * 0.7)), darker + (255,)))
-    if i == 2:
-        # gold ink carries fine flakes of metal
-        flakes = Image.new("L", (N, N), 0)
-        dfl = ImageDraw.Draw(flakes)
-        for _ in range(36):
-            a, t = rng.uniform(0, 2 * math.pi), math.sqrt(rng.uniform(0, 1)) * r * 0.92
-            fx, fy = px(x + math.cos(a) * t, y + math.sin(a) * t)
-            q = rng.uniform(0.2, 0.42) * U
-            dfl.ellipse((fx - q, fy - q, fx + q, fy + q), fill=int(rng.uniform(60, 140)))
-        front = Image.alpha_composite(front, solid(ImageChops.multiply(flakes, one), (240, 208, 130, 255)))
+    edge = ImageChops.subtract(shape, shape.filter(ImageFilter.MinFilter(int(1.6 * U) | 1)))
+    edge = edge.filter(ImageFilter.GaussianBlur(0.5 * U))
+    darker = tuple(int(c * rim) for c in colour)
+    return Image.alpha_composite(front, solid(edge.point(lambda v: int(v * 0.7)), darker + (255,)))
+
+
+def point(x, y, r, seed):
+    pts = [(x + r * math.cos(2 * math.pi * i / 180), y + r * math.sin(2 * math.pi * i / 180)) for i in range(180)]
+    shape = Image.new("L", (N, N), 0)
+    ImageDraw.Draw(shape).polygon([px(a, b) for a, b in wander(pts, seed, r * 0.035)], fill=255)
+    return shape.filter(ImageFilter.GaussianBlur(0.35 * U))
+
+
+def stroke(cx, cy, rx, ry, angle, start, sweep, width, seed):
+    """One stroke of the pen along an ellipse: it swells in the middle and thins where the pen lands and lifts."""
+    g = np.random.default_rng(seed)
+    ph1, ph2 = g.uniform(0, 2 * math.pi, 2)
+    shape = Image.new("L", (N, N), 0)
+    d = ImageDraw.Draw(shape)
+    steps = int(abs(sweep) * 3)
+    for i in range(steps + 1):
+        s = i / steps
+        t = math.radians(start + sweep * s)
+        wob = 1 + 0.012 * math.sin(3 * t + ph1) + 0.008 * math.sin(7 * t + ph2)
+        x, y = turned(rx * wob * math.cos(t), ry * wob * math.sin(t), angle)
+        w = width * (0.25 + 0.75 * math.sin(math.pi * s) ** 0.5)
+        a, b = px(cx + x, cy + y)
+        rr = w * U / 2
+        d.ellipse((a - rr, b - rr, a + rr, b + rr), fill=255)
+    return shape.filter(ImageFilter.GaussianBlur(0.3 * U))
+
+
+def orbit_point(cx, cy, rx, ry, angle, t):
+    x, y = turned(rx * math.cos(math.radians(t)), ry * math.sin(math.radians(t)), angle)
+    return cx + x, cy + y
+
+
+# ------------------------------------------------------------- launcher
+#
+# The ellipse is the line of the thought: drawn in one stroke of dark ink,
+# tilted, not quite closed. Two red points sit on it; the third, larger,
+# in gold ink with fine flakes of metal, has slipped off it and runs out
+# past the edge of the icon.
+
+OX, OY, RX, RY, TILT = -2, 0, 42, 17, -14
+front = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+front = inked(front, stroke(OX, OY, RX, RY, TILT, 10, 334, 2.2, 3), INK, rim=0.9)
+reds = [orbit_point(OX, OY, RX, RY, TILT, t) for t in (222, 262)]
+for i, (x, y) in enumerate(reds):
+    front = inked(front, point(x, y, 7.6, 40 + i), (150, 38, 30))
+gx, gy, gr = 40, 22, 15.5
+gold = point(gx, gy, gr, 42)
+front = inked(front, gold, (178, 128, 40))
+flakes = Image.new("L", (N, N), 0)
+dfl = ImageDraw.Draw(flakes)
+for _ in range(36):
+    a, t = rng.uniform(0, 2 * math.pi), math.sqrt(rng.uniform(0, 1)) * gr * 0.92
+    fx, fy = px(gx + math.cos(a) * t, gy + math.sin(a) * t)
+    q = rng.uniform(0.2, 0.42) * U
+    dfl.ellipse((fx - q, fy - q, fx + q, fy + q), fill=int(rng.uniform(60, 140)))
+front = Image.alpha_composite(front, solid(ImageChops.multiply(flakes, gold), (240, 208, 130, 255)))
 back = paper(11, GREY)
 back.save(RES + "ic_back.jpg", quality=88, optimize=True)
 save(front, "ic_fg.png")
 preview(back, front, "launcher.png")
+LAUNCHER_POINTS = reds + [(gx, gy)]
 
 # ------------------------------------------------------------- settings
+#
+# The head of a spanner in the same dark ink, set off the middle, its
+# handle running out past the edge, the jaws touched with gold where bolts
+# have turned. The ellipse goes round the head: behind it, the stroke is
+# hidden; where it crosses in front, the pen has left a fine line of bare
+# paper through the ink.
 
-ANGLE = math.radians(-32)
-
-
-def turn(points, cx, cy):
-    out = []
-    for x, y in points:
-        xr = x * math.cos(ANGLE) - y * math.sin(ANGLE)
-        yr = x * math.sin(ANGLE) + y * math.cos(ANGLE)
-        out.append(px(cx + xr, cy + yr))
-    return out
+ANGLE = -32
+HX, HY = 14, -10
 
 
-HX, HY = 16, -12          # the head sits up and to the right
+def spanner(x, y):
+    return turned(x, y, ANGLE)
+
+
+outline = []
+for i in range(0, 361, 2):
+    a = math.radians(i)
+    outline.append((HX + spanner(27 * math.cos(a), 27 * math.sin(a))[0],
+                    HY + spanner(27 * math.cos(a), 27 * math.sin(a))[1]))
 tool = Image.new("L", (N, N), 0)
 d = ImageDraw.Draw(tool)
-disc(d, HX, HY, 27, 255)
-d.polygon(turn([(-10, -8.5), (-120, -8.5), (-120, 8.5), (-10, 8.5)], HX, HY), fill=255)
-# the jaws: an opening fifteen degrees off the axis, with a round throat
-slot_poly = [(4, -11.5), (44, -11.5 + 40 * math.tan(math.radians(15))), (44, 11.5 + 40 * math.tan(math.radians(15))), (4, 11.5)]
+d.polygon([px(a, b) for a, b in wander(outline, 9, 0.9)], fill=255)
+handle = [spanner(x, y) for x, y in [(-10, -8.5), (-120, -9.5), (-120, 9.5), (-10, 8.5)]]
+d.polygon([px(HX + a, HY + b) for a, b in handle], fill=255)
+lean = math.tan(math.radians(15))
+jaw = [spanner(x, y) for x, y in [(4, -11.5), (46, -11.5 + 42 * lean), (46, 11.5 + 42 * lean), (4, 11.5)]]
 slot = Image.new("L", (N, N), 0)
 ds = ImageDraw.Draw(slot)
-ds.polygon(turn(slot_poly, HX, HY), fill=255)
-cx, cy = turn([(4, 0)], HX, HY)[0]
-ds.ellipse((cx - 11.5 * U, cy - 11.5 * U, cx + 11.5 * U, cy + 11.5 * U), fill=255)
-wide = slot.filter(ImageFilter.MaxFilter(int(1.6 * U) | 1))
-body = ImageChops.subtract(tool, slot)
-worn = ImageChops.multiply(ImageChops.subtract(wide, slot), body)
+ds.polygon([px(HX + a, HY + b) for a, b in jaw], fill=255)
+tx, ty = spanner(4, 0)
+a, b = px(HX + tx, HY + ty)
+ds.ellipse((a - 11.5 * U, b - 11.5 * U, a + 11.5 * U, b + 11.5 * U), fill=255)
+tool = ImageChops.subtract(tool, slot).filter(ImageFilter.GaussianBlur(0.35 * U))
+worn = ImageChops.multiply(ImageChops.subtract(slot.filter(ImageFilter.MaxFilter(int(2.2 * U) | 1)), slot), tool)
 
+SX, SY, SRX, SRY, STILT = HX - 2, HY + 2, 40, 14, 18
 front = Image.new("RGBA", (N, N), (0, 0, 0, 0))
-front = Image.alpha_composite(front, shadow_of(body, 2.6, 4.0, 3.0, 0.36))
-front = Image.alpha_composite(front, solid(ImageChops.offset(body, int(0.9 * U), int(1.0 * U)), (58, 64, 72, 255)))
-front = Image.alpha_composite(front, solid(ImageChops.offset(body, int(-0.7 * U), int(-0.8 * U)), (176, 182, 190, 255)))
-front = Image.alpha_composite(front, solid(body, (120, 127, 136, 255)))
-front = Image.alpha_composite(front, solid(worn, (214, 154, 42, 255)))
-# a long soft light along the handle, as on turned steel
-sheen = Image.new("L", (N, N), 0)
-ImageDraw.Draw(sheen).polygon(turn([(-10, -5), (-120, -5), (-120, -1.5), (-10, -1.5)], HX, HY), fill=255)
-sheen = ImageChops.multiply(sheen.filter(ImageFilter.GaussianBlur(1.2 * U)), body)
-front = Image.alpha_composite(front, solid(sheen.point(lambda v: int(v * 0.45)), (235, 238, 242, 255)))
+front = inked(front, stroke(SX, SY, SRX, SRY, STILT, 200, 334, 2.0, 8), INK, rim=0.9)
+front = inked(front, tool, INK)
+front = inked(front, worn, (178, 128, 40))
+near = stroke(SX, SY, SRX, SRY, STILT, 12, 150, 1.4, 8)
+front = Image.alpha_composite(front, solid(ImageChops.multiply(near, tool), GREY + (255,)))
 back = paper(23, GREY)
 back.save(RES + "door_back.jpg", quality=88, optimize=True)
 save(front, "door_fg.png")
 preview(back, front, "settings.png")
+print("points", [(round(x, 1), round(y, 1)) for x, y in LAUNCHER_POINTS])
