@@ -81,7 +81,7 @@ final class Tray extends FrameLayout {
 
         TextView caption = new TextView(getContext());
         caption.setText(name.toString().toUpperCase(Locale.getDefault()));
-        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scaled);
+        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         caption.setLetterSpacing(0.12f);
         caption.setTextColor(Tone.faint());
         caption.setPadding(dp(16), 0, dp(16), dp(6));

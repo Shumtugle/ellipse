@@ -54,7 +54,7 @@ final class Ask {
 
         TextView title = new TextView(context);
         title.setText(caption.toUpperCase(Locale.getDefault()));
-        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scaled);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         title.setLetterSpacing(0.12f);
         title.setTextColor(Tone.faint());
         card.addView(title);
@@ -64,7 +64,7 @@ final class Ask {
         field.setSingleLine(true);
         field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
         field.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
-        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
         field.setTextColor(Tone.onSurface());
         field.setBackground(Tone.box(Tone.container(), 16 * density, 0f));
         int inner = Math.round(14 * density);
@@ -159,7 +159,7 @@ final class Ask {
         TextView made = new TextView(context);
         made.setText(text);
         made.setTextColor(colour);
-        made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
+        made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
         int h = Math.round(16 * density);
         int v = Math.round(12 * density);
         made.setPadding(h, v, h, v);

@@ -43,7 +43,7 @@ final class Nest extends LinearLayout {
 
         TextView caption = new TextView(context);
         caption.setText(name.toString().toUpperCase(Locale.getDefault()));
-        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 11f * scaled);
+        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scaled);
         caption.setLetterSpacing(0.12f);
         caption.setTextColor(Tone.faint());
         caption.setSingleLine(true);
@@ -69,7 +69,7 @@ final class Nest extends LinearLayout {
                 more.setText("+" + (doors.size() - room + 1));
                 more.setGravity(Gravity.CENTER);
                 more.setTextColor(Tone.onSurface());
-                more.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+                more.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
                 more.setBackground(Tone.touch(Tone.box(Tone.containerHigh(), icon / 2f, 0f), icon / 2f));
                 more.setOnClickListener(new OnClickListener() {
                     public void onClick(View v) {

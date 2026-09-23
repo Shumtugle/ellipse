@@ -12,7 +12,8 @@ import android.view.View;
  * twenty four, in one stroke weight: a magnifier, a gear, a brush, three
  * dots in a ring, a turning arrow, an arrow turning back, a phone, a grid
  * of dots, a palette, a stroke of a finger, a box with an arrow out of
- * it, a globe, a chevron pointing down, and a cross.
+ * it, a globe, a chevron pointing down, a cross, a small i in a ring, a
+ * bin, two corners pulled apart, and a pen.
  */
 final class Glyph extends View {
 
@@ -30,6 +31,10 @@ final class Glyph extends View {
     static final int LANGUAGE = 11;
     static final int CHEVRON = 12;
     static final int CROSS = 13;
+    static final int INFO = 14;
+    static final int TRASH = 15;
+    static final int RESIZE = 16;
+    static final int PEN = 17;
 
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -180,6 +185,47 @@ final class Glyph extends View {
                 oval.set(8f * u, 3f * u, 16f * u, 21f * u);
                 canvas.drawOval(oval, line);
                 canvas.drawLine(3f * u, 12f * u, 21f * u, 12f * u, line);
+                break;
+            case INFO:
+                canvas.drawCircle(12f * u, 12f * u, 9f * u, line);
+                canvas.drawLine(12f * u, 11f * u, 12f * u, 16.5f * u, line);
+                canvas.drawCircle(12f * u, 7.8f * u, 1.3f * u, fill);
+                break;
+            case TRASH:
+                canvas.drawLine(4.5f * u, 6.5f * u, 19.5f * u, 6.5f * u, line);
+                path.moveTo(9.5f * u, 6.5f * u);
+                path.lineTo(9.5f * u, 4f * u);
+                path.lineTo(14.5f * u, 4f * u);
+                path.lineTo(14.5f * u, 6.5f * u);
+                canvas.drawPath(path, line);
+                path.reset();
+                path.moveTo(6.5f * u, 6.5f * u);
+                path.lineTo(7.5f * u, 20f * u);
+                path.lineTo(16.5f * u, 20f * u);
+                path.lineTo(17.5f * u, 6.5f * u);
+                canvas.drawPath(path, line);
+                canvas.drawLine(10.5f * u, 10f * u, 10.5f * u, 16.5f * u, line);
+                canvas.drawLine(13.5f * u, 10f * u, 13.5f * u, 16.5f * u, line);
+                break;
+            case RESIZE:
+                canvas.drawLine(5f * u, 19f * u, 19f * u, 5f * u, line);
+                path.moveTo(12f * u, 5f * u);
+                path.lineTo(19f * u, 5f * u);
+                path.lineTo(19f * u, 12f * u);
+                path.moveTo(5f * u, 12f * u);
+                path.lineTo(5f * u, 19f * u);
+                path.lineTo(12f * u, 19f * u);
+                canvas.drawPath(path, line);
+                break;
+            case PEN:
+                path.moveTo(4.5f * u, 19.5f * u);
+                path.lineTo(5.5f * u, 15.5f * u);
+                path.lineTo(16f * u, 5f * u);
+                path.lineTo(19f * u, 8f * u);
+                path.lineTo(8.5f * u, 18.5f * u);
+                path.close();
+                canvas.drawPath(path, line);
+                canvas.drawLine(13.5f * u, 7.5f * u, 16.5f * u, 10.5f * u, line);
                 break;
             case CROSS:
                 canvas.drawLine(6.5f * u, 6.5f * u, 17.5f * u, 17.5f * u, line);

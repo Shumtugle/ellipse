@@ -30,8 +30,8 @@ final class Row extends View {
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
         inset = 24f * density;
         gap = 18f * density;
-        tall = Math.round(iconSize + 20f * density);
-        words.setTextSize(17f * scaled);
+        tall = Math.round(iconSize + 28f * density);
+        words.setTextSize(20f * scaled);
         tint();
     }
 

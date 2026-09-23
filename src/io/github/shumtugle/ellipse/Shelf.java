@@ -99,7 +99,7 @@ final class Shelf extends FrameLayout {
         field = new EditText(context);
         field.setBackground(null);
         field.setHint(WIDGETS);
-        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scaled);
+        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
         field.setSingleLine(true);
         field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         field.setImeOptions(EditorInfo.IME_ACTION_SEARCH | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
@@ -284,13 +284,13 @@ final class Shelf extends FrameLayout {
         TextView name = new TextView(getContext());
         name.setText(maker.name);
         name.setTextColor(Tone.onSurface());
-        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 21f * scaled);
         name.setSingleLine(true);
         words.addView(name);
         TextView count = new TextView(getContext());
         count.setText(offers.size() == 1 ? ONE : offers.size() + MANY);
         count.setTextColor(Tone.faint());
-        count.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+        count.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         words.addView(count);
         top.addView(words, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         final Glyph chevron = new Glyph(getContext(), Glyph.CHEVRON, dp(24));
@@ -351,7 +351,7 @@ final class Shelf extends FrameLayout {
             TextView label = new TextView(context);
             label.setText(info.loadLabel(manager));
             label.setTextColor(Tone.onSurface());
-            label.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
             label.setGravity(Gravity.CENTER);
             label.setPadding(0, dp(12), 0, 0);
             one.addView(label);
@@ -359,7 +359,7 @@ final class Shelf extends FrameLayout {
             TextView size = new TextView(context);
             size.setText(span[0] + " \u00D7 " + span[1]);
             size.setTextColor(Tone.faint());
-            size.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+            size.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
             size.setGravity(Gravity.CENTER);
             one.addView(size);
             if (Build.VERSION.SDK_INT >= 31) {
@@ -368,7 +368,7 @@ final class Shelf extends FrameLayout {
                     TextView said = new TextView(context);
                     said.setText(about);
                     said.setTextColor(Tone.faint());
-                    said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+                    said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
                     said.setGravity(Gravity.CENTER);
                     one.addView(said);
                 }

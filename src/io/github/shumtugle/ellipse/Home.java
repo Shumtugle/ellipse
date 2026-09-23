@@ -133,6 +133,8 @@ public final class Home extends Activity {
     private static final String RESIZE = "Resize";
     private static final String RENAME = "Rename";
     private static final String NEW_FOLDER = "Folder";
+    private static final String OWN_SETTINGS = "Ellipse settings";
+    private static final int OWN_MAKER = 1000;
     private float carryStartX;
     private float carryStartY;
     private boolean carryMoved;
@@ -1853,30 +1855,43 @@ public final class Home extends Activity {
             }
             List<String> lines = new ArrayList<>();
             List<Integer> keys = new ArrayList<>();
+            List<Integer> tools = new ArrayList<>();
             lines.add(APP_INFO);
             keys.add(KEY_INFO);
+            tools.add(Glyph.INFO);
             if (!systemApp(door)) {
                 lines.add(UNINSTALL);
                 keys.add(KEY_UNINSTALL);
+                tools.add(Glyph.TRASH);
             }
-            sections.add(section(lines, keys));
+            if (whence != null) {
+                lines.add(REMOVE);
+                keys.add(KEY_REMOVE);
+                tools.add(Glyph.CROSS);
+            }
+            sections.add(strip(lines, keys, tools));
         } else {
             List<String> lines = new ArrayList<>();
             List<Integer> keys = new ArrayList<>();
+            List<Integer> tools = new ArrayList<>();
             if (token.startsWith(Keep.FOLDER_THING)) {
                 lines.add(RENAME);
                 keys.add(KEY_RENAME);
+                tools.add(Glyph.PEN);
             }
             if (whence != null && whence[0] >= 0 && resizable(token)) {
                 lines.add(RESIZE);
                 keys.add(KEY_RESIZE);
+                tools.add(Glyph.RESIZE);
+            }
+            if (whence != null) {
+                lines.add(REMOVE);
+                keys.add(KEY_REMOVE);
+                tools.add(Glyph.CROSS);
             }
             if (!lines.isEmpty()) {
-                sections.add(section(lines, keys));
+                sections.add(strip(lines, keys, tools));
             }
-        }
-        if (whence != null) {
-            sections.add(new Menu.Section(null, new String[] {REMOVE}, new int[] {KEY_REMOVE}));
         }
         menuFor = MENU_THING;
         int[] at = new int[2];
@@ -1915,6 +1930,16 @@ public final class Home extends Activity {
                 }
             });
         }
+    }
+
+    /** The home screen's own doings for a thing, as a strip of tools apart from what the app offers. */
+    private static Menu.Section strip(List<String> lines, List<Integer> keys, List<Integer> tools) {
+        Menu.Section made = section(lines, keys);
+        made.tools = new int[tools.size()];
+        for (int i = 0; i < made.tools.length; i++) {
+            made.tools[i] = tools.get(i);
+        }
+        return made;
     }
 
     private static Menu.Section section(List<String> lines, List<Integer> keys) {
@@ -2155,8 +2180,13 @@ public final class Home extends Activity {
         } catch (RuntimeException none) {
             makers.clear();
         }
+        /* The home screen's own door to its settings comes first, apart;
+           then what every app can make. */
+        Menu.Section own = new Menu.Section(null, new String[] {OWN_SETTINGS}, new int[] {OWN_MAKER});
+        own.icons = new android.graphics.drawable.Drawable[] {getDrawable(R.mipmap.door)};
         if (makers.isEmpty()) {
-            refuse(screens);
+            menuFor = MENU_MAKERS;
+            menu.show(new Menu.Section[] {own}, askX, askY, dp(20));
             return;
         }
         String[] lines = new String[makers.size()];
@@ -2172,11 +2202,15 @@ public final class Home extends Activity {
         Menu.Section section = new Menu.Section(null, lines, keys);
         section.icons = icons;
         menuFor = MENU_MAKERS;
-        menu.show(new Menu.Section[] {section}, askX, askY, dp(20));
+        menu.show(new Menu.Section[] {own, section}, askX, askY, dp(20));
     }
 
     /** A maker was chosen: its own window makes the shortcut, and the answer comes back as a pin request. */
     private void make(int which) {
+        if (which == OWN_MAKER) {
+            setAnywhere(Keep.OWN_THING, pendingPage);
+            return;
+        }
         if (which < 0 || which >= makers.size()) {
             return;
         }

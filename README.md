@@ -39,9 +39,10 @@ layout will not come down to the places it has is laid out as large as it
 needs and drawn smaller, the same both ways, so nothing is cut off; one
 that fits is left as it is.
 
-A long press on anything opens its menu beside it: an app's own shortcuts
-with their pictures, App info and Uninstall; Rename and Resize for a
-folder, Resize for a widget; and, set apart, Remove. Moving the finger on
+A long press on anything opens its menu beside it: first what the app
+itself offers, its own shortcuts with their pictures; then, apart, on a
+tone of their own, the home screen's tools as a strip of drawings with
+words — App info, Uninstall, Rename, Resize, Remove, as fits the thing. Moving the finger on
 closes the menu and carries the thing. The round button at the dock's end
 becomes a bin while something is carried from a place; it is taken off (a widget lets go of its
 place, the clock is switched off in the settings). A widget or a folder
@@ -51,8 +52,8 @@ places, never over what stands beside it; a touch outside ends it. A folder larg
 screen as a card with its apps in it, two small icons to a place; the
 last place shows how many more there are. Apps can be set into the
 dock, and taken out of it. Add folder makes a folder of one's own, named
-at once; apps are dropped into it. Add shortcut offers every app's own
-shortcut makers. A screen with nothing on it can be removed. Other apps
+at once; apps are dropped into it. Add shortcut offers the door to this home
+screen's own settings first, then every app's own shortcut makers. A screen with nothing on it can be removed. Other apps
 can ask to put a shortcut or a widget on the home screen: a card asks,
 and it is set down in the first free place. Apps of a work profile are
 listed with their badge. An app that leaves the phone leaves no trace. Home returns to the home screen.
@@ -90,7 +91,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.17.0
+  sh build.sh ellipse-1.17.1
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

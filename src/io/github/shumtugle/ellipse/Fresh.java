@@ -91,7 +91,7 @@ final class Fresh extends FrameLayout {
     private TextView caption(String text) {
         TextView made = new TextView(getContext());
         made.setText(text.toUpperCase(Locale.ROOT));
-        made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scaled);
+        made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         made.setLetterSpacing(0.12f);
         made.setTextColor(Tone.faint());
         made.setPadding(dp(16), dp(12), dp(16), dp(4));
@@ -144,7 +144,7 @@ final class Fresh extends FrameLayout {
         if (recent.isEmpty() && lately.isEmpty()) {
             TextView none = new TextView(getContext());
             none.setText(EMPTY);
-            none.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+            none.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
             none.setTextColor(Tone.faint());
             none.setPadding(dp(16), dp(24), dp(16), dp(24));
             sheet.addView(none);

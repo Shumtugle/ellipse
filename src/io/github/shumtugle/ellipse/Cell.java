@@ -50,13 +50,13 @@ final class Cell extends View {
         float density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
         gap = 6f * density;
-        words.setTextSize(12.5f * scaled);
+        words.setTextSize(14f * scaled);
         words.setTextAlign(Paint.Align.CENTER);
         words.setColor(Tone.onSurface());
         /* The names stand on the wallpaper, whatever it is; a soft dark
            halo keeps them legible on a white sky without a plate behind. */
         words.setShadowLayer(3f * density, 0f, 0.75f * density, 0x99000000);
-        small.setTextSize(11f * scaled);
+        small.setTextSize(12.5f * scaled);
         small.setTextAlign(Paint.Align.CENTER);
         small.setColor(Tone.primary());
         setClickable(true);
@@ -75,7 +75,7 @@ final class Cell extends View {
         float density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
         TextPaint probe = new TextPaint();
-        probe.setTextSize(12.5f * scaled);
+        probe.setTextSize(14f * scaled);
         return 6f * density - probe.ascent() + probe.descent();
     }
 

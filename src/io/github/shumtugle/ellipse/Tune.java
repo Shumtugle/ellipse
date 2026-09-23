@@ -266,7 +266,7 @@ public final class Tune extends Activity {
         field.setHint(SEARCH);
         field.setHintTextColor(Tone.faint());
         field.setTextColor(Tone.onSurface());
-        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scaled);
+        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
         field.setSingleLine(true);
         field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         field.setImeOptions(EditorInfo.IME_ACTION_SEARCH | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
@@ -293,7 +293,7 @@ public final class Tune extends Activity {
         pill = bar;
 
         heading = new TextView(this);
-        heading.setTextSize(TypedValue.COMPLEX_UNIT_PX, 32f * scaled);
+        heading.setTextSize(TypedValue.COMPLEX_UNIT_PX, 34f * scaled);
         heading.setTextColor(Tone.onSurface());
         heading.setPadding(dp(24), dp(20), dp(24), dp(12));
         heading.setVisibility(View.GONE);
@@ -415,7 +415,7 @@ public final class Tune extends Activity {
         made.setOrientation(LinearLayout.HORIZONTAL);
         made.setGravity(Gravity.CENTER_VERTICAL);
         boolean drawn = line.glyph >= 0;
-        made.setPadding(dp(drawn ? 28 : 24), dp(18), dp(24), dp(18));
+        made.setPadding(dp(drawn ? 28 : 24), dp(22), dp(24), dp(22));
         boolean soon = line.kind == SOON;
         if (!soon) {
             made.setBackground(Tone.touch(null, 0f));
@@ -431,12 +431,12 @@ public final class Tune extends Activity {
         TextView title = new TextView(this);
         title.setText(line.title);
         title.setTextColor(soon ? Tone.faint() : Tone.onSurface());
-        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
         words.addView(title);
         final TextView about = new TextView(this);
         about.setText(soon ? line.about + ". " + LATER + "." : line.about);
         about.setTextColor(Tone.faint());
-        about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+        about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         about.setPadding(0, dp(2), 0, 0);
         words.addView(about);
         made.addView(words, new LinearLayout.LayoutParams(0,
@@ -455,7 +455,7 @@ public final class Tune extends Activity {
             final TextView value = new TextView(this);
             value.setText(valueOf(line));
             value.setTextColor(Tone.primary());
-            value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
+            value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
             made.addView(value);
             made.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
@@ -536,11 +536,11 @@ public final class Tune extends Activity {
             made.setBackground(Tone.touch(null, 0f));
             ImageView icon = new ImageView(this);
             icon.setImageDrawable(door.icon());
-            made.addView(icon, new LinearLayout.LayoutParams(dp(40), dp(40)));
+            made.addView(icon, new LinearLayout.LayoutParams(dp(48), dp(48)));
             TextView name = new TextView(this);
             name.setText(door.label);
             name.setTextColor(Tone.onSurface());
-            name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+            name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
             name.setSingleLine(true);
             name.setPadding(dp(20), 0, dp(12), 0);
             made.addView(name, new LinearLayout.LayoutParams(0,
