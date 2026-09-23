@@ -22,9 +22,9 @@ import java.util.List;
 final class Tray extends FrameLayout {
 
     interface Hand {
-        void open(App app, View from);
+        void open(Held app, View from);
 
-        void lift(App app, View from);
+        void lift(Held app, View from);
 
         void closed();
     }
@@ -35,7 +35,7 @@ final class Tray extends FrameLayout {
     private final Hand hand;
     private boolean closing;
 
-    Tray(Context context, String name, List<App> apps, Icons icons, int width, Hand hand) {
+    Tray(Context context, String name, List<Held> apps, Icons icons, int width, Hand hand) {
         super(context);
         this.hand = hand;
         setBackgroundColor(0x66000000);
@@ -76,9 +76,10 @@ final class Tray extends FrameLayout {
                 rowParams.topMargin = i == 0 ? 0 : Round.dp(12f);
                 card.addView(row, rowParams);
             }
-            final App app = apps.get(i);
+            final Held app = apps.get(i);
             View cell = Cell.make(context, tile, icons.look());
-            Cell.dress(cell, app, icons, tile);
+            Cell.dress(cell, app, context, icons, tile,
+                context.getResources().getDisplayMetrics().densityDpi);
             cell.setOnClickListener(new OnClickListener() {
                 public void onClick(View v) {
                     Tray.this.hand.open(app, v);

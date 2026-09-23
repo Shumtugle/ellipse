@@ -49,8 +49,7 @@ final class Things {
     }
 
     /** A folder: up to four small tiles, two by two. */
-    static View folder(Context context, Icons icons, List<String> apps, Map<String, App> known,
-                       int width, String name) {
+    static View folder(Context context, Icons icons, List<Held> held, int width, String name) {
         LinearLayout face = new LinearLayout(context);
         face.setOrientation(LinearLayout.VERTICAL);
         face.setGravity(Gravity.CENTER);
@@ -61,11 +60,7 @@ final class Things {
         int tall = Tile.height(small, icons.look());
         LinearLayout row = null;
         int shown = 0;
-        for (String component : apps) {
-            App app = known.get(component);
-            if (app == null) {
-                continue;
-            }
+        for (final Held app : held) {
             if (shown % 2 == 0) {
                 row = new LinearLayout(context);
                 row.setOrientation(LinearLayout.HORIZONTAL);
@@ -75,7 +70,17 @@ final class Things {
             }
             ImageView mini = new ImageView(context);
             mini.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            icons.put(mini, app, small);
+            if (app.app != null) {
+                icons.put(mini, app.app, small);
+            } else {
+                final Context where = context;
+                final int dpi = context.getResources().getDisplayMetrics().densityDpi;
+                icons.put(mini, app.written, small, new Icons.Source() {
+                    public android.graphics.drawable.Drawable icon() {
+                        return app.icon(where, dpi);
+                    }
+                });
+            }
             LinearLayout.LayoutParams miniParams = new LinearLayout.LayoutParams(small, tall);
             miniParams.leftMargin = shown % 2 == 0 ? 0 : gap;
             row.addView(mini, miniParams);

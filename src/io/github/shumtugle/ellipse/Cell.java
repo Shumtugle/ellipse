@@ -52,6 +52,24 @@ final class Cell {
         cell.setContentDescription(app.label);
     }
 
+    /** The same, for a thing that is not an application: a screen inside one. */
+    static void dress(View made, final Held held, final Context context, Icons icons, int tile, final int dpi) {
+        LinearLayout cell = (LinearLayout) made;
+        ImageView face = (ImageView) cell.getChildAt(0);
+        TextView name = (TextView) cell.getChildAt(1);
+        if (held.app != null) {
+            icons.put(face, held.app, tile);
+        } else {
+            icons.put(face, held.written, tile, new Icons.Source() {
+                public android.graphics.drawable.Drawable icon() {
+                    return held.icon(context, dpi);
+                }
+            });
+        }
+        name.setText(held.label);
+        cell.setContentDescription(held.label);
+    }
+
     /** The tile of a cell, for whoever needs its picture. */
     static ImageView face(View cell) {
         return (ImageView) ((LinearLayout) cell).getChildAt(0);

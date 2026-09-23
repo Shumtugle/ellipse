@@ -502,7 +502,7 @@ public final class Home extends Activity {
     private View make(final Layout.Item item) {
         final View view;
         if (Layout.FOLDER.equals(item.kind)) {
-            view = Things.folder(this, icons, item.apps, known, tile, item.label);
+            view = Things.folder(this, icons, holding(item), tile, item.label);
             view.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     openFolder(item);
@@ -1046,6 +1046,22 @@ public final class Home extends Activity {
                 roll = null;
             }
         });
+        if (open.size() > 1) {
+            // All of them at once, in a folder of their own: a list of
+            // seventy screens is not carried out one at a time.
+            final List<String> every = new ArrayList<String>();
+            for (int i : index) {
+                every.add(new ComponentName(open.get(i).packageName, open.get(i).name).flattenToShortString());
+            }
+            roll.row(Words.s("screens_folder"), String.valueOf(open.size()), new Runnable() {
+                public void run() {
+                    if (roll != null) {
+                        roll.close();
+                    }
+                    gather(app.label, every);
+                }
+            }, null);
+        }
         for (int i : index) {
             final android.content.pm.ActivityInfo one = open.get(i);
             final String name = names.get(i);
@@ -1538,26 +1554,71 @@ public final class Home extends Activity {
 
     // ------------------------------------------------------------ folders
 
-    private void openFolder(final Layout.Item folder) {
-        List<App> inside = new ArrayList<App>();
+    /**
+     * What a folder holds: its applications, and the screens inside
+     * applications that have been put in beside them. A name that answers
+     * to nothing any more is simply left out.
+     */
+    private List<Held> holding(Layout.Item folder) {
+        List<Held> inside = new ArrayList<Held>();
         for (String component : folder.apps) {
             App app = known.get(component);
             if (app != null) {
-                inside.add(app);
+                inside.add(Held.of(component, app));
+                continue;
+            }
+            Held screen = Held.screen(this, component);
+            if (screen != null) {
+                inside.add(screen);
             }
         }
+        return inside;
+    }
+
+    /**
+     * A folder made on the screen in sight, holding what it is given: the
+     * screens inside an application, say. It goes wherever there is room,
+     * and the home screen is laid out again with it.
+     */
+    private void gather(String name, List<String> inside) {
+        int page = board.page();
+        int[] spot = layout.nearest(page, layout.columns / 2, 0, 1, 1, null);
+        if (spot == null) {
+            stage.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
+            return;
+        }
+        Layout.Item made = new Layout.Item(Layout.FOLDER, spot[0], spot[1]);
+        made.label = name;
+        made.apps.addAll(inside);
+        layout.screen(page).items.add(made);
+        layout.save(this);
+        build();
+    }
+
+    private void openFolder(final Layout.Item folder) {
+        List<Held> inside = holding(folder);
         if (inside.isEmpty()) {
             return;
         }
         stage.still(true);
         tray = new Tray(this, folder.label == null ? "" : folder.label, inside, icons, stage.getWidth(),
             new Tray.Hand() {
-                public void open(App app, View from) {
-                    launch(app, from);
+                public void open(Held app, View from) {
+                    if (app.app != null) {
+                        launch(app.app, from);
+                        return;
+                    }
+                    try {
+                        startActivity(app.opening());
+                    } catch (RuntimeException gone) {
+                        from.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
+                    }
                 }
 
-                public void lift(App app, View from) {
-                    liftFromFolder(app, from, folder);
+                public void lift(Held app, View from) {
+                    if (app.app != null) {
+                        liftFromFolder(app.app, from, folder);
+                    }
                 }
 
                 public void closed() {

@@ -294,6 +294,9 @@ screens_of	Экраны внутри
 # A press opens one; a long press sets it on a screen. Not every screen opens alone.
 screens_note	Касание открывает, долгое нажатие ставит на экран. Не каждый экран открывается сам по себе
 
+# All of them in a folder
+screens_folder	Все в папку
+
 # This screen does not open from outside.
 no_entry	Этот экран не открывается снаружи
 
