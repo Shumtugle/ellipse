@@ -34,6 +34,9 @@ final class Pager extends ViewGroup {
     private boolean dragging;
     private int page;
     private int home = -1;
+    private boolean dots = true;
+    /** Whether a turn past either end comes round to the other. */
+    private boolean endless;
     private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Turn turn;
 
@@ -49,6 +52,15 @@ final class Pager extends ViewGroup {
         ring.setStyle(Paint.Style.STROKE);
     }
 
+    void dots(boolean shown) {
+        dots = shown;
+        invalidate();
+    }
+
+    void endless(boolean on) {
+        endless = on;
+    }
+
     /** Which page is the home one, ringed among the points; none by default. */
     void home(int which) {
         home = which;
@@ -61,7 +73,7 @@ final class Pager extends ViewGroup {
 
     /** The height kept at the foot for the row of points. */
     int foot() {
-        return Math.round(28f * density);
+        return Math.round((dots ? 28f : 8f) * density);
     }
 
     int page() {
@@ -179,11 +191,20 @@ final class Pager extends ViewGroup {
                 if (dragging) {
                     speed.computeCurrentVelocity(1000);
                     float v = speed.getXVelocity();
-                    int near = Math.round(getScrollX() / (float) Math.max(1, getWidth()));
+                    float at = getScrollX() / (float) Math.max(1, getWidth());
+                    int near = Math.round(at);
                     if (Math.abs(v) > fling) {
                         near = v < 0 ? page + 1 : page - 1;
                     }
-                    show(near, true);
+                    int last = getChildCount() - 1;
+                    /* Past an end, with the screens going round, the far
+                       end is come to: the pages dim, turn, and light again. */
+                    boolean past = at < -0.12f || at > last + 0.12f;
+                    if (endless && last > 0 && (near < 0 || near > last) && (past || Math.abs(v) > fling)) {
+                        wrap(near < 0 ? last : 0);
+                    } else {
+                        show(near, true);
+                    }
                 }
                 dragging = false;
                 if (speed != null) {
@@ -194,6 +215,16 @@ final class Pager extends ViewGroup {
             default:
                 return true;
         }
+    }
+
+    private void wrap(final int to) {
+        animate().cancel();
+        animate().alpha(0f).setDuration(Pace.PRESS).withEndAction(new Runnable() {
+            public void run() {
+                show(to, false);
+                animate().alpha(1f).setDuration(Pace.ARRIVE / 2).withEndAction(null).start();
+            }
+        }).start();
     }
 
     private void track(MotionEvent event) {
@@ -208,7 +239,7 @@ final class Pager extends ViewGroup {
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
         int count = getChildCount();
-        if (count < 2) {
+        if (count < 2 || !dots) {
             return;
         }
         float gap = 14f * density;

@@ -55,6 +55,87 @@ final class Keep {
         return context.getSharedPreferences("ellipse", Context.MODE_PRIVATE);
     }
 
+    // ------------------------------------------------------------ settings
+
+    /** The settings, each by the key it is kept under. */
+    static final String DOCK = "dock";
+    /** Lines or pages: the same key the list's own menu keeps its choice under. */
+    static final String VIEW_KEY = "view";
+    static final String DESK_GRID = "desk_grid";
+    static final String DESK_ENDLESS = "desk_endless";
+    static final String DOTS = "dots";
+    static final String AUTO_ADD = "auto_add";
+    static final String LIST_GRID = "list_grid";
+    static final String LIST_ENDLESS = "list_endless";
+    static final String CLOCK = "clock";
+    static final String ON_BACK = "on_back";
+    static final String ON_UP = "on_up";
+    static final String ON_DOWN = "on_down";
+    static final String ON_HOME = "on_home";
+    private static final String HIDDEN = "hidden";
+    private static final String STAMP = "stamp";
+
+    /** What a gesture may do. */
+    static final int DO_NOTHING = 0;
+    static final int DO_FRESH = 1;
+    static final int DO_LIST = 2;
+    static final int DO_NOTICES = 3;
+    static final int DO_QUICK = 4;
+    static final int DO_HOME = 5;
+
+    static boolean flag(Context context, String key, boolean fallback) {
+        return store(context).getBoolean(key, fallback);
+    }
+
+    static void saveFlag(Context context, String key, boolean on) {
+        store(context).edit().putBoolean(key, on).apply();
+        touch(context);
+    }
+
+    static int number(Context context, String key, int fallback) {
+        return store(context).getInt(key, fallback);
+    }
+
+    static void saveNumber(Context context, String key, int value) {
+        store(context).edit().putInt(key, value).apply();
+        touch(context);
+    }
+
+    /** A grid kept as one number: columns times ten, plus rows. */
+    static int columns(int grid) {
+        return Math.max(3, Math.min(7, grid / 10));
+    }
+
+    static int rows(int grid) {
+        return Math.max(3, Math.min(9, grid % 10));
+    }
+
+    /** What is left out of the list of every application, by component. */
+    static java.util.Set<String> hidden(Context context) {
+        return new java.util.HashSet<>(store(context).getStringSet(HIDDEN,
+            new java.util.HashSet<String>()));
+    }
+
+    static void hide(Context context, ComponentName name, boolean hide) {
+        java.util.Set<String> set = hidden(context);
+        if (hide) {
+            set.add(name.flattenToString());
+        } else {
+            set.remove(name.flattenToString());
+        }
+        store(context).edit().putStringSet(HIDDEN, set).apply();
+        touch(context);
+    }
+
+    /** A mark changed with every setting, so the home screen knows to set itself out again. */
+    static int stamp(Context context) {
+        return store(context).getInt(STAMP, 0);
+    }
+
+    private static void touch(Context context) {
+        store(context).edit().putInt(STAMP, stamp(context) + 1).apply();
+    }
+
     /** Everything kept is forgotten: the next start is a first start. */
     static void reset(Context context) {
         store(context).edit().clear().commit();

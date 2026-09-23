@@ -68,8 +68,9 @@ final class Drawer extends FrameLayout {
         {Keep.BY_NAME, Keep.NEWEST, Keep.UPDATED},
         {Keep.LINES, Keep.PAGES}
     };
-    private static final int COLUMNS = 4;
-    private static final int ROWS = 5;
+    /** The grid of a page, when the list is laid out across. */
+    private int columns = 4;
+    private int rows = 5;
 
     private final Opener opener;
     private final ListView list;
@@ -234,6 +235,14 @@ final class Drawer extends FrameLayout {
         tint();
     }
 
+    /** The grid of the pages, and whether they go round; the pages are laid out again. */
+    void grid(int columns, int rows, boolean endless) {
+        this.columns = columns;
+        this.rows = rows;
+        pager.endless(endless);
+        paginate();
+    }
+
     /** The order and the view the list stands in now, as the menu marks them. */
     void order(int order, int view) {
         this.order = order;
@@ -395,9 +404,9 @@ final class Drawer extends FrameLayout {
         pager.removeAllViews();
         Grid page = null;
         for (int i = 0; i < doors.size(); i++) {
-            int at = i % (COLUMNS * ROWS);
+            int at = i % (columns * rows);
             if (at == 0) {
-                page = new Grid(getContext(), COLUMNS, ROWS);
+                page = new Grid(getContext(), columns, rows);
                 page.setPadding(dp(8), 0, dp(8), 0);
                 pager.addView(page);
             }
@@ -413,7 +422,7 @@ final class Drawer extends FrameLayout {
                     return true;
                 }
             });
-            page.put(cell, at % COLUMNS, at / COLUMNS);
+            page.put(cell, at % columns, at / columns);
         }
         pager.show(0, false);
     }

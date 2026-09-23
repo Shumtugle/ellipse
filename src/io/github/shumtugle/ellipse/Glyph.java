@@ -10,7 +10,9 @@ import android.view.View;
 /**
  * The small line drawings of the settings, drawn by hand on a grid of
  * twenty four, in one stroke weight: a magnifier, a gear, a brush, three
- * dots in a ring, a turning arrow, and an arrow turning back.
+ * dots in a ring, a turning arrow, an arrow turning back, a phone, a grid
+ * of dots, a palette, a stroke of a finger, a box with an arrow out of
+ * it, and a globe.
  */
 final class Glyph extends View {
 
@@ -20,6 +22,12 @@ final class Glyph extends View {
     static final int OTHER = 3;
     static final int RESTART = 4;
     static final int RESET = 5;
+    static final int DESK = 6;
+    static final int LIST = 7;
+    static final int LOOK = 8;
+    static final int HANDS = 9;
+    static final int BACKUP = 10;
+    static final int LANGUAGE = 11;
 
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -111,6 +119,65 @@ final class Glyph extends View {
                     canvas.drawLine(12f * u, 8.5f * u, 12f * u, 12f * u, line);
                     canvas.drawLine(12f * u, 12f * u, 14.5f * u, 13.5f * u, line);
                 }
+                break;
+            case DESK:
+                canvas.drawRoundRect(6.5f * u, 3f * u, 17.5f * u, 21f * u, 2.5f * u, 2.5f * u, line);
+                canvas.drawLine(10.5f * u, 18f * u, 13.5f * u, 18f * u, line);
+                canvas.drawLine(3f * u, 8f * u, 3f * u, 16f * u, line);
+                canvas.drawLine(21f * u, 8f * u, 21f * u, 16f * u, line);
+                break;
+            case LIST:
+                canvas.drawCircle(12f * u, 12f * u, 9.5f * u, line);
+                for (int r = -1; r <= 1; r++) {
+                    for (int c = -1; c <= 1; c++) {
+                        canvas.drawCircle(12f * u + c * 3.6f * u, 12f * u + r * 3.6f * u, 1.1f * u, fill);
+                    }
+                }
+                break;
+            case LOOK:
+                path.moveTo(12f * u, 3f * u);
+                path.cubicTo(5f * u, 3f * u, 3f * u, 9f * u, 3f * u, 12f * u);
+                path.cubicTo(3f * u, 17f * u, 7f * u, 21f * u, 12f * u, 21f * u);
+                path.cubicTo(14f * u, 21f * u, 14f * u, 18.5f * u, 13f * u, 17.5f * u);
+                path.cubicTo(12f * u, 16f * u, 13f * u, 14.5f * u, 15f * u, 14.5f * u);
+                path.lineTo(17f * u, 14.5f * u);
+                path.cubicTo(19.5f * u, 14.5f * u, 21f * u, 13f * u, 21f * u, 10.5f * u);
+                path.cubicTo(21f * u, 6f * u, 17f * u, 3f * u, 12f * u, 3f * u);
+                canvas.drawPath(path, line);
+                canvas.drawCircle(7.5f * u, 11.5f * u, 1.3f * u, fill);
+                canvas.drawCircle(10f * u, 7.5f * u, 1.3f * u, fill);
+                canvas.drawCircle(14.5f * u, 7.5f * u, 1.3f * u, fill);
+                canvas.drawCircle(17f * u, 11f * u, 1.3f * u, fill);
+                break;
+            case HANDS:
+                path.moveTo(5f * u, 19f * u);
+                path.cubicTo(9f * u, 17f * u, 12f * u, 12f * u, 12f * u, 5f * u);
+                canvas.drawPath(path, line);
+                path.reset();
+                path.moveTo(8.5f * u, 8f * u);
+                path.lineTo(12f * u, 4.5f * u);
+                path.lineTo(15.5f * u, 8f * u);
+                canvas.drawPath(path, line);
+                canvas.drawCircle(18f * u, 18f * u, 2.5f * u, line);
+                break;
+            case BACKUP:
+                path.moveTo(4f * u, 13f * u);
+                path.lineTo(4f * u, 19f * u);
+                path.lineTo(20f * u, 19f * u);
+                path.lineTo(20f * u, 13f * u);
+                canvas.drawPath(path, line);
+                path.reset();
+                canvas.drawLine(12f * u, 15f * u, 12f * u, 4f * u, line);
+                path.moveTo(8f * u, 8f * u);
+                path.lineTo(12f * u, 4f * u);
+                path.lineTo(16f * u, 8f * u);
+                canvas.drawPath(path, line);
+                break;
+            case LANGUAGE:
+                canvas.drawCircle(12f * u, 12f * u, 9f * u, line);
+                oval.set(8f * u, 3f * u, 16f * u, 21f * u);
+                canvas.drawOval(oval, line);
+                canvas.drawLine(3f * u, 12f * u, 21f * u, 12f * u, line);
                 break;
             default:
                 break;

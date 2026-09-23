@@ -41,21 +41,27 @@ carried to a side edge and held there turns the screens.
 
 The settings open from that door: a field for finding at the top, the
 rooms one under another, and two tabs at the foot, the settings and the
-style. For now there is one room, Other, where the launcher can be
-restarted, or reset to how it was on first start (asked twice).
+style. Desktop: the dock, the grid of the screens, endless scrolling, the
+page points, and new apps set down by themselves. All apps: lines or
+pages, the grid of a page, endless scrolling, and apps left out of the
+list. Look: the clock (icon styles are to come). Gestures: what a swipe up,
+a swipe down, Back and Home do on bare screens; a swipe down may lower the
+notifications or the quick settings. Backup and restore, and languages,
+are to come. Other: restart the launcher, or reset it to how it was on
+first start (asked twice).
 
 There are no folders of one's own yet, and what is set down cannot yet be moved or taken off. They return
 one at a time.
 
 - Android 8.0 or newer
-- No permissions
+- One permission: to lower the phone's own shade on a swipe down
 - No dependencies: platform APIs only, built without Gradle
 
 ## Build
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.9.0
+  sh build.sh ellipse-1.10.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
