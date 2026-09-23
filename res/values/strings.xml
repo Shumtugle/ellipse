@@ -1,7 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Only what the system shows by itself lives here. Every word of the
-     screens is in the word table, where a language module can reach it. -->
 <resources>
     <string name="app_name">Ellipse</string>
-    <string name="settings">Settings</string>
 </resources>

@@ -1,81 +1,102 @@
 package io.github.shumtugle.ellipse;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
+import android.text.TextPaint;
 import android.text.TextUtils;
-import android.view.Gravity;
 import android.view.View;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 
 /**
- * A tile with a name under it: how an application is shown wherever it
- * is shown with its name, in the drawer and in an open folder alike.
+ * One application on the screen: its own icon, exactly as the system
+ * draws it, and its name under it on the grid. In the dock the name is
+ * left out; five places at the foot are learnt by shape, not by reading.
  */
-final class Cell {
+final class Cell extends View {
 
-    private Cell() {
+    final Apps.Door door;
+
+    private final Drawable icon;
+    private final TextPaint words = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final boolean named;
+    private final float iconSize;
+    private final float gap;
+    private CharSequence shown = "";
+
+    Cell(Context context, Apps.Door door, float iconSize, boolean named) {
+        super(context);
+        this.door = door;
+        this.icon = door.icon == null ? null : door.icon.mutate();
+        this.iconSize = iconSize;
+        this.named = named;
+        float density = context.getResources().getDisplayMetrics().density;
+        float scaled = context.getResources().getDisplayMetrics().scaledDensity;
+        gap = 6f * density;
+        words.setTextSize(12.5f * scaled);
+        words.setTextAlign(Paint.Align.CENTER);
+        words.setColor(Tone.onSurface());
+        /* The names stand on the wallpaper, whatever it is; a soft dark
+           halo keeps them legible on a white sky without a plate behind. */
+        words.setShadowLayer(3f * density, 0f, 0.75f * density, 0x99000000);
+        setClickable(true);
+        setContentDescription(door.label);
     }
 
-    static LinearLayout make(Context context, int tile, Tile.Look look) {
-        LinearLayout cell = new LinearLayout(context);
-        cell.setOrientation(LinearLayout.VERTICAL);
-        cell.setGravity(Gravity.CENTER_HORIZONTAL);
-        cell.setPadding(0, Round.dp(4f), 0, Round.dp(4f));
-        cell.setBackground(Round.touch(null, Tone.of(Tone.ON_SURFACE), Round.L));
-        cell.setStateListAnimator(Give.tile());
-        ImageView face = new ImageView(context);
-        face.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        face.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        cell.addView(face, new LinearLayout.LayoutParams(tile, Tile.height(tile, look)));
-        TextView name = Letter.set(new TextView(context), Letter.BODY_M);
-        name.setTextColor(Tone.of(Tone.ON_SURFACE));
-        name.setGravity(Gravity.CENTER_HORIZONTAL);
-        name.setSingleLine(true);
-        name.setEllipsize(TextUtils.TruncateAt.END);
-        name.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        LinearLayout.LayoutParams under = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        under.topMargin = Round.dp(8f);
-        under.leftMargin = Round.dp(4f);
-        under.rightMargin = Round.dp(4f);
-        cell.addView(name, under);
-        return cell;
-    }
-
-    static void dress(View made, App app, Icons icons, int tile) {
-        LinearLayout cell = (LinearLayout) made;
-        ImageView face = (ImageView) cell.getChildAt(0);
-        TextView name = (TextView) cell.getChildAt(1);
-        icons.put(face, app, tile);
-        name.setText(app.label);
-        cell.setContentDescription(app.label);
-    }
-
-    /** The same, for a thing that is not an application: a screen inside one. */
-    static void dress(View made, final Held held, final Context context, Icons icons, int tile, final int dpi) {
-        LinearLayout cell = (LinearLayout) made;
-        ImageView face = (ImageView) cell.getChildAt(0);
-        TextView name = (TextView) cell.getChildAt(1);
-        if (held.app != null) {
-            icons.put(face, held.app, tile);
-        } else {
-            icons.put(face, held.written, tile, new Icons.Source() {
-                public android.graphics.drawable.Drawable icon() {
-                    return held.icon(context, dpi);
-                }
-            });
+    private float top() {
+        float tall = iconSize;
+        if (named) {
+            tall += gap - words.ascent() + words.descent();
         }
-        name.setText(held.label);
-        cell.setContentDescription(held.label);
+        return (getHeight() - tall) / 2f;
     }
 
-    /** The tile of a cell, for whoever needs its picture. */
-    static ImageView face(View cell) {
-        return (ImageView) ((LinearLayout) cell).getChildAt(0);
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        setPivotX(w / 2f);
+        setPivotY(top() + iconSize / 2f);
+        if (named) {
+            shown = TextUtils.ellipsize(door.label == null ? "" : door.label, words,
+                w - gap * 1.5f, TextUtils.TruncateAt.END);
+        }
     }
 
-    static int width(View cell) {
-        return ((LinearLayout) cell).getChildAt(0).getLayoutParams().width;
+    /** Sinks under the finger, and springs back past its place when it lifts. */
+    @Override
+    public void setPressed(boolean pressed) {
+        boolean was = isPressed();
+        super.setPressed(pressed);
+        if (was == pressed) {
+            return;
+        }
+        float to = pressed ? Pace.SINK : 1f;
+        animate().scaleX(to).scaleY(to)
+            .setDuration(pressed ? Pace.PRESS : Pace.ARRIVE)
+            .setInterpolator(pressed ? Pace.EMPHASIS : Pace.SPRING).start();
+    }
+
+    /** Where the icon itself stands, in the screen's coordinates, for the opening to grow from. */
+    int[] iconBounds() {
+        int[] at = new int[2];
+        getLocationOnScreen(at);
+        int left = Math.round(at[0] + (getWidth() - iconSize) / 2f);
+        int top = Math.round(at[1] + top());
+        return new int[] {left, top, Math.round(iconSize), Math.round(iconSize)};
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        float y = top();
+        float x = (getWidth() - iconSize) / 2f;
+        if (icon != null) {
+            icon.setBounds(Math.round(x), Math.round(y),
+                Math.round(x + iconSize), Math.round(y + iconSize));
+            icon.draw(canvas);
+        }
+        if (named) {
+            canvas.drawText(shown, 0, shown.length(), getWidth() / 2f,
+                y + iconSize + gap - words.ascent(), words);
+        }
     }
 }
