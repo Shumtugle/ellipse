@@ -69,7 +69,9 @@ final class Drawer extends LinearLayout {
         this.hand = hand;
         setOrientation(VERTICAL);
         sheet = new android.graphics.drawable.GradientDrawable();
-        sheet.setColor(Tone.of(Tone.SURFACE, 0.97f));
+        // The drawer lies on the same field as the folders and the widgets:
+        // its colour and how solid it stands are set once, for all of them.
+        sheet.setColor(Well.colour(Well.of(context)));
         setBackground(sheet);
         corners(1f);
         setClickable(true);

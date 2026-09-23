@@ -72,13 +72,7 @@ final class Picker extends FrameLayout {
         sheet.setOrientation(LinearLayout.VERTICAL);
         sheet.setClickable(true);
         sheet.setBackground(Round.sheet(Tone.of(Tone.SURFACE_CONTAINER), Round.XL));
-        sheet.setPadding(Round.dp(16f), Round.dp(12f), Round.dp(16f), 0);
-
-        View grip = new View(context);
-        grip.setBackground(Round.box(Tone.of(Tone.ON_SURFACE_VARIANT, 0.5f), Round.FULL));
-        LinearLayout.LayoutParams gripPlace = new LinearLayout.LayoutParams(Round.dp(32f), Round.dp(4f));
-        gripPlace.gravity = Gravity.CENTER_HORIZONTAL;
-        sheet.addView(grip, gripPlace);
+        sheet.setPadding(Round.dp(16f), Round.dp(20f), Round.dp(16f), 0);
 
         final android.widget.EditText field = new android.widget.EditText(context);
         field.setSingleLine(true);
