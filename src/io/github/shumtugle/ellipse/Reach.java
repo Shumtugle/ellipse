@@ -14,8 +14,11 @@ import android.view.View;
  * shrink by. A whole side can be taken, anywhere along it and a finger's
  * breadth either side of it; a corner takes both its sides. It is drawn
  * across whole places, the thing growing with it as it goes, never over
- * what stands beside it. A touch inside the frame is let be; a touch
- * outside it ends the reshaping.
+ * what stands beside it, while the side itself follows the finger
+ * smoothly so the hand always sees where it is. The phone's own edge
+ * gestures are kept off the frame's sides, so a side at the screen's edge
+ * can be taken without going Back. A touch inside the frame is let be; a
+ * touch outside it ends the reshaping.
  */
 final class Reach extends View {
 
@@ -52,6 +55,10 @@ final class Reach extends View {
     private boolean takeTop;
     private boolean takeRight;
     private boolean takeBottom;
+    /** Where the finger has the taken sides now, between the lines places snap to. */
+    private float fingerX;
+    private float fingerY;
+    private final java.util.List<android.graphics.Rect> kept = new java.util.ArrayList<>();
     private boolean ended;
 
     Reach(Context context, Grid grid, View thing, int[] block, int minAcross, int minDown,
@@ -106,9 +113,39 @@ final class Reach extends View {
         return (side == LEFT || side == RIGHT) ? wide : tall;
     }
 
+    /** The sides of the frame where the phone's edge gestures are held back. */
+    private void guardEdges(RectF f) {
+        if (android.os.Build.VERSION.SDK_INT < 29) {
+            return;
+        }
+        int band = Math.round(40f * density);
+        kept.clear();
+        kept.add(new android.graphics.Rect(Math.round(f.left) - band, Math.round(f.top),
+            Math.round(f.left) + band, Math.round(f.bottom)));
+        kept.add(new android.graphics.Rect(Math.round(f.right) - band, Math.round(f.top),
+            Math.round(f.right) + band, Math.round(f.bottom)));
+        setSystemGestureExclusionRects(kept);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         RectF f = frame();
+        guardEdges(f);
+        if (held != NONE) {
+            /* The taken sides are drawn where the finger is, not where they will snap. */
+            if (takeLeft) {
+                f.left = Math.min(fingerX, f.right - 24f * density);
+            }
+            if (takeRight) {
+                f.right = Math.max(fingerX, f.left + 24f * density);
+            }
+            if (takeTop) {
+                f.top = Math.min(fingerY, f.bottom - 24f * density);
+            }
+            if (takeBottom) {
+                f.bottom = Math.max(fingerY, f.top + 24f * density);
+            }
+        }
         float r = Math.min(24f * density, Math.min(f.width(), f.height()) / 2f);
         canvas.drawRoundRect(f, r, r, ring);
         for (float[] h : handles(f)) {
@@ -156,6 +193,8 @@ final class Reach extends View {
                     takeBottom = tall;
                 }
                 held = takeLeft || takeTop || takeRight || takeBottom ? LEFT : NONE;
+                fingerX = x;
+                fingerY = y;
                 if (held == NONE && !f.contains(x, y)) {
                     end();
                 }
@@ -166,7 +205,10 @@ final class Reach extends View {
                 return true;
             case MotionEvent.ACTION_MOVE:
                 if (held != NONE) {
+                    fingerX = x;
+                    fingerY = y;
                     drag(x, y);
+                    invalidate();
                 }
                 return true;
             case MotionEvent.ACTION_UP:
