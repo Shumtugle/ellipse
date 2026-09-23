@@ -40,7 +40,7 @@ final class Glyph extends View {
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
     private final RectF oval = new RectF();
-    private final int kind;
+    private int kind;
     private final float size;
 
     Glyph(Context context, int kind, float size) {
@@ -51,6 +51,12 @@ final class Glyph extends View {
         line.setStrokeCap(Paint.Cap.ROUND);
         line.setStrokeJoin(Paint.Join.ROUND);
         tint(Tone.onSurface());
+    }
+
+    /** Draws another of the drawings in the same place. */
+    void setKind(int kind) {
+        this.kind = kind;
+        invalidate();
     }
 
     void tint(int colour) {

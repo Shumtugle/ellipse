@@ -39,10 +39,12 @@ layout will not come down to the places it has is laid out as large as it
 needs and drawn smaller, the same both ways, so nothing is cut off; one
 that fits is left as it is.
 
-A long press on anything opens its menu beside it: first what the app
-itself offers, its own shortcuts with their pictures; then, apart, on a
-tone of their own, the home screen's tools as a strip of drawings with
-words — App info, Uninstall, Rename, Resize, Remove, as fits the thing. Moving the finger on
+A long press on anything opens its menu, pointing at it, under a head
+with its name and a round button. The first face is what the app itself
+offers, its own shortcuts with their pictures; the gear turns the card to
+the second face, the home screen's own: Uninstall, Rename, Resize, and,
+apart, Remove in the colour of taking away; there the round button opens
+the app's information. Moving the finger on
 closes the menu and carries the thing. The round button at the dock's end
 becomes a bin while something is carried from a place; it is taken off (a widget lets go of its
 place, the clock is switched off in the settings). A widget or a folder
@@ -91,7 +93,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.17.1
+  sh build.sh ellipse-1.18.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

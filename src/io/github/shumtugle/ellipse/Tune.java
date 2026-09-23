@@ -107,10 +107,12 @@ public final class Tune extends Activity {
 
     private static final int RESTART = 1;
     private static final int RESET = 2;
+    private static final int DEFAULT = 3;
 
     private static final String SEARCH = "Search";
     private static final String AGAIN = "Tap again to reset everything";
     private static final String LATER = "Coming in a later version";
+    private static final String ALREADY = "Ellipse is the home screen now";
 
     private static final String[] GRIDS = {"3 \u00D7 4", "4 \u00D7 5", "4 \u00D7 6", "5 \u00D7 5", "5 \u00D7 6", "6 \u00D7 7"};
     private static final int[] GRID_VALUES = {34, 45, 46, 55, 56, 67};
@@ -182,6 +184,8 @@ public final class Tune extends Activity {
                 };
             case OTHER:
                 return new Line[] {
+                    deed(Glyph.DESK, "Make default home screen",
+                        "Ask Android to open Ellipse for Home, from now on", DEFAULT),
                     deed(Glyph.RESTART, "Restart launcher", "Close the home screen and open it again",
                         RESTART),
                     deed(Glyph.RESET, "Reset launcher",
@@ -434,7 +438,8 @@ public final class Tune extends Activity {
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
         words.addView(title);
         final TextView about = new TextView(this);
-        about.setText(soon ? line.about + ". " + LATER + "." : line.about);
+        String said = line.kind == DEED && line.room == DEFAULT && isHome() ? ALREADY : line.about;
+        about.setText(soon ? line.about + ". " + LATER + "." : said);
         about.setTextColor(Tone.faint());
         about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         about.setPadding(0, dp(2), 0, 0);
@@ -565,6 +570,10 @@ public final class Tune extends Activity {
             restart();
             return;
         }
+        if (line.room == DEFAULT) {
+            askToBeHome();
+            return;
+        }
         /* Setting everything back is asked twice: the first tap says what
            the second will do, and is forgotten after a few seconds. */
         long now = System.currentTimeMillis();
@@ -584,6 +593,44 @@ public final class Tune extends Activity {
         }
         Keep.reset(this);
         restart();
+    }
+
+    /**
+     * Asks Android to make this the home screen: its own question where it
+     * has one, and otherwise the page of the phone's settings where the
+     * home screen is chosen.
+     */
+    private void askToBeHome() {
+        try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                android.app.role.RoleManager roles = getSystemService(android.app.role.RoleManager.class);
+                if (roles != null && roles.isRoleAvailable(android.app.role.RoleManager.ROLE_HOME)
+                    && !roles.isRoleHeld(android.app.role.RoleManager.ROLE_HOME)) {
+                    startActivityForResult(roles.createRequestRoleIntent(android.app.role.RoleManager.ROLE_HOME), 7);
+                    return;
+                }
+            }
+            startActivity(new Intent(android.provider.Settings.ACTION_HOME_SETTINGS));
+        } catch (RuntimeException none) {
+            startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));
+        }
+    }
+
+    /** Whether Android opens this for Home now. */
+    private boolean isHome() {
+        Intent home = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME);
+        android.content.pm.ResolveInfo found = getPackageManager().resolveActivity(home,
+            android.content.pm.PackageManager.MATCH_DEFAULT_ONLY);
+        return found != null && found.activityInfo != null
+            && getPackageName().equals(found.activityInfo.packageName);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (rows != null && path.size() > 0 && room() == OTHER) {
+            fill();
+        }
     }
 
     /** The home screen is closed and opened again, from nothing. */
