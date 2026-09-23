@@ -762,6 +762,21 @@ public final class Home extends Activity {
     private static final Tile.Look DISC = new Tile.Look(2f, 1f, Tile.Look.BARE, 1f);
 
     /**
+     * The little ground a mark sits on in a card. A card belongs to the
+     * thing it opened over, and says so by shape rather than by colour:
+     * the marks stand on the tiles' own outline, at the tiles' own
+     * proportion, so a card of a home screen of squircles is a card of
+     * squircles. Where the tiles wear no shape of ours — no mask over the
+     * icons — the marks keep to a disc, as the icons do.
+     */
+    private Tile.Look mould() {
+        if (look.window == Tile.Look.RAW) {
+            return DISC;
+        }
+        return new Tile.Look(look.power, look.ratio, Tile.Look.BARE, 1f);
+    }
+
+    /**
      * The ways into an application it offers itself, up to five: those it
      * declares first, then those it made lately, each by its rank. Only a
      * home screen chosen as the phone's own may ask for them.
@@ -876,7 +891,15 @@ public final class Home extends Activity {
         android.graphics.Canvas canvas = new android.graphics.Canvas(made);
         android.graphics.Paint disc = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         disc.setColor(fill);
-        canvas.drawCircle(side / 2f, side / 2f, side / 2f, disc);
+        // The ground of a mark is the tiles' own outline: a card says
+        // which home screen it belongs to by its shapes, not by its colour.
+        android.graphics.Path ground = mould() == DISC ? null
+            : Tile.curve(0f, 0f, side, side, look.power);
+        if (ground == null) {
+            canvas.drawCircle(side / 2f, side / 2f, side / 2f, disc);
+        } else {
+            canvas.drawPath(ground, disc);
+        }
         // A layer of an icon is drawn larger than what shows of it; a
         // picture that is a picture already fits the disc as it is.
         int bleed = icon instanceof android.graphics.drawable.AdaptiveIconDrawable
@@ -884,8 +907,11 @@ public final class Home extends Activity {
         mark.setBounds(-bleed, -bleed, side + bleed, side + bleed);
         mark.setColorFilter(new android.graphics.PorterDuffColorFilter(ink,
             android.graphics.PorterDuff.Mode.SRC_IN));
-        android.graphics.Path round = new android.graphics.Path();
-        round.addCircle(side / 2f, side / 2f, side / 2f, android.graphics.Path.Direction.CW);
+        android.graphics.Path round = ground;
+        if (round == null) {
+            round = new android.graphics.Path();
+            round.addCircle(side / 2f, side / 2f, side / 2f, android.graphics.Path.Direction.CW);
+        }
         canvas.save();
         canvas.clipPath(round);
         mark.draw(canvas);
