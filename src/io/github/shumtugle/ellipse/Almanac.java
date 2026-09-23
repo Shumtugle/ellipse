@@ -29,7 +29,8 @@ import java.util.Locale;
  *
  * The hands move once a second while the clock is in sight, and not at
  * all when it is not. A press on a window opens what it shows about: the
- * alarms, the calendar, the phone's battery.
+ * alarms, the calendar, the phone's battery. A long press takes the clock
+ * up, to be set down in another row or on another screen.
  */
 final class Almanac extends View {
 
@@ -84,6 +85,13 @@ final class Almanac extends View {
             public boolean onSingleTapUp(MotionEvent e) {
                 press(e.getX(), e.getY());
                 return true;
+            }
+
+            /* Held long, the clock is taken up to be moved, like anything
+               else standing on a screen. */
+            @Override
+            public void onLongPress(MotionEvent e) {
+                performLongClick();
             }
         });
     }

@@ -115,6 +115,14 @@ final class Cell extends View {
             .setInterpolator(pressed ? Pace.EMPHASIS : Pace.SPRING).start();
     }
 
+    /** What the cell shows as its icon, for a hand to hold up. */
+    Drawable drawable() {
+        if (icon == null && door != null) {
+            icon = door.icon();
+        }
+        return icon;
+    }
+
     /** Where the icon stands, in the cell's own coordinates. */
     int[] localIcon() {
         return new int[] {Math.round((getWidth() - iconSize) / 2f), Math.round(top()),

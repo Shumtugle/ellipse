@@ -5,40 +5,54 @@ import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.view.View;
 
-/** An icon held up under the finger while it is carried to its place. */
+/** A thing held up under the finger while it is carried to its place: an icon, or a picture of it. */
 final class Lift extends View {
 
     private final Drawable icon;
-    private final int size;
+    private final int wide;
+    private final int tall;
 
     Lift(Context context, Drawable icon, int size) {
+        this(context, icon, size, size);
+    }
+
+    Lift(Context context, Drawable icon, int wide, int tall) {
         super(context);
         this.icon = icon == null ? null : (icon.getConstantState() == null
             ? icon : icon.getConstantState().newDrawable().mutate());
-        this.size = size;
-        setPivotX(size / 2f);
-        setPivotY(size / 2f);
+        this.wide = wide;
+        this.tall = tall;
+        setPivotX(wide / 2f);
+        setPivotY(tall / 2f);
     }
 
     int size() {
-        return size;
+        return wide;
     }
 
-    /** Stands the icon's centre at a point of the floor. */
+    int wide() {
+        return wide;
+    }
+
+    int tall() {
+        return tall;
+    }
+
+    /** Stands the thing's centre at a point of the floor. */
     void at(float x, float y) {
-        setTranslationX(x - size / 2f);
-        setTranslationY(y - size / 2f);
+        setTranslationX(x - wide / 2f);
+        setTranslationY(y - tall / 2f);
     }
 
     @Override
     protected void onMeasure(int widthSpec, int heightSpec) {
-        setMeasuredDimension(size, size);
+        setMeasuredDimension(wide, tall);
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         if (icon != null) {
-            icon.setBounds(0, 0, size, size);
+            icon.setBounds(0, 0, wide, tall);
             icon.draw(canvas);
         }
     }

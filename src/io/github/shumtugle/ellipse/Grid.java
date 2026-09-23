@@ -31,6 +31,8 @@ final class Grid extends ViewGroup {
     private ValueAnimator guiding;
     private int targetX = -1;
     private int targetY = -1;
+    private int targetAcross = 1;
+    private int targetDown = 1;
 
     Grid(Context context, int columns, int rows) {
         super(context);
@@ -126,6 +128,74 @@ final class Grid extends ViewGroup {
         return best;
     }
 
+    /** Whether a block of places is inside the grid and all free. */
+    boolean free(int column, int row, int across, int down) {
+        if (column < 0 || row < 0 || column + across > columns || row + down > rows) {
+            return false;
+        }
+        for (int c = column; c < column + across; c++) {
+            for (int r = row; r < row + down; r++) {
+                if (!free(c, r)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /** The centre of a block of places, in the grid's own coordinates. */
+    float[] middle(int column, int row, int across, int down) {
+        if (across == 1 && down == 1) {
+            return centre(column, row);
+        }
+        float w = cellWidth();
+        float h = cellHeight();
+        return new float[] {getPaddingLeft() + (column + across / 2f) * w,
+            getPaddingTop() + (row + down / 2f) * h};
+    }
+
+    /**
+     * Where a block would land with its centre at a point: the block that
+     * point would place, if free, or else the free block nearest to it.
+     */
+    int[] landing(float x, float y, int across, int down) {
+        if (x < 0 || y < 0 || x > getWidth() || y > getHeight()) {
+            return null;
+        }
+        if (across == 1 && down == 1) {
+            int[] under = cellAt(x, y);
+            if (under == null) {
+                return null;
+            }
+            return free(under[0], under[1]) ? under : nearestFree(x, y);
+        }
+        float w = cellWidth();
+        float h = cellHeight();
+        int column = Math.round((x - getPaddingLeft()) / w - across / 2f);
+        int row = Math.round((y - getPaddingTop()) / h - down / 2f);
+        column = Math.max(0, Math.min(columns - across, column));
+        row = Math.max(0, Math.min(rows - down, row));
+        if (free(column, row, across, down)) {
+            return new int[] {column, row};
+        }
+        int[] best = null;
+        float nearest = Float.MAX_VALUE;
+        for (int r = 0; r + down <= rows; r++) {
+            for (int c = 0; c + across <= columns; c++) {
+                if (!free(c, r, across, down)) {
+                    continue;
+                }
+                float[] m = middle(c, r, across, down);
+                float d = (m[0] - x) * (m[0] - x) + (m[1] - y) * (m[1] - y);
+                if (d < nearest) {
+                    nearest = d;
+                    best = new int[] {c, r};
+                }
+            }
+        }
+        return best;
+    }
+
     /** Shows or hides the landing guide, fading it in and out. */
     void carrying(boolean on) {
         if (guiding != null) {
@@ -148,11 +218,17 @@ final class Grid extends ViewGroup {
     }
 
     void target(int[] cell) {
+        target(cell, 1, 1);
+    }
+
+    void target(int[] cell, int across, int down) {
         int x = cell == null ? -1 : cell[0];
         int y = cell == null ? -1 : cell[1];
-        if (x != targetX || y != targetY) {
+        if (x != targetX || y != targetY || across != targetAcross || down != targetDown) {
             targetX = x;
             targetY = y;
+            targetAcross = across;
+            targetDown = down;
             invalidate();
         }
     }
@@ -204,14 +280,29 @@ final class Grid extends ViewGroup {
                     continue;
                 }
                 float[] c = centre(column, row);
-                if (column == targetX && row == targetY) {
+                boolean inside = targetX >= 0 && column >= targetX && column < targetX + targetAcross
+                    && row >= targetY && row < targetY + targetDown;
+                if (column == targetX && row == targetY && targetAcross == 1 && targetDown == 1) {
                     float r = iconSize / 2f;
                     canvas.drawCircle(c[0], c[1], r, wash);
                     canvas.drawCircle(c[0], c[1], r, ring);
-                } else {
+                } else if (!inside) {
                     canvas.drawCircle(c[0], c[1], 2.5f * density * guide, point);
                 }
             }
+        }
+        if (targetX >= 0 && (targetAcross > 1 || targetDown > 1)) {
+            /* A wide thing lands on a block: the block is washed and ringed whole. */
+            float w = cellWidth();
+            float h = cellHeight();
+            float inset = 4f * density;
+            float left = getPaddingLeft() + targetX * w + inset;
+            float top = getPaddingTop() + targetY * h + inset;
+            float right = left + targetAcross * w - 2f * inset;
+            float bottom = top + targetDown * h - 2f * inset;
+            float r = Math.min(28f * density, (bottom - top) / 2f);
+            canvas.drawRoundRect(left, top, right, bottom, r, r, wash);
+            canvas.drawRoundRect(left, top, right, bottom, r, r, ring);
         }
     }
 }

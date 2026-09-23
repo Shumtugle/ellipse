@@ -39,9 +39,8 @@ last opened from here and those installed or updated in the last two weeks,
 each marked new or updated — and a push upward sends it away. An icon
 carried to a side edge and held there turns the screens.
 
-The settings open from that door: a field for finding at the top, the
-rooms one under another, and two tabs at the foot, the settings and the
-style. Desktop: the dock, the grid of the screens, endless scrolling, the
+The settings open from that door, or from the menu of a long press on a
+screen: a field for finding at the top, and the rooms one under another. Desktop: the dock, the grid of the screens, endless scrolling, the
 page points, and new apps set down by themselves. All apps: lines or
 pages, the grid of a page, endless scrolling, and apps left out of the
 list. Look: the clock (icon styles are to come). Gestures: what a swipe up,
@@ -49,6 +48,11 @@ a swipe down, Back and Home do on bare screens; a swipe down may lower the
 notifications or the quick settings. Backup and restore, and languages,
 are to come. Other: restart the launcher, or reset it to how it was on
 first start (asked twice).
+
+Anything standing on a screen, an app, a folder, the door to the settings
+or the clock, is moved by a long press: it is taken up, carried, and set
+down in a free place of any screen; let go anywhere else, it goes back.
+The first move keeps the default set-out as the owner's own.
 
 There are no folders of one's own yet, and what is set down cannot yet be moved or taken off. They return
 one at a time.
@@ -61,7 +65,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.10.0
+  sh build.sh ellipse-1.11.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

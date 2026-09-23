@@ -31,8 +31,7 @@ import java.util.Set;
  * The settings of the home screen, in the shape settings of home screens
  * have come to take: a field for finding at the top, the rooms of the
  * settings one under another, each with its drawing, its name and a line
- * about what is in it, and at the foot two tabs, the settings and the
- * style. A room opens sideways, with its name large at its head; Back
+ * about what is in it. A room opens sideways, with its name large at its head; Back
  * leaves it, and Back again leaves the settings.
  *
  * Inside a room a line is one of four things: a switch, a choice that
@@ -105,15 +104,11 @@ public final class Tune extends Activity {
     private static final int LANGUAGE = 6;
     private static final int OTHER = 7;
     private static final int HIDDEN = 8;
-    private static final int STYLE = 9;
 
     private static final int RESTART = 1;
     private static final int RESET = 2;
 
     private static final String SEARCH = "Search";
-    private static final String SETTINGS = "Settings";
-    private static final String STYLE_TAB = "Style";
-    private static final String NOTHING = "Nothing here yet.";
     private static final String AGAIN = "Tap again to reset everything";
     private static final String LATER = "Coming in a later version";
 
@@ -216,10 +211,8 @@ public final class Tune extends Activity {
     private TextView heading;
     private ScrollView scroll;
     private LinearLayout rows;
-    private LinearLayout tabs;
     private Menu menu;
     private final List<Integer> path = new ArrayList<>();
-    private int tab = ROOT;
     private long armed;
     /** The choice the menu stands open for, and the words showing its value. */
     private Line asking;
@@ -286,7 +279,7 @@ public final class Tune extends Activity {
             }
 
             public void afterTextChanged(Editable t) {
-                if (room() == ROOT && tab == ROOT) {
+                if (room() == ROOT) {
                     fill();
                 }
             }
@@ -317,15 +310,6 @@ public final class Tune extends Activity {
         root.addView(scroll, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
-        tabs = new LinearLayout(this);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        tabs.setBackgroundColor(Tone.container());
-        tabs.addView(tab(Glyph.GEAR, SETTINGS, ROOT), new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        tabs.addView(tab(Glyph.BRUSH, STYLE_TAB, STYLE), new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        root.addView(tabs);
-
         menu = new Menu(this, host, new Menu.Listener() {
             public void picked(int section, int key) {
                 pick(key);
@@ -349,7 +333,7 @@ public final class Tune extends Activity {
                     bottom = insets.getSystemWindowInsetBottom();
                 }
                 head.setPadding(0, top, 0, 0);
-                tabs.setPadding(0, dp(12), 0, dp(12) + bottom);
+                rows.setPadding(0, dp(4), 0, dp(16) + bottom);
                 return insets;
             }
         });
@@ -357,57 +341,17 @@ public final class Tune extends Activity {
         host.requestApplyInsets();
     }
 
-    /** A tab at the foot: its drawing in a pill that shows which tab is on, its word under it. */
-    private View tab(int glyph, String word, final int which) {
-        LinearLayout made = new LinearLayout(this);
-        made.setOrientation(LinearLayout.VERTICAL);
-        made.setGravity(Gravity.CENTER_HORIZONTAL);
-        FrameLayout mark = new FrameLayout(this);
-        Glyph drawing = new Glyph(this, glyph, dp(24));
-        mark.addView(drawing, new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
-        made.addView(mark, new LinearLayout.LayoutParams(dp(64), dp(32)));
-        TextView name = new TextView(this);
-        name.setText(word);
-        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scaled);
-        name.setPadding(0, dp(6), 0, 0);
-        made.addView(name);
-        made.setTag(new Object[] {mark, drawing, name});
-        made.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (tab != which || !path.isEmpty()) {
-                    tab = which;
-                    path.clear();
-                    show(0);
-                }
-            }
-        });
-        return made;
-    }
-
-    private void markTabs() {
-        for (int i = 0; i < tabs.getChildCount(); i++) {
-            Object[] parts = (Object[]) tabs.getChildAt(i).getTag();
-            boolean on = (i == 0 ? ROOT : STYLE) == tab;
-            ((View) parts[0]).setBackground(on ? Tone.box(Tone.containerHigh(), dp(16), 0f) : null);
-            ((Glyph) parts[1]).tint(on ? Tone.onSurface() : Tone.faint());
-            ((TextView) parts[2]).setTextColor(on ? Tone.onSurface() : Tone.faint());
-            ((TextView) parts[2]).setTypeface(null, on ? android.graphics.Typeface.BOLD
-                : android.graphics.Typeface.NORMAL);
-        }
-    }
-
     /** Shows the room at the top of the path; a room entered comes in from the side it lies on. */
     private void show(int from) {
         armed = 0L;
         menu.hide(false);
         boolean inRoom = room() != ROOT;
-        pill.setVisibility(inRoom || tab != ROOT ? View.GONE : View.VISIBLE);
+        pill.setVisibility(inRoom ? View.GONE : View.VISIBLE);
         heading.setVisibility(inRoom ? View.VISIBLE : View.GONE);
         heading.setText(nameOf(room()));
         if (inRoom) {
             hideKeys();
         }
-        markTabs();
         fill();
         scroll.scrollTo(0, 0);
         if (from != 0) {
@@ -420,10 +364,6 @@ public final class Tune extends Activity {
 
     private void fill() {
         rows.removeAllViews();
-        if (tab == STYLE) {
-            rows.addView(quiet(NOTHING));
-            return;
-        }
         if (room() == HIDDEN) {
             fillHidden();
             return;
@@ -468,15 +408,6 @@ public final class Tune extends Activity {
         row.setTranslationY(dp(10));
         row.animate().alpha(1f).translationY(0f).setStartDelay(Pace.STEP * Math.min(i, 8))
             .setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
-    }
-
-    private TextView quiet(String text) {
-        TextView none = new TextView(this);
-        none.setText(text);
-        none.setTextColor(Tone.faint());
-        none.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
-        none.setPadding(dp(24), dp(40), dp(24), dp(24));
-        return none;
     }
 
     private View row(final Line line) {
@@ -674,11 +605,6 @@ public final class Tune extends Activity {
         }
         if (!path.isEmpty()) {
             path.remove(path.size() - 1);
-            show(-1);
-            return;
-        }
-        if (tab != ROOT) {
-            tab = ROOT;
             show(-1);
             return;
         }

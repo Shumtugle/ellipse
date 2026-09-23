@@ -14,19 +14,38 @@ import java.util.List;
 final class Keep {
 
     /** One application set down on the grid. */
+    /**
+     * One thing set down on a screen: an application by its component, or
+     * one of the home screen's own things by a word after a hash — the
+     * clock, a folder the phone fills, the door to the settings.
+     */
     static final class Spot {
+        final String token;
+        /** The application, when the thing is one; otherwise none. */
         final ComponentName name;
         final int screen;
         final int x;
         final int y;
 
-        Spot(ComponentName name, int screen, int x, int y) {
-            this.name = name;
+        Spot(String token, int screen, int x, int y) {
+            this.token = token;
+            this.name = token.startsWith("#") ? null : ComponentName.unflattenFromString(token);
             this.screen = screen;
             this.x = x;
             this.y = y;
         }
+
+        String line() {
+            return screen + "\t" + x + "\t" + y + "\t" + token;
+        }
     }
+
+    /** The home screen's own things, as they are kept. */
+    static final String CLOCK_THING = "#clock";
+    static final String VENDOR_THING = "#vendor";
+    static final String SYSTEM_THING = "#system";
+    static final String OWN_THING = "#own";
+    private static final String LAID = "laid";
 
     private static final String PLACED = "placed";
     private static final String ORDER = "order";
@@ -173,8 +192,7 @@ final class Keep {
         if (!kept.contains(SCREENS)) {
             StringBuilder out = new StringBuilder();
             for (Spot spot : placed(context)) {
-                out.append(spot.screen + 1).append('\t').append(spot.x).append('\t')
-                    .append(spot.y).append('\t').append(spot.name.flattenToString()).append('\n');
+                out.append(new Spot(spot.token, spot.screen + 1, spot.x, spot.y).line()).append('\n');
             }
             edit.putString(PLACED, out.toString());
             edit.putInt(SCREENS, 3).putInt(HOME, 1).putInt(ROLES, 1);
@@ -249,13 +267,13 @@ final class Keep {
                 continue;
             }
             int shift = part.length - 3;
-            ComponentName name = ComponentName.unflattenFromString(part[2 + shift]);
-            if (name == null) {
+            String token = part[2 + shift];
+            if (!token.startsWith("#") && ComponentName.unflattenFromString(token) == null) {
                 continue;
             }
             try {
                 int screen = shift == 1 ? Integer.parseInt(part[0]) : 0;
-                list.add(new Spot(name, screen, Integer.parseInt(part[shift]),
+                list.add(new Spot(token, screen, Integer.parseInt(part[shift]),
                     Integer.parseInt(part[1 + shift])));
             } catch (NumberFormatException broken) {
                 // A line that cannot be read is let go.
@@ -264,18 +282,55 @@ final class Keep {
         return list;
     }
 
-    /** Sets a door down in a place; whatever the owner had put there before gives way. */
-    static void place(Context context, ComponentName name, int screen, int x, int y) {
+    private static void write(Context context, List<Spot> spots) {
         StringBuilder out = new StringBuilder();
+        for (Spot spot : spots) {
+            if (out.length() > 0) {
+                out.append('\n');
+            }
+            out.append(spot.line());
+        }
+        store(context).edit().putString(PLACED, out.toString()).apply();
+    }
+
+    /** Sets a thing down in a place; whatever stood exactly there before gives way. */
+    static void place(Context context, String token, int screen, int x, int y) {
+        List<Spot> kept = new ArrayList<>();
         for (Spot spot : placed(context)) {
             if (spot.screen == screen && spot.x == x && spot.y == y) {
                 continue;
             }
-            out.append(spot.screen).append('\t').append(spot.x).append('\t').append(spot.y)
-                .append('\t').append(spot.name.flattenToString()).append('\n');
+            kept.add(spot);
         }
-        out.append(screen).append('\t').append(x).append('\t').append(y).append('\t')
-            .append(name.flattenToString());
-        store(context).edit().putString(PLACED, out.toString()).apply();
+        kept.add(new Spot(token, screen, x, y));
+        write(context, kept);
+    }
+
+    /** Moves the thing standing in one place to another. */
+    static void shift(Context context, int screen, int x, int y, int toScreen, int toX, int toY) {
+        List<Spot> kept = new ArrayList<>();
+        for (Spot spot : placed(context)) {
+            if (spot.screen == screen && spot.x == x && spot.y == y) {
+                kept.add(new Spot(spot.token, toScreen, toX, toY));
+            } else {
+                kept.add(spot);
+            }
+        }
+        write(context, kept);
+    }
+
+    /**
+     * Whether the screens are set out by hand now. Until something that
+     * came with the default set-out is first moved, the default is laid
+     * anew every time; from then on, only what is kept here stands.
+     */
+    static boolean laid(Context context) {
+        return store(context).getBoolean(LAID, false);
+    }
+
+    /** Keeps the whole set-out as it stands, and from now on only it. */
+    static void lay(Context context, List<Spot> spots) {
+        write(context, spots);
+        store(context).edit().putBoolean(LAID, true).apply();
     }
 }
