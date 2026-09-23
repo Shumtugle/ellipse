@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The icons: warm cream and paper, one deep ink, gold, and the
-         bright bands under the lifted corner. Every colour of the screen
+    <!-- The icons: warm cream and paper, one deep ink, and the bright
+         surface under the lifted corner. Every colour of the screen
          itself is grown at run time from one seed. -->
     <color name="cream">#FFF8E4AE</color>
     <color name="paper">#FFF1E6D0</color>
     <color name="ink">#FF12243D</color>
-    <color name="ink_back">#FF2C4A72</color>
-    <color name="ink_edge">#FF6E8BB3</color>
+    <color name="paper_back">#FFD6C5A6</color>
+    <color name="paper_edge">#FFFFFBF2</color>
     <color name="shade">#59000000</color>
-    <color name="ring_far">#FF9AA3AE</color>
-    <color name="ring_near">#FF4F5B69</color>
     <color name="gold">#FFD18E1F</color>
-    <color name="gold_light">#FFF7D98C</color>
     <color name="coral">#FFE8674A</color>
     <color name="teal">#FF2F9A8F</color>
     <color name="clear">#00000000</color>

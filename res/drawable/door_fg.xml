@@ -1,19 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The underside: a smooth square of the icon's own ink with one corner
-     lifted, like a leaf of stiff paper, and under it another surface
-     altogether, laid in bright bands. -->
+<!-- The underside: a sheet of stiff paper on the ink, one corner lifted
+     well back, and under it another surface altogether, where two
+     sliders stand, set: what is under the familiar is the means to
+     change it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <group android:translateX="52" android:translateY="53" android:scaleX="0.6" android:scaleY="0.6">
-        <path android:fillColor="@color/gold" android:pathData="M34,6 L34,14 L14,34 L6,34 Z" />
-        <path android:fillColor="@color/coral" android:pathData="M34,14 L34,22 L22,34 L14,34 Z" />
-        <path android:fillColor="@color/teal" android:pathData="M34,22 L34,34 L22,34 Z" />
-        <path android:fillColor="@color/ink"
-            android:pathData="M-28,-34 L28,-34 Q34,-34 34,-28 L34,6 L6,34 L-28,34 Q-34,34 -34,28 L-34,-28 Q-34,-34 -28,-34 Z" />
-        <path android:fillColor="@color/shade" android:pathData="M34,6 L34,11 L11,34 L6,34 Z" />
-        <path android:fillColor="@color/ink_back" android:pathData="M34,6 L6,34 L15,15 Z" />
-        <path android:strokeColor="@color/ink_edge" android:strokeWidth="1.5"
-            android:strokeLineCap="round" android:pathData="M34,6 L15,15 L6,34" />
+    <group android:translateX="53" android:translateY="54" android:scaleX="0.6" android:scaleY="0.6">
+        <path android:fillColor="@color/teal" android:pathData="M34,-14 L34,34 L-14,34 Z" />
+        <path android:strokeColor="@color/paper" android:strokeWidth="3.5" android:strokeLineCap="round"
+            android:pathData="M13,12 L30,12 M1,24 L30,24" />
+        <path android:fillColor="@color/gold"
+            android:pathData="M17,12a5,5 0 1 0 10,0a5,5 0 1 0 -10,0z" />
+        <path android:fillColor="@color/coral"
+            android:pathData="M3,24a5,5 0 1 0 10,0a5,5 0 1 0 -10,0z" />
+        <path android:fillColor="@color/paper"
+            android:pathData="M-28,-34 L28,-34 Q34,-34 34,-28 L34,-14 L-14,34 L-28,34 Q-34,34 -34,28 L-34,-28 Q-34,-34 -28,-34 Z" />
+        <path android:fillColor="@color/shade" android:pathData="M34,-14 L34,-9 L-9,34 L-14,34 Z" />
+        <path android:fillColor="@color/paper_back" android:pathData="M34,-14 L-14,34 L2,2 Z" />
+        <path android:strokeColor="@color/paper_edge" android:strokeWidth="1.5"
+            android:strokeLineCap="round" android:pathData="M34,-14 L2,2 L-14,34" />
     </group>
 </vector>
