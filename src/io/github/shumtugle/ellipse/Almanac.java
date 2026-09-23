@@ -22,9 +22,10 @@ import java.util.Locale;
 /**
  * The home screen's own clock, drawn the design system's way: a card of
  * the surface, and in it three windows, each a container of its own
- * colour. On the left, a scalloped face with the hands of a clock; on the
- * right, the hour in figures with the date under it, and under that the
- * phone's charge.
+ * colour. On the left, a scalloped face with the hands of a clock. Given
+ * one row of the grid, the hour in figures with the date under it stands
+ * beside the face and the phone's charge beside that, all three in a line;
+ * given two, the charge goes under the hour.
  *
  * The hands move once a second while the clock is in sight, and not at
  * all when it is not. A press on a window opens what it shows about: the
@@ -163,19 +164,29 @@ final class Almanac extends View {
         float corner = Math.min(px(28f), (h - 2f * inset) / 2f);
         canvas.drawRoundRect(inset, inset, w - inset, h - inset, corner, corner, paint);
 
-        float pad = px(12f);
-        float gap = px(10f);
+        boolean line = w > h * 2.6f;
+        float pad = px(line ? 10f : 12f);
+        float gap = px(line ? 8f : 10f);
         float column = h - 2f * (inset + pad);
-        float side = Math.min(column, (w - 2f * (inset + pad)) * 0.44f);
         float left = inset + pad;
-        dialBox.set(left, (h - side) / 2f, left + side, (h + side) / 2f);
         float right = w - inset - pad;
-        float from = dialBox.right + gap * 1.4f;
         float top = inset + pad;
         float bottom = h - inset - pad;
-        float split = top + (column - gap) * 0.62f;
-        timeBox.set(from, top, right, split);
-        chargeBox.set(from, split + gap, right, bottom);
+        if (line) {
+            float side = column;
+            dialBox.set(left, top, left + side, bottom);
+            float chargeWide = column * 0.9f;
+            chargeBox.set(right - chargeWide, top, right, bottom);
+            timeBox.set(dialBox.right + gap, top, chargeBox.left - gap, bottom);
+        } else {
+            float side = Math.min(column, (w - 2f * (inset + pad)) * 0.44f);
+            dialBox.set(left, (h - side) / 2f, left + side, (h + side) / 2f);
+            float from = dialBox.right + gap * 1.4f;
+            float split = top + (column - gap) * 0.62f;
+            timeBox.set(from, top, right, split);
+            chargeBox.set(from, split + gap, right, bottom);
+        }
+        float side = dialBox.width();
 
         paint.setColor(Tone.primaryContainer());
         canvas.drawPath(cookie(dialBox.centerX(), dialBox.centerY(), side / 2f, 12, 0.07f), paint);
@@ -199,10 +210,15 @@ final class Almanac extends View {
         words.setTextSize(fit(day, timeBox.width() * 0.84f, timeBox.height() * 0.17f));
         canvas.drawText(day, timeBox.centerX(), timeBox.top + timeBox.height() * 0.84f, words);
 
-        float rc = Math.min(chargeBox.height() / 2f, px(24f));
+        float rc = Math.min(Math.min(chargeBox.width(), chargeBox.height()) / 2f, px(24f));
         paint.setColor(Tone.tertiaryContainer());
         canvas.drawRoundRect(chargeBox, rc, rc, paint);
-        pill(canvas, chargeBox, charge >= 0 ? charge + "%" : "\u2013", Tone.onTertiaryContainer());
+        String level = charge >= 0 ? charge + "%" : "\u2013";
+        if (line) {
+            stacked(canvas, chargeBox, level, Tone.onTertiaryContainer());
+        } else {
+            pill(canvas, chargeBox, level, Tone.onTertiaryContainer());
+        }
     }
 
     /** A round face with shallow scallops at its edge, like a biscuit. */
@@ -236,6 +252,18 @@ final class Almanac extends View {
         battery(canvas, start + s / 2f, box.centerY(), s, ink);
         Paint.FontMetrics f = words.getFontMetrics();
         canvas.drawText(text, start + s + px(6f), box.centerY() - (f.ascent + f.descent) / 2f, words);
+    }
+
+    /** The mark above its words, for a window taller than it is wide. */
+    private void stacked(Canvas canvas, RectF box, String text, int ink) {
+        float s = Math.min(box.width() * 0.46f, box.height() * 0.4f);
+        float cy = box.top + box.height() * 0.36f;
+        battery(canvas, box.centerX(), cy, s, ink);
+        words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        words.setColor(ink);
+        words.setTextAlign(Paint.Align.CENTER);
+        words.setTextSize(fit(text, box.width() * 0.78f, box.height() * 0.2f));
+        canvas.drawText(text, box.centerX(), box.top + box.height() * 0.82f, words);
     }
 
     /** The largest size, up to a height, at which words fit a width. */

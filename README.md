@@ -20,7 +20,7 @@ updated first, and either runs down in lines or across in pages of four
 by five icons with their names.
 
 Three screens stand side by side from the start, the middle one home.
-The home screen carries the home screen's own clock across its top, drawn
+The home screen carries the home screen's own clock across its top row, drawn
 the design system's way — a scalloped dial, the hour and the date, the
 phone's charge — and four everyday applications at its foot. The screen
 before it holds a folder of the applications signed by the same hand as
@@ -50,7 +50,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.8.0
+  sh build.sh ellipse-1.8.1
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

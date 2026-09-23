@@ -522,13 +522,13 @@ public final class Home extends Activity {
 
         int home = Math.min(Keep.roles(this), count - 1);
         Grid middle = pages.get(home);
-        if (free(middle, 0, 0, COLUMNS, 2)) {
+        if (free(middle, 0, 0, COLUMNS, 1)) {
             Almanac clock = new Almanac(this, new Almanac.Hand() {
                 public void pressed(String window, View from, android.graphics.RectF box) {
                     look(window, from, box);
                 }
             });
-            middle.put(clock, 0, 0, COLUMNS, 2);
+            middle.put(clock, 0, 0, COLUMNS, 1);
             cells.add(clock);
         }
         Intent[] everyday = {
