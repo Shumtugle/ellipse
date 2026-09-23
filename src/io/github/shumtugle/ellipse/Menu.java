@@ -16,7 +16,8 @@ import java.util.Locale;
  * was asked for at, a round button or a fingertip, and stands beside that
  * point rather than at an edge of the screen. Its lines follow one after
  * another, like icons arriving; a chosen line wears a tonal pill of the
- * accent. A touch anywhere else, or Back, sends it back into its point.
+ * accent; a section without a name is set off by a hairline. A touch
+ * anywhere else, or Back, sends it back into its point.
  */
 final class Menu {
 
@@ -104,6 +105,16 @@ final class Menu {
         card.setBackground(Tone.box(Tone.containerHigh(), dp(28), dp(0.5f)));
         for (int s = 0; s < sections.length; s++) {
             Section section = sections[s];
+            if (s > 0 && section.caption == null) {
+                /* A section with no name of its own is set off from the one
+                   before by a hairline: it is another kind of line. */
+                View rule = new View(context);
+                rule.setBackgroundColor(Tone.outline());
+                LinearLayout.LayoutParams ruleParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(1)));
+                ruleParams.setMargins(dp(16), dp(8), dp(16), dp(6));
+                card.addView(rule, ruleParams);
+            }
             if (section.caption != null) {
                 TextView caption = new TextView(context);
                 caption.setText(section.caption.toUpperCase(Locale.ROOT));

@@ -910,7 +910,6 @@ public final class Home extends Activity {
         if (!home) {
             offered.add(MAKE_HOME);
         }
-        offered.add(SETTINGS);
         String[] lines = new String[offered.size()];
         int[] keys = new int[offered.size()];
         for (int i = 0; i < offered.size(); i++) {
@@ -918,7 +917,9 @@ public final class Home extends Activity {
             keys[i] = offered.get(i);
         }
         on.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-        menu.show(new Menu.Section[] {new Menu.Section(null, lines, keys)},
+        /* The settings stand apart, under a hairline: they lead away. */
+        menu.show(new Menu.Section[] {new Menu.Section(null, lines, keys),
+                new Menu.Section(null, new String[] {ASKS[SETTINGS]}, new int[] {SETTINGS})},
             root.fingerX(), root.fingerY(), dp(20));
     }
 
