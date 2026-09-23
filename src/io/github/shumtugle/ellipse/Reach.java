@@ -10,10 +10,12 @@ import android.view.View;
 
 /**
  * The frame a widget or a folder is reshaped in: a ring of the accent
- * round the places it takes, and a round handle in the middle of each
- * side it may grow or shrink by. A handle is drawn across whole places,
- * the thing growing with it as it goes, never over what stands beside
- * it; a touch anywhere else ends the reshaping.
+ * round the places it takes, and a short bar on each side it may grow or
+ * shrink by. A whole side can be taken, anywhere along it and a finger's
+ * breadth either side of it; a corner takes both its sides. It is drawn
+ * across whole places, the thing growing with it as it goes, never over
+ * what stands beside it. A touch inside the frame is let be; a touch
+ * outside it ends the reshaping.
  */
 final class Reach extends View {
 
@@ -45,6 +47,11 @@ final class Reach extends View {
     private int across;
     private int down;
     private int held = NONE;
+    /** The sides taken by the finger now, any of them, a corner being two. */
+    private boolean takeLeft;
+    private boolean takeTop;
+    private boolean takeRight;
+    private boolean takeBottom;
     private boolean ended;
 
     Reach(Context context, Grid grid, View thing, int[] block, int minAcross, int minDown,
@@ -105,12 +112,20 @@ final class Reach extends View {
         float r = Math.min(24f * density, Math.min(f.width(), f.height()) / 2f);
         canvas.drawRoundRect(f, r, r, ring);
         for (float[] h : handles(f)) {
-            if (!movable((int) h[0])) {
+            int side = (int) h[0];
+            if (!movable(side)) {
                 continue;
             }
-            float size = (held == (int) h[0] ? 9f : 7f) * density;
-            canvas.drawCircle(h[1], h[2], size, knob);
-            canvas.drawCircle(h[1], h[2], size, rim);
+            boolean taken = (side == LEFT && takeLeft) || (side == TOP && takeTop)
+                || (side == RIGHT && takeRight) || (side == BOTTOM && takeBottom);
+            float half = (taken ? 20f : 16f) * density;
+            float thick = (taken ? 10f : 8f) * density;
+            boolean upright = side == LEFT || side == RIGHT;
+            RectF bar = upright
+                ? new RectF(h[1] - thick / 2f, h[2] - half, h[1] + thick / 2f, h[2] + half)
+                : new RectF(h[1] - half, h[2] - thick / 2f, h[1] + half, h[2] + thick / 2f);
+            canvas.drawRoundRect(bar, thick / 2f, thick / 2f, knob);
+            canvas.drawRoundRect(bar, thick / 2f, thick / 2f, rim);
         }
     }
 
@@ -123,17 +138,29 @@ final class Reach extends View {
         float y = event.getY();
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
-                held = NONE;
-                float best = 32f * density;
-                for (float[] h : handles(frame())) {
-                    float d = (float) Math.hypot(h[1] - x, h[2] - y);
-                    if (movable((int) h[0]) && d < best) {
-                        best = d;
-                        held = (int) h[0];
-                    }
+                RectF f = frame();
+                float band = 36f * density;
+                boolean along = y > f.top - band && y < f.bottom + band;
+                boolean across = x > f.left - band && x < f.right + band;
+                takeLeft = wide && along && Math.abs(x - f.left) < band;
+                takeRight = wide && along && Math.abs(x - f.right) < band && !takeLeft;
+                takeTop = tall && across && Math.abs(y - f.top) < band;
+                takeBottom = tall && across && Math.abs(y - f.bottom) < band && !takeTop;
+                /* A narrow frame: the nearer side wins where both would do. */
+                if (takeLeft && Math.abs(x - f.right) < Math.abs(x - f.left)) {
+                    takeLeft = false;
+                    takeRight = wide;
                 }
-                if (held == NONE) {
+                if (takeTop && Math.abs(y - f.bottom) < Math.abs(y - f.top)) {
+                    takeTop = false;
+                    takeBottom = tall;
+                }
+                held = takeLeft || takeTop || takeRight || takeBottom ? LEFT : NONE;
+                if (held == NONE && !f.contains(x, y)) {
                     end();
+                }
+                if (held != NONE) {
+                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
                 }
                 invalidate();
                 return true;
@@ -145,6 +172,10 @@ final class Reach extends View {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 held = NONE;
+                takeLeft = false;
+                takeTop = false;
+                takeRight = false;
+                takeBottom = false;
                 invalidate();
                 return true;
             default:
@@ -152,7 +183,7 @@ final class Reach extends View {
         }
     }
 
-    /** The held side follows the finger to the nearest line between places. */
+    /** The taken sides follow the finger, each to the nearest line between places. */
     private void drag(float x, float y) {
         int[] g = new int[2];
         int[] me = new int[2];
@@ -160,37 +191,57 @@ final class Reach extends View {
         getLocationOnScreen(me);
         float gx = x - (g[0] - me[0]) - grid.getPaddingLeft();
         float gy = y - (g[1] - me[1]) - grid.getPaddingTop();
-        int line = held == LEFT || held == RIGHT
-            ? Math.round(gx / grid.cellWidth()) : Math.round(gy / grid.cellHeight());
-        int c = column;
-        int r = row;
-        int a = across;
-        int d = down;
-        if (held == LEFT) {
-            c = line;
-            a = column + across - line;
-        } else if (held == RIGHT) {
-            a = line - column;
-        } else if (held == TOP) {
-            r = line;
-            d = row + down - line;
-        } else {
-            d = line - row;
+        int lineX = Math.round(gx / grid.cellWidth());
+        int lineY = Math.round(gy / grid.cellHeight());
+        int left = column;
+        int right = column + across;
+        int top = row;
+        int bottom = row + down;
+        if (takeLeft) {
+            left = lineX;
         }
-        if (a < minAcross || a > maxAcross || d < minDown || d > maxDown) {
+        if (takeRight) {
+            right = lineX;
+        }
+        if (takeTop) {
+            top = lineY;
+        }
+        if (takeBottom) {
+            bottom = lineY;
+        }
+        /* Each direction is tried on its own, so a corner that cannot go
+           one way still goes the other. */
+        int a = right - left;
+        int d = bottom - top;
+        boolean widthFits = a >= minAcross && a <= maxAcross;
+        boolean heightFits = d >= minDown && d <= maxDown;
+        if (!widthFits) {
+            left = column;
+            a = across;
+        }
+        if (!heightFits) {
+            top = row;
+            d = down;
+        }
+        if (left == column && top == row && a == across && d == down) {
             return;
         }
-        if (c == column && r == row && a == across && d == down) {
-            return;
+        if (!grid.free(left, top, a, d, thing)) {
+            if (grid.free(left, row, a, down, thing) && (a != across || left != column)) {
+                top = row;
+                d = down;
+            } else if (grid.free(column, top, across, d, thing) && (d != down || top != row)) {
+                left = column;
+                a = across;
+            } else {
+                return;
+            }
         }
-        if (!grid.free(c, r, a, d, thing)) {
-            return;
-        }
-        column = c;
-        row = r;
+        column = left;
+        row = top;
         across = a;
         down = d;
-        grid.reshape(thing, c, r, a, d);
+        grid.reshape(thing, left, top, a, d);
         performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
         invalidate();
     }

@@ -36,12 +36,12 @@ narrows the shelf. A widget chosen is bound (the phone may ask leave), set
 up if it wants that, and set down in the first free block of its size.
 Widgets move like anything else on the screens.
 
-Anything carried from a screen can be dropped on Remove, which comes down
-from the top while it is carried: it is taken off (a widget lets go of its
+Anything carried from a screen can be dropped on Remove, which takes the
+dock's place at the foot once the thing is carried away from its place: it is taken off (a widget lets go of its
 place, the clock is switched off in the settings). A widget or a folder
-held and let go without moving is offered to reshape: a frame with a
-handle on each side it may grow by, drawn across whole places, never over
-what stands beside it. A folder larger than one place opens up on the
+held and let go where it stood is offered to reshape: a frame whose sides
+are taken anywhere along them, a corner taking two, drawn across whole
+places, never over what stands beside it; a touch outside ends it. A folder larger than one place opens up on the
 screen as a card with its apps in it, two small icons to a place; the
 last place shows how many more there are. Adding shortcuts and folders is
 offered but not yet done. Home returns to the home screen.
@@ -79,7 +79,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.15.0
+  sh build.sh ellipse-1.15.1
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

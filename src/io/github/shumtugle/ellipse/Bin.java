@@ -8,9 +8,11 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 /**
- * Where things are taken off the screens: a pill that comes down from the
- * top while something from a screen is carried, and warms to the colour
- * of taking away when the finger is over it.
+ * Where things are taken off the screens: while something from a screen
+ * is carried away from its place, the dock at the foot gives way to a
+ * pill of its own size that says so, and warms to the colour of taking
+ * away when the finger is over it. It lies where nothing can be set down
+ * anyway, well away from the places a thing is carried between.
  */
 final class Bin extends LinearLayout {
 
@@ -27,7 +29,7 @@ final class Bin extends LinearLayout {
         density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
         setOrientation(HORIZONTAL);
-        setGravity(Gravity.CENTER_VERTICAL);
+        setGravity(Gravity.CENTER);
         setPadding(dp(18), dp(12), dp(22), dp(12));
         cross = new Glyph(context, Glyph.CROSS, dp(22));
         addView(cross);
@@ -53,16 +55,20 @@ final class Bin extends LinearLayout {
         word.setTextColor(ink);
     }
 
-    void show() {
+    /** Comes up in the dock's place, as tall as the dock is. */
+    void show(int tall) {
         if (shown) {
             return;
         }
         shown = true;
         over = false;
         paint();
+        android.view.ViewGroup.LayoutParams params = getLayoutParams();
+        params.height = tall > 0 ? tall : dp(80);
+        setLayoutParams(params);
         setVisibility(VISIBLE);
         setAlpha(0f);
-        setTranslationY(-dp(24));
+        setTranslationY(dp(24));
         animate().cancel();
         animate().alpha(1f).translationY(0f).scaleX(1f).scaleY(1f).setDuration(Pace.ARRIVE)
             .setInterpolator(Pace.EMPHASIS).withEndAction(null).start();
@@ -74,7 +80,7 @@ final class Bin extends LinearLayout {
         }
         shown = false;
         animate().cancel();
-        animate().alpha(0f).translationY(-dp(24)).setDuration(Pace.ARRIVE / 2)
+        animate().alpha(0f).translationY(dp(24)).setDuration(Pace.ARRIVE / 2)
             .setInterpolator(Pace.EMPHASIS).withEndAction(new Runnable() {
                 public void run() {
                     if (!shown) {
@@ -84,14 +90,12 @@ final class Bin extends LinearLayout {
             }).start();
     }
 
-    /** Whether a point of the floor is over it, with a margin a finger forgives. */
+    /** Whether a point of the floor is over it; a little above its top edge counts too. */
     boolean holds(float x, float y) {
         if (!shown || getWidth() == 0) {
             return false;
         }
-        float grace = dp(24);
-        return x > getLeft() - grace && x < getRight() + grace
-            && y > getTop() - grace && y < getBottom() + grace;
+        return x > getLeft() && x < getRight() && y > getTop() - dp(12);
     }
 
     /** The finger comes over it, or leaves it. */
@@ -101,7 +105,7 @@ final class Bin extends LinearLayout {
         }
         over = now;
         paint();
-        float s = now ? 1.08f : 1f;
+        float s = now ? 1.03f : 1f;
         animate().scaleX(s).scaleY(s).setDuration(Pace.PRESS).setInterpolator(Pace.SPRING).start();
         if (now) {
             performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);

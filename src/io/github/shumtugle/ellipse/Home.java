@@ -375,7 +375,9 @@ public final class Home extends Activity {
                 shelf.setPadding(left, 0, right, 0);
                 shelf.inset(top, keys);
                 FrameLayout.LayoutParams binAt = (FrameLayout.LayoutParams) bin.getLayoutParams();
-                binAt.topMargin = top + dp(20);
+                binAt.leftMargin = left + dp(8);
+                binAt.rightMargin = right + dp(8);
+                binAt.bottomMargin = bottom + dp(10);
                 bin.setLayoutParams(binAt);
                 return insets;
             }
@@ -531,8 +533,10 @@ public final class Home extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         bin = new Bin(this);
-        root.addView(bin, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+        FrameLayout.LayoutParams binParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, dp(80), Gravity.BOTTOM);
+        binParams.setMargins(dp(8), 0, dp(8), dp(10));
+        root.addView(bin, binParams);
         reach = null;
 
         menu = new Menu(this, root, new Menu.Listener() {
@@ -1151,9 +1155,6 @@ public final class Home extends Activity {
         carryStartX = x;
         carryStartY = y;
         carryMoved = false;
-        if (whence != null) {
-            bin.show();
-        }
         hold(x, y);
     }
 
@@ -1164,8 +1165,13 @@ public final class Home extends Activity {
         }
         fingerX = x;
         fingerY = y;
-        if (!carryMoved && Math.hypot(x - carryStartX, y - carryStartY) > dp(14)) {
+        /* Only once the thing is truly carried away does the bin come up:
+           a hand that is still deciding is not offered to throw it out. */
+        if (!carryMoved && Math.hypot(x - carryStartX, y - carryStartY) > dp(32)) {
             carryMoved = true;
+            if (origin != null) {
+                bin.show(bar.getVisibility() == View.VISIBLE ? bar.getHeight() : dp(80));
+            }
         }
         edge(x);
         float cx = x;
@@ -1206,7 +1212,11 @@ public final class Home extends Activity {
         final String token = carried;
         final int[] whence = origin;
         final boolean binned = kept && whence != null && bin.over();
-        final boolean still = kept && whence != null && !carryMoved;
+        /* Let go where it stood, whether it was held still or carried
+           and brought back, it stays and is offered to reshape. */
+        boolean home = landing != null && whence != null && screens.page() == whence[0]
+            && landing[0] == whence[1] && landing[1] == whence[2];
+        final boolean still = kept && whence != null && !binned && (!carryMoved || home);
         bin.hide();
         if (still) {
             /* Held and let go without moving: it stays where it stood, and
