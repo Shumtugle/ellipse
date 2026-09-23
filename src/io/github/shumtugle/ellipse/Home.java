@@ -304,13 +304,17 @@ public final class Home extends Activity {
         barParams.setMargins(dp(8), dp(6), dp(8), dp(10));
         frame.addView(bar, barParams);
 
-        drawer = new Drawer(this, Math.round(iconSize * 0.78f), new Drawer.Opener() {
+        drawer = new Drawer(this, iconSize, new Drawer.Opener() {
             public void open(View from, Apps.Door door, int[] icon) {
                 launch(from, door, icon);
             }
 
-            public void lift(Row row, float rawX, float rawY) {
-                pick(row, rawX, rawY);
+            public void lift(View from, Apps.Door door, int[] icon, float rawX, float rawY) {
+                pick(from, door, icon, rawX, rawY);
+            }
+
+            public void view(int view) {
+                Keep.saveView(Home.this, view);
             }
 
             public void order(int order) {
@@ -320,7 +324,7 @@ public final class Home extends Activity {
         });
         root.addView(drawer, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        drawer.order(Keep.order(this));
+        drawer.order(Keep.order(this), Keep.view(this));
         if (was) {
             drawer.rise();
         }
@@ -512,7 +516,7 @@ public final class Home extends Activity {
      * it will have on the grid, rides a little above the finger, and the
      * list is swallowed into that fingertip.
      */
-    private void pick(Row row, float rawX, float rawY) {
+    private void pick(View from, Apps.Door door, int[] icon, float rawX, float rawY) {
         if (lift != null) {
             return;
         }
@@ -522,12 +526,11 @@ public final class Home extends Activity {
         float y = rawY - floorAt[1];
 
         int[] rowAt = new int[2];
-        row.getLocationOnScreen(rowAt);
-        int[] icon = row.iconBounds();
+        from.getLocationOnScreen(rowAt);
         float fromX = rowAt[0] - floorAt[0] + icon[0] + icon[2] / 2f;
         float fromY = rowAt[1] - floorAt[1] + icon[1] + icon[3] / 2f;
 
-        carried = row.door();
+        carried = door;
         lift = new Lift(this, carried.icon(), Math.round(iconSize));
         root.addView(lift, new FrameLayout.LayoutParams(lift.size(), lift.size()));
         fingerX = x;
@@ -556,7 +559,7 @@ public final class Home extends Activity {
         });
         growing.start();
 
-        row.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        from.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
         drawer.swallow(x, y);
         grid.carrying(true);
         hold(x, y);

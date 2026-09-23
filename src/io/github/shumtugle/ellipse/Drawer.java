@@ -30,7 +30,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Every application, by name, one to a line, on plain black. No title: a
+ * Every application, on plain black: by name one to a line going down, or
+ * as icons with their names on pages of four by five going across. No title: a
  * list of every application says what it is by being one. At its foot
  * stands the bar the home screen already knows, here with a field to
  * narrow the list and the round button of the list's own menu.
@@ -45,19 +46,30 @@ final class Drawer extends FrameLayout {
         /** Opens a door; the icon is given in the coordinates of the view it stands in. */
         void open(View from, Apps.Door door, int[] icon);
 
-        /** A line was held: its icon is to be carried from a point of the screen. */
-        void lift(Row row, float rawX, float rawY);
+        /** A line or an icon was held: its icon is to be carried from a point of the screen. */
+        void lift(View from, Apps.Door door, int[] icon, float rawX, float rawY);
 
         /** Another order was chosen in the list's menu. */
         void order(int order);
+
+        /** Lines or pages were chosen in the list's menu. */
+        void view(int view);
     }
 
     private static final String SEARCH = "Search";
     private static final String MENU = "Menu";
-    private static final String SORT = "Sort";
-    /** The orders, in the order the menu offers them. */
-    private static final String[] ORDERS = {"A to Z", "Newest first", "Recently updated"};
-    private static final int[] ORDER_KEYS = {Keep.BY_NAME, Keep.NEWEST, Keep.UPDATED};
+    /** The menu's sections, and in each the choices it offers, in the order they stand. */
+    private static final String[] SECTIONS = {"Sort", "View"};
+    private static final String[][] CHOICES = {
+        {"A to Z", "Newest first", "Recently updated"},
+        {"Lines", "Pages"}
+    };
+    private static final int[][] KEYS = {
+        {Keep.BY_NAME, Keep.NEWEST, Keep.UPDATED},
+        {Keep.LINES, Keep.PAGES}
+    };
+    private static final int COLUMNS = 4;
+    private static final int ROWS = 5;
 
     private final Opener opener;
     private final ListView list;
@@ -74,18 +86,23 @@ final class Drawer extends FrameLayout {
     /** The menu: a card that grows out of the round button, and the veil that closes it. */
     private final View veil;
     private final LinearLayout card;
-    private final TextView caption;
-    private final TextView[] choices = new TextView[ORDERS.length];
+    private final TextView[] captions = new TextView[SECTIONS.length];
+    private final TextView[][] choices = new TextView[SECTIONS.length][];
     private boolean menu;
     private int order;
+    private int view;
+    /** The pages, when the list is laid out across, and the icon size on them. */
+    private final Pager pager;
+    private final float gridIcon;
     private android.animation.ValueAnimator turning;
     private float downX;
     private float downY;
 
-    Drawer(Context context, float iconSize, final Opener opener) {
+    Drawer(Context context, float gridIcon, final Opener opener) {
         super(context);
         this.opener = opener;
-        this.iconSize = iconSize;
+        this.gridIcon = gridIcon;
+        this.iconSize = Math.round(gridIcon * 0.78f);
         density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
         setBackgroundColor(Color.BLACK);
@@ -115,7 +132,8 @@ final class Drawer extends FrameLayout {
         });
         list.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             public boolean onItemLongClick(AdapterView<?> parent, View view, int at, long id) {
-                opener.lift((Row) view, downX, downY);
+                Row row = (Row) view;
+                opener.lift(row, row.door(), row.iconBounds(), downX, downY);
                 return true;
             }
         });
@@ -130,8 +148,19 @@ final class Drawer extends FrameLayout {
             public void onScroll(android.widget.AbsListView view, int first, int count, int total) {
             }
         });
-        column.addView(list, new LinearLayout.LayoutParams(
+        FrameLayout content = new FrameLayout(context);
+        column.addView(content, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        content.addView(list, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+        pager = new Pager(context);
+        pager.setVisibility(GONE);
+        pager.turn(new Pager.Turn() {
+            public void turned(int page) {
+                hideKeys();
+            }
+        });
+        content.addView(pager, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
         /* The bar, as the browser this screen borrows its look from wears
            it: one tone, one radius, one hairline, a field and a round button. */
@@ -214,50 +243,61 @@ final class Drawer extends FrameLayout {
         card.setVisibility(GONE);
         card.setClickable(true);
 
-        caption = new TextView(context);
-        caption.setText(SORT.toUpperCase(java.util.Locale.ROOT));
-        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scaled);
-        caption.setLetterSpacing(0.12f);
-        caption.setPadding(dp(16), 0, dp(16), dp(8));
-        card.addView(caption);
+        for (int group = 0; group < SECTIONS.length; group++) {
+            TextView caption = new TextView(context);
+            caption.setText(SECTIONS[group].toUpperCase(java.util.Locale.ROOT));
+            caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scaled);
+            caption.setLetterSpacing(0.12f);
+            caption.setPadding(dp(16), group == 0 ? 0 : dp(14), dp(16), dp(8));
+            card.addView(caption);
+            captions[group] = caption;
 
-        for (int i = 0; i < ORDERS.length; i++) {
-            final int key = ORDER_KEYS[i];
-            TextView choice = new TextView(context);
-            choice.setText(ORDERS[i]);
-            choice.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
-            choice.setSingleLine(true);
-            choice.setGravity(Gravity.CENTER_VERTICAL);
-            choice.setPadding(dp(16), dp(13), dp(16), dp(13));
-            choice.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    choose(key);
-                }
-            });
-            LinearLayout.LayoutParams choiceParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            choiceParams.topMargin = dp(2);
-            card.addView(choice, choiceParams);
-            choices[i] = choice;
+            choices[group] = new TextView[CHOICES[group].length];
+            for (int i = 0; i < CHOICES[group].length; i++) {
+                final int section = group;
+                final int key = KEYS[group][i];
+                TextView choice = new TextView(context);
+                choice.setText(CHOICES[group][i]);
+                choice.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
+                choice.setSingleLine(true);
+                choice.setGravity(Gravity.CENTER_VERTICAL);
+                choice.setPadding(dp(16), dp(13), dp(16), dp(13));
+                choice.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        choose(section, key);
+                    }
+                });
+                LinearLayout.LayoutParams choiceParams = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                choiceParams.topMargin = dp(2);
+                card.addView(choice, choiceParams);
+                choices[group][i] = choice;
+            }
         }
         addView(card, new LayoutParams(dp(248), LayoutParams.WRAP_CONTENT,
             Gravity.BOTTOM | Gravity.END));
         tint();
     }
 
-    /** The order the list stands in now, as the menu marks it. */
-    void order(int order) {
+    /** The order and the view the list stands in now, as the menu marks them. */
+    void order(int order, int view) {
         this.order = order;
+        this.view = view;
+        list.setVisibility(view == Keep.PAGES ? GONE : VISIBLE);
+        pager.setVisibility(view == Keep.PAGES ? VISIBLE : GONE);
         mark();
     }
 
-    /** The chosen order wears the accent; the others stay plain. */
+    /** What is chosen wears the accent; the rest stays plain. */
     private void mark() {
-        for (int i = 0; i < choices.length; i++) {
-            boolean on = ORDER_KEYS[i] == order;
-            int fill = on ? ((0x2E << 24) | (Tone.primary() & 0x00FFFFFF)) : 0x00000000;
-            choices[i].setBackground(Tone.touch(Tone.box(fill, dp(20), 0f), dp(20)));
-            choices[i].setTextColor(on ? Tone.primary() : Tone.onSurface());
+        int[] now = {order, view};
+        for (int group = 0; group < choices.length; group++) {
+            for (int i = 0; i < choices[group].length; i++) {
+                boolean on = KEYS[group][i] == now[group];
+                int fill = on ? ((0x2E << 24) | (Tone.primary() & 0x00FFFFFF)) : 0x00000000;
+                choices[group][i].setBackground(Tone.touch(Tone.box(fill, dp(20), 0f), dp(20)));
+                choices[group][i].setTextColor(on ? Tone.primary() : Tone.onSurface());
+            }
         }
     }
 
@@ -352,14 +392,20 @@ final class Drawer extends FrameLayout {
     }
 
     /** The mark moves to the chosen line first, so the choice is seen, then the card goes. */
-    private void choose(int key) {
-        if (key == order) {
+    private void choose(int section, int key) {
+        if (key == (section == 0 ? order : view)) {
             shutMenu(true);
             return;
         }
-        order = key;
-        mark();
-        opener.order(key);
+        if (section == 0) {
+            order = key;
+            mark();
+            opener.order(key);
+        } else {
+            order(order, key);
+            opener.view(key);
+            enter(view == Keep.PAGES ? pager : list);
+        }
         postDelayed(new Runnable() {
             public void run() {
                 shutMenu(true);
@@ -390,6 +436,7 @@ final class Drawer extends FrameLayout {
      */
     void inset(int top, int bottom) {
         list.setPadding(0, top + dp(12), 0, dp(8));
+        pager.setPadding(0, top + dp(12), 0, 0);
         LinearLayout.LayoutParams barParams = (LinearLayout.LayoutParams) bar.getLayoutParams();
         barParams.bottomMargin = bottom + dp(10);
         bar.setLayoutParams(barParams);
@@ -403,9 +450,14 @@ final class Drawer extends FrameLayout {
     /** The same list in another order: the lines are let in again from the top. */
     void reorder(List<Apps.Door> doors) {
         fill(doors);
-        list.setAlpha(0f);
-        list.setTranslationY(dp(16));
-        list.animate().alpha(1f).translationY(0f).setDuration(Pace.ARRIVE)
+        enter(view == Keep.PAGES ? pager : list);
+    }
+
+    /** The content is let in again, from a little below. */
+    private void enter(View content) {
+        content.setAlpha(0f);
+        content.setTranslationY(dp(16));
+        content.animate().alpha(1f).translationY(0f).setDuration(Pace.ARRIVE)
             .setInterpolator(Pace.EMPHASIS).start();
     }
 
@@ -434,6 +486,39 @@ final class Drawer extends FrameLayout {
         }
         lines.notifyDataSetChanged();
         list.setSelection(0);
+        paginate();
+    }
+
+    /**
+     * The same doors, twenty to a page, filled row by row. The pages are
+     * built again whenever the doors change; their icons are only painted
+     * once a page is turned to.
+     */
+    private void paginate() {
+        pager.removeAllViews();
+        Grid page = null;
+        for (int i = 0; i < doors.size(); i++) {
+            int at = i % (COLUMNS * ROWS);
+            if (at == 0) {
+                page = new Grid(getContext(), COLUMNS, ROWS);
+                page.setPadding(dp(8), 0, dp(8), 0);
+                pager.addView(page);
+            }
+            final Cell cell = new Cell(getContext(), doors.get(i), gridIcon, true);
+            cell.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    opener.open(cell, cell.door, cell.localIcon());
+                }
+            });
+            cell.setOnLongClickListener(new View.OnLongClickListener() {
+                public boolean onLongClick(View v) {
+                    opener.lift(cell, cell.door, cell.localIcon(), downX, downY);
+                    return true;
+                }
+            });
+            page.put(cell, at % COLUMNS, at / COLUMNS);
+        }
+        pager.show(0, false);
     }
 
     void tint() {
@@ -451,7 +536,9 @@ final class Drawer extends FrameLayout {
         }
         blob.tint();
         card.setBackground(Tone.box(Tone.containerHigh(), dp(28), dp(0.5f)));
-        caption.setTextColor(Tone.faint());
+        for (TextView caption : captions) {
+            caption.setTextColor(Tone.faint());
+        }
         mark();
         for (int i = 0; i < list.getChildCount(); i++) {
             ((Row) list.getChildAt(i)).tint();
@@ -487,6 +574,7 @@ final class Drawer extends FrameLayout {
         }
         shown = true;
         list.setSelection(0);
+        pager.show(0, false);
         setVisibility(VISIBLE);
         setAlpha(0f);
         setTranslationY(density * 72f);

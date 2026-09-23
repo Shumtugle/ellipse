@@ -17,7 +17,7 @@ final class Cell extends View {
 
     final Apps.Door door;
 
-    private final Drawable icon;
+    private Drawable icon;
     private final TextPaint words = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final boolean named;
     private final float iconSize;
@@ -27,9 +27,6 @@ final class Cell extends View {
     Cell(Context context, Apps.Door door, float iconSize, boolean named) {
         super(context);
         this.door = door;
-        Drawable drawn = door.icon();
-        this.icon = drawn == null ? null : drawn.getConstantState() == null
-            ? drawn : drawn.getConstantState().newDrawable().mutate();
         this.iconSize = iconSize;
         this.named = named;
         float density = context.getResources().getDisplayMetrics().density;
@@ -87,6 +84,12 @@ final class Cell extends View {
             .setInterpolator(pressed ? Pace.EMPHASIS : Pace.SPRING).start();
     }
 
+    /** Where the icon stands, in the cell's own coordinates. */
+    int[] localIcon() {
+        return new int[] {Math.round((getWidth() - iconSize) / 2f), Math.round(top()),
+            Math.round(iconSize), Math.round(iconSize)};
+    }
+
     /** Where the icon itself stands, in the screen's coordinates, for the opening to grow from. */
     int[] iconBounds() {
         int[] at = new int[2];
@@ -100,6 +103,11 @@ final class Cell extends View {
     protected void onDraw(Canvas canvas) {
         float y = top();
         float x = (getWidth() - iconSize) / 2f;
+        /* The icon is asked for when first seen: a page nobody turns to
+           never paints its icons at all. */
+        if (icon == null) {
+            icon = door.icon();
+        }
         if (icon != null) {
             icon.setBounds(Math.round(x), Math.round(y),
                 Math.round(x + iconSize), Math.round(y + iconSize));

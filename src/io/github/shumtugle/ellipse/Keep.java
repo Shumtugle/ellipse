@@ -28,6 +28,11 @@ final class Keep {
 
     private static final String PLACED = "placed";
     private static final String ORDER = "order";
+    private static final String VIEW = "view";
+
+    /** How the list of every application is laid out: lines down, or pages across. */
+    static final int LINES = 0;
+    static final int PAGES = 1;
 
     /** The orders the list of every application can stand in. */
     static final int BY_NAME = 0;
@@ -48,6 +53,14 @@ final class Keep {
 
     static void saveOrder(Context context, int order) {
         store(context).edit().putInt(ORDER, order).apply();
+    }
+
+    static int view(Context context) {
+        return store(context).getInt(VIEW, LINES) == PAGES ? PAGES : LINES;
+    }
+
+    static void saveView(Context context, int view) {
+        store(context).edit().putInt(VIEW, view).apply();
     }
 
     /** One line per spot: column, row and the door, apart by tabs. */
