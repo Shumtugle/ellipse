@@ -1,15 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- One gesture: a thick line that runs, turns hard and stops, and an
+     orbit about it, tilted and off the middle, its far half behind the
+     line and its near half, with the gold ball, in front. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
-    <group android:rotation="-18" android:pivotX="54" android:pivotY="54">
-        <path android:strokeColor="@color/metal" android:strokeWidth="3.2"
-            android:pathData="M24,54a30,19 0,1 0,60 0a30,19 0,1 0,-60 0z" />
-        <path android:fillColor="@color/sun"
-            android:pathData="M27.8,54a3,3 0,1 0,6 0a3,3 0,1 0,-6 0z" />
-        <path android:fillColor="@color/gold"
-            android:pathData="M70,41.8a7,7 0,1 0,14 0a7,7 0,1 0,-14 0z" />
-        <path android:fillColor="@color/gold_light"
-            android:pathData="M72.6,39.6a2.6,2.6 0,1 0,5.2 0a2.6,2.6 0,1 0,-5.2 0z" />
+    <group android:translateX="54" android:translateY="54" android:scaleX="0.6" android:scaleY="0.6">
+        <group android:translateX="10" android:translateY="-8" android:rotation="-24">
+            <path android:strokeColor="@color/ring_far" android:strokeWidth="5"
+                android:pathData="M-50,0 A50,20 0 0 1 50,0" />
+        </group>
+        <path android:strokeColor="@color/ink" android:strokeWidth="12"
+            android:strokeLineCap="round" android:strokeLineJoin="round"
+            android:pathData="M-40,28 L4,28 L-12,-6" />
+        <group android:translateX="10" android:translateY="-8" android:rotation="-24">
+            <path android:strokeColor="@color/ring_near" android:strokeWidth="5"
+                android:pathData="M50,0 A50,20 0 0 1 -50,0" />
+            <path android:fillColor="@color/gold"
+                android:pathData="M-32.5,-18a10.5,10.5 0 1 0 21,0a10.5,10.5 0 1 0 -21,0z" />
+            <path android:fillColor="@color/gold_light"
+                android:pathData="M-28.6,-21.6a3.4,3.4 0 1 0 6.8,0a3.4,3.4 0 1 0 -6.8,0z" />
+        </group>
     </group>
 </vector>

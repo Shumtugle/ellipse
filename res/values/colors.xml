@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The cloth under the emblem. Every colour of the screen itself is
-         grown at run time from one seed. -->
-    <color name="cloth">#FF17110B</color>
-    <color name="metal">#FFC2C2C2</color>
-    <color name="gold">#FFC99A3E</color>
-    <color name="gold_light">#FFF1D9A2</color>
-    <color name="sun">#FFF4EEE2</color>
+    <!-- The icons: warm cream and paper, one deep ink, gold, and the
+         bright bands under the lifted corner. Every colour of the screen
+         itself is grown at run time from one seed. -->
+    <color name="cream">#FFF8E4AE</color>
+    <color name="paper">#FFF1E6D0</color>
+    <color name="ink">#FF12243D</color>
+    <color name="ink_back">#FF2C4A72</color>
+    <color name="ink_edge">#FF6E8BB3</color>
+    <color name="shade">#59000000</color>
+    <color name="ring_far">#FF9AA3AE</color>
+    <color name="ring_near">#FF4F5B69</color>
+    <color name="gold">#FFD18E1F</color>
+    <color name="gold_light">#FFF7D98C</color>
+    <color name="coral">#FFE8674A</color>
+    <color name="teal">#FF2F9A8F</color>
     <color name="clear">#00000000</color>
     <color name="room">#FF0A0908</color>
 </resources>

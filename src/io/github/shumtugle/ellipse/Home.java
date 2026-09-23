@@ -695,8 +695,9 @@ public final class Home extends Activity {
 
     /** The door to this home screen's own settings. */
     private void ownDoor(Grid page, int column, int row) {
-        Cell own = new Cell(this, getPackageManager().getApplicationIcon(getApplicationInfo()),
-            OWN, iconSize);
+        /* Not the home screen's own icon: the settings are the underside of
+           it, and wear a face of their own. */
+        Cell own = new Cell(this, getDrawable(R.mipmap.door), OWN, iconSize);
         own.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 tune(v);
