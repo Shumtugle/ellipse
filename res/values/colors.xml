@@ -1,19 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- The icons: warm cream and paper, one deep ink, and the bright
-         surface under the lifted corner. Every colour of the screen
+    <!-- The home screen's icon: warm cream, one deep ink, gold. Every colour of the screen
          itself is grown at run time from one seed. -->
     <color name="cream_edge">#FFE7D49E</color>
     <color name="orbit">#FFC9C0A8</color>
     <color name="gold_light">#FFF7D98C</color>
-    <color name="paper">#FFF1E6D0</color>
     <color name="ink">#FF1D3A63</color>
-    <color name="paper_back">#FFD6C5A6</color>
-    <color name="paper_edge">#FFFFFBF2</color>
-    <color name="shade">#59000000</color>
     <color name="gold">#FFD18E1F</color>
-    <color name="coral">#FFE8674A</color>
-    <color name="teal">#FF2F9A8F</color>
     <color name="clear">#00000000</color>
     <color name="room">#FF0A0908</color>
 </resources>
