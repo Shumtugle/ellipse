@@ -3,7 +3,6 @@
     <!-- The icons: warm cream and paper, one deep ink, and the bright
          surface under the lifted corner. Every colour of the screen
          itself is grown at run time from one seed. -->
-    <color name="cream_lit">#FFFBF0CE</color>
     <color name="cream_edge">#FFE7D49E</color>
     <color name="orbit">#FFC9C0A8</color>
     <color name="gold_light">#FFF7D98C</color>
