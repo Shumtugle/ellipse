@@ -41,6 +41,13 @@ final class Layout {
     static final String DOOR = "door";
     /** One screen inside an application, opened by its own name rather than the front door. */
     static final String ACTIVITY = "activity";
+    /**
+     * A shortcut made by an application for whoever asks: it carries a way
+     * in of its own — a note, a conversation, a place on a map — rather
+     * than a name of a screen. The way in is kept written out, and its
+     * picture beside it among the home screen's own files.
+     */
+    static final String LINK = "link";
     /** This home screen's own clock, with the date, the weather and the charge. */
     /** Kept to know a clock left in an older layout, so it can be left out. */
     static final String CLOCK = "clock";

@@ -309,6 +309,9 @@ put_door	Все приложения
 # A folder
 put_folder	Папка
 
+# A shortcut
+put_link	Ярлык
+
 # Add screen
 add_screen	Новый экран
 

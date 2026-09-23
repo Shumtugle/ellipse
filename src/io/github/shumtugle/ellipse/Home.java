@@ -98,6 +98,14 @@ public final class Home extends Activity {
     private float cellH;
     private static final int BIND = 11;
     private static final int CONFIGURE = 12;
+    /** Choosing which application shall make a shortcut, and then making it. */
+    private static final int WHICH_LINK = 13;
+    private static final int MAKE_LINK = 14;
+
+    /** Where a shortcut being made is to stand. */
+    private int linkScreen;
+    private int linkX;
+    private int linkY;
     private Layout layout;
     private List<App> apps = new ArrayList<App>();
     private final Map<String, App> known = new HashMap<String, App>();
@@ -525,6 +533,8 @@ public final class Home extends Activity {
             });
         } else if (Layout.ACTIVITY.equals(item.kind)) {
             view = screenTile(item);
+        } else if (Layout.LINK.equals(item.kind)) {
+            view = linkTile(item);
         } else if (Layout.SHORTCUT.equals(item.kind)) {
             view = shortcutTile(item);
             view.setContentDescription(item.label);
@@ -1633,6 +1643,140 @@ public final class Home extends Activity {
             FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
     }
 
+    // ------------------------------------------------------------ links
+
+    /**
+     * A shortcut is made in two turns: the owner chooses which application
+     * shall make one, and the application then makes it and hands back a
+     * way in, a name and a picture.
+     */
+    private void askLink(int screen, int cx, int cy) {
+        linkScreen = screen;
+        linkX = cx;
+        linkY = cy;
+        Intent making = new Intent(Intent.ACTION_CREATE_SHORTCUT);
+        Intent choosing = new Intent(Intent.ACTION_PICK_ACTIVITY)
+            .putExtra(Intent.EXTRA_INTENT, making)
+            .putExtra(Intent.EXTRA_TITLE, Words.s("put_link"));
+        try {
+            startActivityForResult(choosing, WHICH_LINK);
+        } catch (RuntimeException refused) {
+            stage.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
+        }
+    }
+
+    /** What the application handed back, written down and set on the screen. */
+    private void keepLink(Intent said) {
+        Intent way = said.getParcelableExtra(Intent.EXTRA_SHORTCUT_INTENT);
+        if (way == null) {
+            return;
+        }
+        String name = said.getStringExtra(Intent.EXTRA_SHORTCUT_NAME);
+        Layout.Item made = new Layout.Item(Layout.LINK, linkX, linkY);
+        made.label = name == null ? Words.s("put_link") : name;
+        made.component = way.toUri(Intent.URI_INTENT_SCHEME);
+        Bitmap drawn = said.getParcelableExtra(Intent.EXTRA_SHORTCUT_ICON);
+        if (drawn == null) {
+            Intent.ShortcutIconResource from =
+                said.getParcelableExtra(Intent.EXTRA_SHORTCUT_ICON_RESOURCE);
+            if (from != null) {
+                try {
+                    android.content.res.Resources theirs =
+                        getPackageManager().getResourcesForApplication(from.packageName);
+                    int at = theirs.getIdentifier(from.resourceName, null, null);
+                    Drawable icon = at == 0 ? null : theirs.getDrawable(at, null);
+                    if (icon != null) {
+                        int side = Math.max(1, Math.max(icon.getIntrinsicWidth(), Round.dp(48f)));
+                        drawn = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+                        icon.setBounds(0, 0, side, side);
+                        icon.draw(new android.graphics.Canvas(drawn));
+                    }
+                } catch (Exception gone) {
+                    drawn = null;
+                }
+            }
+        }
+        String kept = drawn == null ? null : keepPicture(drawn);
+        if (kept != null) {
+            made.options.put("icon", kept);
+        }
+        if (linkScreen < 0 || linkScreen >= layout.screens.size()
+            || !layout.free(linkScreen, linkX, linkY, 1, 1, null)) {
+            int[] spot = layout.nearest(board.page(), layout.columns / 2, layout.rows - 1, 1, 1, null);
+            if (spot == null) {
+                return;
+            }
+            made.x = spot[0];
+            made.y = spot[1];
+            layout.screen(board.page()).items.add(made);
+        } else {
+            layout.screens.get(linkScreen).items.add(made);
+        }
+        layout.save(this);
+        build();
+    }
+
+    /** A shortcut's picture, kept among the home screen's own files. */
+    private String keepPicture(Bitmap picture) {
+        java.io.File room = new java.io.File(getFilesDir(), "links");
+        room.mkdirs();
+        String name = "link-" + System.currentTimeMillis() + ".png";
+        java.io.OutputStream out = null;
+        try {
+            out = new java.io.FileOutputStream(new java.io.File(room, name));
+            picture.compress(Bitmap.CompressFormat.PNG, 100, out);
+            return name;
+        } catch (java.io.IOException unwritten) {
+            return null;
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
+                }
+            } catch (java.io.IOException never) {
+                // Nothing to be done about a file that will not close.
+            }
+        }
+    }
+
+    /** A shortcut on a screen: its own picture, and its own way in. */
+    private View linkTile(final Layout.Item item) {
+        ImageView face = new ImageView(this);
+        face.setScaleType(ImageView.ScaleType.CENTER);
+        face.setBackground(Round.touch(null, Tone.of(Tone.ON_SURFACE), Round.L));
+        face.setContentDescription(item.label);
+        final String kept = item.options.get("icon");
+        icons.put(face, "link:" + item.component, tile, new Icons.Source() {
+            public Drawable icon() {
+                if (kept == null) {
+                    return null;
+                }
+                Bitmap picture = android.graphics.BitmapFactory.decodeFile(
+                    new java.io.File(new java.io.File(getFilesDir(), "links"), kept).getPath());
+                return picture == null ? null : new android.graphics.drawable.BitmapDrawable(
+                    getResources(), picture);
+            }
+        });
+        face.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                try {
+                    startActivity(Intent.parseUri(item.component, Intent.URI_INTENT_SCHEME)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (Exception refused) {
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
+                }
+            }
+        });
+        face.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                liftFromHome(item, v);
+                return true;
+            }
+        });
+        return face;
+    }
+
     // ------------------------------------------------------------ ground
 
     private void offerGround(final int screen, final int cx, final int cy) {
@@ -1658,6 +1802,11 @@ public final class Home extends Activity {
         offer.row(Sketch.WIDGET, Words.s("widget"), new Runnable() {
             public void run() {
                 openPicker(screen, cx, cy);
+            }
+        });
+        offer.row(Sketch.PIN, Words.s("put_link"), new Runnable() {
+            public void run() {
+                askLink(screen, cx, cy);
             }
         });
         offer.row(Sketch.PLUS, Words.s("add_screen"), new Runnable() {
@@ -2145,6 +2294,23 @@ public final class Home extends Activity {
     @Override
     protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == WHICH_LINK) {
+            if (result == RESULT_OK && data != null && data.getComponent() != null) {
+                try {
+                    startActivityForResult(new Intent(Intent.ACTION_CREATE_SHORTCUT)
+                        .setComponent(data.getComponent()), MAKE_LINK);
+                } catch (RuntimeException refused) {
+                    stage.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
+                }
+            }
+            return;
+        }
+        if (request == MAKE_LINK) {
+            if (result == RESULT_OK && data != null) {
+                keepLink(data);
+            }
+            return;
+        }
         if (waiting == null) {
             return;
         }
