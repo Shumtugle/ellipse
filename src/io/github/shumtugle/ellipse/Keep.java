@@ -55,6 +55,11 @@ final class Keep {
         return context.getSharedPreferences("ellipse", Context.MODE_PRIVATE);
     }
 
+    /** Everything kept is forgotten: the next start is a first start. */
+    static void reset(Context context) {
+        store(context).edit().clear().commit();
+    }
+
     static int order(Context context) {
         int kept = store(context).getInt(ORDER, BY_NAME);
         return kept < BY_NAME || kept > UPDATED ? BY_NAME : kept;

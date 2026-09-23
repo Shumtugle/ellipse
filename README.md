@@ -25,8 +25,8 @@ the design system's way — a scalloped dial, the hour and the date, the
 phone's charge — and four everyday applications at its foot. The screen
 before it holds a folder of the applications signed by the same hand as
 the phone's store, named after them; the screen after it, a folder of the
-phone's own applications, the phone's settings, and a door to this home
-screen's settings, still to come. Screens
+phone's own applications, the phone's settings, and the door to this home
+screen's settings. Screens
 turn sideways, with points under them and a ring round the home one. A long press on a screen opens its menu beside
 the finger: add a screen, and on any screen but the home one, make it the
 home screen. Adding shortcuts, widgets and folders is offered but not yet
@@ -39,7 +39,12 @@ last opened from here and those installed or updated in the last two weeks,
 each marked new or updated — and a push upward sends it away. An icon
 carried to a side edge and held there turns the screens.
 
-There are no settings and no folders yet, and what is set down cannot yet be moved or taken off. They return
+The settings open from that door: a field for finding at the top, the
+rooms one under another, and two tabs at the foot, the settings and the
+style. For now there is one room, Other, where the launcher can be
+restarted, or reset to how it was on first start (asked twice).
+
+There are no folders of one's own yet, and what is set down cannot yet be moved or taken off. They return
 one at a time.
 
 - Android 8.0 or newer
@@ -50,7 +55,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.8.1
+  sh build.sh ellipse-1.9.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

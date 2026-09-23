@@ -13,4 +13,15 @@
         <item name="android:windowActionBar">false</item>
         <item name="android:colorEdgeEffect">@color/clear</item>
     </style>
+
+    <!-- The settings: a room of its own, dark and solid, under the same
+         clear bars. -->
+    <style name="Room" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/room</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@color/clear</item>
+        <item name="android:navigationBarColor">@color/clear</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:colorEdgeEffect">@color/clear</item>
+    </style>
 </resources>

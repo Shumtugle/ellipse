@@ -554,8 +554,7 @@ public final class Home extends Activity {
                     OWN, iconSize);
                 own.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        /* The settings of this home screen are still to come. */
-                        refuse(v);
+                        tune(v);
                     }
                 });
                 after.put(own, 2, ROWS - 1);
@@ -608,6 +607,13 @@ public final class Home extends Activity {
         });
         into.put(cell, column, row);
         cells.add(cell);
+    }
+
+    /** The settings, grown out of the door that leads to them. */
+    private void tune(View from) {
+        Intent open = new Intent(this, Tune.class);
+        startActivity(open, ActivityOptions.makeClipRevealAnimation(from, 0, 0,
+            from.getWidth(), from.getHeight()).toBundle());
     }
 
     /** A window of the clock was pressed: what it shows about is opened out of it. */
