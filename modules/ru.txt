@@ -255,6 +255,12 @@ language_what	Английский живёт внутри, любой друг�
 # English
 english	Английский
 
+# Forget everything
+wipe	Забыть всё
+
+# Everything? Press again
+wipe_sure	Точно всё? Ещё раз
+
 # {n} of {m} words
 words_of	{n} из {m} слов
 

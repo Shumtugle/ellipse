@@ -273,17 +273,53 @@ public final class Keep {
         }
     }
 
+    /**
+     * What the switch between mine and the default touches: how things
+     * look, and nothing else. The grid, the screens, what stands on them,
+     * the widgets, the shortcuts, the drawer's order and the language are
+     * the owner's work, and a change of look is not a reason to undo it.
+     */
+    private static final String[] LOOK = {"wall", "hue", "rich", "night", "flat", "window", "rim", "gloss",
+        "power", "ratio", "thick", "zoom", "door", "well_shape", "well_hue", "well_dense"};
+
     static void toDefault(Context context, JSONObject mine) throws JSONException {
         store(context).edit().putString("mine", mine.toString()).apply();
-        restore(context, defaults());
+        restore(context, only(defaults()));
     }
 
     static void toMine(Context context) {
         JSONObject mine = mine(context);
         store(context).edit().remove("mine").apply();
         if (mine != null) {
-            restore(context, mine);
+            restore(context, only(mine));
         }
+    }
+
+    /** The same settings with everything that is not a matter of looks left out. */
+    private static JSONObject only(JSONObject all) {
+        JSONObject few = new JSONObject();
+        for (String key : LOOK) {
+            if (all.has(key)) {
+                try {
+                    few.put(key, all.get(key));
+                } catch (JSONException never) {
+                    // A value that will not be copied is a value not changed.
+                }
+            }
+        }
+        return few;
+    }
+
+    /**
+     * Everything forgotten: the settings, the screens as they were laid
+     * out, the language that was loaded. The home screen then starts as it
+     * would on a phone that had never seen it.
+     */
+    static void wipe(Context context) {
+        store(context).edit().clear().apply();
+        new java.io.File(context.getFilesDir(), "layout.json").delete();
+        new java.io.File(context.getFilesDir(), "layout.json.mine").delete();
+        Words.forget();
     }
 
 

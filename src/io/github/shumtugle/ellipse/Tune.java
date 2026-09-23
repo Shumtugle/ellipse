@@ -404,12 +404,9 @@ public final class Tune extends Activity {
                 mine.put("columns", grid.columns);
                 mine.put("rows", grid.rows);
                 Keep.toDefault(this, mine);
-                Layout.stash(this);
-                Layout.fresh(this).save(this);
                 Keep.touch(this);
             } else {
                 Keep.toMine(this);
-                Layout.unstash(this);
                 Keep.touch(this);
             }
         } catch (org.json.JSONException broken) {
@@ -1789,6 +1786,35 @@ public final class Tune extends Activity {
         }
         tongueSaid = words(Letter.BODY_M, "", Tone.PRIMARY);
         card.addView(tongueSaid, spaced(8));
+
+        // Everything forgotten and begun again — settings, screens and
+        // language alike. Asked for twice, since it cannot be taken back.
+        final TextView[] wipe = new TextView[1];
+        wipe[0] = button(Words.s("wipe"), false, new View.OnClickListener() {
+            public void onClick(View v) {
+                if (!"sure".equals(wipe[0].getTag())) {
+                    wipe[0].setTag("sure");
+                    wipe[0].setText(Words.s("wipe_sure"));
+                    root.postDelayed(new Runnable() {
+                        public void run() {
+                            if ("sure".equals(wipe[0].getTag())) {
+                                wipe[0].setTag(null);
+                                wipe[0].setText(Words.s("wipe"));
+                            }
+                        }
+                    }, 4000L);
+                    return;
+                }
+                Keep.wipe(Tune.this);
+                startActivity(new Intent(Tune.this, Home.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+                finish();
+            }
+        });
+        LinearLayout.LayoutParams lastly = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, Round.dp(56f));
+        lastly.topMargin = Round.dp(28f);
+        card.addView(wipe[0], lastly);
         return card;
     }
 

@@ -255,6 +255,12 @@ language_what
 # English
 english	
 
+# Forget everything
+wipe	
+
+# Everything? Press again
+wipe_sure	
+
 # {n} of {m} words
 words_of	
 

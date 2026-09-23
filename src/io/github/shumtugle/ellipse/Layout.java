@@ -368,40 +368,8 @@ final class Layout {
 
     // ------------------------------------------------------------ what was mine
 
-    /** The layout of the moment, set aside whole while the default stands in its place. */
-    static void stash(Context context) {
-        File file = new File(context.getFilesDir(), FILE);
-        File aside = new File(context.getFilesDir(), FILE + ".mine");
-        if (file.exists() && !aside.exists()) {
-            file.renameTo(aside);
-        }
-    }
 
-    /** The layout set aside, back in its place; the default it replaced goes. */
-    static void unstash(Context context) {
-        File aside = new File(context.getFilesDir(), FILE + ".mine");
-        if (aside.exists()) {
-            aside.renameTo(new File(context.getFilesDir(), FILE));
-        }
-    }
 
-    /** The layout set aside, if there is one: its widgets are kept alive while it waits. */
-    static Layout stashed(Context context) {
-        File aside = new File(context.getFilesDir(), FILE + ".mine");
-        if (!aside.exists()) {
-            return null;
-        }
-        try {
-            InputStream in = new FileInputStream(aside);
-            try {
-                return parse(read(in));
-            } finally {
-                in.close();
-            }
-        } catch (IOException | JSONException broken) {
-            return null;
-        }
-    }
 
     // ------------------------------------------------------------ the file
 

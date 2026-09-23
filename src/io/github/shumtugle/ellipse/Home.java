@@ -2267,17 +2267,6 @@ public final class Home extends Activity {
                 }
             }
         }
-        // The owner's own layout, set aside while the default stands, keeps its widgets alive.
-        Layout aside = Layout.stashed(this);
-        if (aside != null) {
-            for (Layout.Screen screen : aside.screens) {
-                for (Layout.Item item : screen.items) {
-                    if (Layout.WIDGET.equals(item.kind) && item.id >= 0) {
-                        used.add(item.id);
-                    }
-                }
-            }
-        }
         int[] held;
         try {
             held = host.getAppWidgetIds();
