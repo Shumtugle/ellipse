@@ -33,18 +33,8 @@ import java.util.List;
  * corners from the tile's to its own on the way. What is on the card
  * follows once there is room for it, a line at a time.
  *
- * The card takes its colour from the thing: from the hue that most of
- * its picture is, darkened into a ground and lightened into ink, so the
- * card of a red application is a deep red and that of a gold one a deep
- * gold. A picture with no hue to speak of leaves the card in the seed's
- * own colours.
- *
- * At its head, the thing's name, large, and round buttons for what is
- * done to the thing itself. Under it, tiles two to a row, each a picture
- * and a name: a press does it and closes the card; a tile that can be
- * lifted lifts under a long press, to be set on a screen. Under the tiles,
- * whole lines for what is less often wanted, and counts between a minus
- * and a plus, which keep the card open while they change.
+ * The card takes its colour from the scheme, like every other surface:
+ * one kind of thing, one ground, whatever it opens over.
  */
 final class Offer extends FrameLayout {
 
@@ -137,39 +127,14 @@ final class Offer extends FrameLayout {
 
     // ------------------------------------------------------------ colour
 
-    /** The card's colours from a picture: its hue, if it has one. */
+        /**
+     * A card is a card, whatever it is about. It was taking its colour
+     * from the picture of the thing it opened over, so one application's
+     * card came up green and another's brown; a screenful of them read as
+     * a handful of badges rather than as one kind of thing. The colour
+     * now comes from the scheme, like every other surface.
+     */
     Offer tint(Bitmap picture) {
-        if (picture == null) {
-            return this;
-        }
-        double sumX = 0;
-        double sumY = 0;
-        double weight = 0;
-        double richness = 0;
-        float[] hsv = new float[3];
-        int stepX = Math.max(1, picture.getWidth() / 24);
-        int stepY = Math.max(1, picture.getHeight() / 24);
-        for (int y = stepY / 2; y < picture.getHeight(); y += stepY) {
-            for (int x = stepX / 2; x < picture.getWidth(); x += stepX) {
-                int c = picture.getPixel(x, y);
-                if (Color.alpha(c) < 200) {
-                    continue;
-                }
-                Color.colorToHSV(c, hsv);
-                double w = hsv[1] * hsv[1] * Math.min(1.0, hsv[2] * 1.6);
-                double a = Math.toRadians(hsv[0]);
-                sumX += Math.cos(a) * w;
-                sumY += Math.sin(a) * w;
-                weight += w;
-                richness += hsv[1] * w;
-            }
-        }
-        if (weight < 1.5) {
-            return this;
-        }
-        float hue = (float) ((Math.toDegrees(Math.atan2(sumY, sumX)) + 360.0) % 360.0);
-        double chroma = 20.0 + 50.0 * (richness / weight);
-        colours(hue, chroma);
         return this;
     }
 
