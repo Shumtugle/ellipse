@@ -168,7 +168,6 @@ public final class Tune extends Activity {
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         Fault.watch(this);
-        Keep.catchUp(this);
         Cast.flat = Keep.flat(this);
         Round.measure(this);
         Tone.read(this);
@@ -216,9 +215,6 @@ public final class Tune extends Activity {
         });
         column.addView(showcase.view, spaced(20));
         cards.add(showcase.view);
-        View choice = defaultSwitch();
-        column.addView(choice, spaced(20));
-        cards.add(choice);
         contents = new LinearLayout(this);
         contents.setOrientation(LinearLayout.VERTICAL);
         column.addView(contents, spaced(20));
@@ -367,56 +363,7 @@ public final class Tune extends Activity {
         }
     }
 
-    /**
-     * My own, or the default. The default is the home screen as the
-     * design system's own guidelines have it, and as a new phone first
-     * sees it. Going to it keeps what was mine, whole, to come back to.
-     */
-    private View defaultSwitch() {
-        // Not a pair of standing states but a deed and, for a little
-        // while, its undoing: the look goes back to the default, and until
-        // something is set by hand there is still a way back to what was.
-        final boolean back = Keep.onDefault(this);
-        LinearLayout made = new LinearLayout(this);
-        made.setOrientation(LinearLayout.VERTICAL);
-        made.addView(button(Words.s(back ? "look_back" : "look_default"), false,
-            new View.OnClickListener() {
-                public void onClick(View v) {
-                    turnDefault(!back);
-                }
-            }), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Round.dp(52f)));
-        return made;
-    }
 
-    /**
-     * The look set back to the default, or back to what it was before that.
-     * Only the look is touched: the screens, what stands on them and the
-     * language are the owner's work and are left alone. What was is kept
-     * only until the owner sets something by hand; after that there is
-     * nothing to go back to, and the way back is no longer offered.
-     */
-    private void turnDefault(boolean standard) {
-        try {
-            if (standard) {
-                org.json.JSONObject mine = Keep.export(this);
-                mine.put("columns", grid.columns);
-                mine.put("rows", grid.rows);
-                Keep.toDefault(this, mine);
-                Keep.touch(this);
-            } else {
-                Keep.toMine(this);
-                Keep.touch(this);
-            }
-        } catch (org.json.JSONException broken) {
-            root.performHapticFeedback(android.view.HapticFeedbackConstants.REJECT);
-            return;
-        }
-        root.postDelayed(new Runnable() {
-            public void run() {
-                recreate();
-            }
-        }, Pace.ARRIVE);
-    }
 
     /**
      * The marks of the system's bars, dark on a light room and light on a

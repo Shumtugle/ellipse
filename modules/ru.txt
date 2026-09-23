@@ -12,9 +12,6 @@ back	Назад
 # Applications
 drawer	Приложения
 
-# Search
-search	Поиск
-
 # Files and language
 house	Файлы и язык
 
@@ -90,8 +87,8 @@ window_follows	По плитке
 # Medallion
 window_round	Медальон
 
-# No mask
-window_raw	Без маски
+# As the system
+window_raw	Системные
 
 # Light
 light	Свет
@@ -327,9 +324,6 @@ remove_screen	Убрать экран
 # Main screen
 main_screen	Главный экран
 
-# Screen {n}
-screen_n	Экран {n}
-
 # Width
 width	Ширина
 
@@ -410,12 +404,6 @@ door_keyhole	Скважина
 
 # Bare glass
 door_glass	Пустое стекло
-
-# Back as it was
-look_back	Вернуть как было
-
-# Default
-look_default	По умолчанию
 
 # Dock
 dock	Док

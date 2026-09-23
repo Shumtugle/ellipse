@@ -166,7 +166,6 @@ public final class Home extends Activity {
         super.onCreate(state);
         Fault.watch(this);
         Keep.settle(this);
-        Keep.catchUp(this);
         Cast.flat = Keep.flat(this);
         Round.measure(this);
         Tone.read(this);

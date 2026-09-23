@@ -12,9 +12,6 @@ back
 # Applications
 drawer	
 
-# Search
-search	
-
 # Files and language
 house	
 
@@ -90,7 +87,7 @@ window_follows
 # Medallion
 window_round	
 
-# No mask
+# As the system
 window_raw	
 
 # Light
@@ -327,9 +324,6 @@ remove_screen
 # Main screen
 main_screen	
 
-# Screen {n}
-screen_n	
-
 # Width
 width	
 
@@ -410,12 +404,6 @@ door_keyhole
 
 # Bare glass
 door_glass	
-
-# Back as it was
-look_back	
-
-# Default
-look_default	
 
 # Dock
 dock	

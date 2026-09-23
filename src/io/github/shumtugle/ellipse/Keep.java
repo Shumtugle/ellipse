@@ -59,7 +59,6 @@ public final class Keep {
     }
 
     public static void saveLook(Context context, float hue, float rich, boolean wall) {
-        moved(context);
         mark(store(context).edit().putFloat("hue", hue).putFloat("rich", rich)
             .putBoolean("wall", wall), context);
     }
@@ -79,7 +78,6 @@ public final class Keep {
     }
 
     static void saveTile(Context context, Tile.Look look) {
-        moved(context);
         mark(store(context).edit().putFloat("power", look.power)
             .putFloat("ratio", look.ratio).putInt("rim", look.rim).putFloat("zoom", look.zoom)
             .putFloat("thick", look.width).putInt("window", look.window).putBoolean("gloss", look.gloss),
@@ -260,20 +258,7 @@ public final class Keep {
         return o;
     }
 
-    /** Whether the default stands now; what was the owner's own is kept beside it. */
-    static boolean onDefault(Context context) {
-        return store(context).getString("mine", null) != null;
-    }
 
-    /** The owner's own settings, as they were when the default was put in their place. */
-    static JSONObject mine(Context context) {
-        String kept = store(context).getString("mine", null);
-        try {
-            return kept == null ? null : new JSONObject(kept);
-        } catch (JSONException broken) {
-            return null;
-        }
-    }
 
     /**
      * What the switch between mine and the default touches: how things
@@ -281,48 +266,9 @@ public final class Keep {
      * the widgets, the shortcuts, the drawer's order and the language are
      * the owner's work, and a change of look is not a reason to undo it.
      */
-    private static final String[] LOOK = {"wall", "hue", "rich", "night", "flat", "window", "rim", "gloss",
-        "power", "ratio", "thick", "zoom", "door", "well_shape", "well_hue", "well_dense"};
 
-    static void toDefault(Context context, JSONObject mine) throws JSONException {
-        restore(context, only(defaults()));
-        // Written after the restoring, since restoring a look lets go of it.
-        store(context).edit().putString("mine", mine.toString()).apply();
-    }
 
-    static void toMine(Context context) {
-        JSONObject mine = mine(context);
-        store(context).edit().remove("mine").apply();
-        if (mine != null) {
-            restore(context, only(mine));
-        }
-    }
 
-    /**
-     * A look set by hand: whatever was kept to go back to is no longer what
-     * was, so it is let go. The way back is offered for as long as nothing
-     * has been touched since, and no longer.
-     */
-    private static void moved(Context context) {
-        if (store(context).contains("mine")) {
-            store(context).edit().remove("mine").apply();
-        }
-    }
-
-    /** The same settings with everything that is not a matter of looks left out. */
-    private static JSONObject only(JSONObject all) {
-        JSONObject few = new JSONObject();
-        for (String key : LOOK) {
-            if (all.has(key)) {
-                try {
-                    few.put(key, all.get(key));
-                } catch (JSONException never) {
-                    // A value that will not be copied is a value not changed.
-                }
-            }
-        }
-        return few;
-    }
 
     /**
      * Everything forgotten: the settings, the screens as they were laid
@@ -372,7 +318,6 @@ public final class Keep {
     }
 
     static void saveNight(Context context, int wish) {
-        moved(context);
         mark(store(context).edit().putInt("night", wish), context);
     }
 
@@ -390,7 +335,6 @@ public final class Keep {
     }
 
     static void saveWell(Context context, Well.Look look) {
-        moved(context);
         mark(store(context).edit().putInt("well_shape", look.shape).putInt("well_hue", look.hue)
             .putFloat("well_dense", look.dense), context);
     }
@@ -406,24 +350,6 @@ public final class Keep {
         return store(context).getBoolean("flat", false);
     }
 
-    /**
-     * A phone that stood on the default before the default was drawn flat,
-     * or before its door was blue, takes both up, once.
-     */
-    static void catchUp(Context context) {
-        SharedPreferences kept = store(context);
-        if (kept.getInt("caught", 0) >= 1) {
-            return;
-        }
-        SharedPreferences.Editor edit = kept.edit().putInt("caught", 1);
-        if (onDefault(context)) {
-            edit.putBoolean("flat", true);
-            if (kept.getInt("door", Door.DEFAULT) == Door.DISC_LIGHT) {
-                edit.putInt("door", Door.DEFAULT);
-            }
-        }
-        edit.apply();
-    }
 
     // ---------------------------------------------------------------- dock
 
@@ -459,7 +385,6 @@ public final class Keep {
     }
 
     static void saveDoor(Context context, int face) {
-        moved(context);
         mark(store(context).edit().putInt("door", face), context);
     }
 
