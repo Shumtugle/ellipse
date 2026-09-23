@@ -12,6 +12,10 @@ import android.graphics.drawable.Drawable;
 import android.os.Process;
 import android.os.UserHandle;
 
+import java.text.Collator;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,13 +33,25 @@ final class Apps {
         final ComponentName name;
         final UserHandle user;
         final CharSequence label;
-        final Drawable icon;
+        private final LauncherActivityInfo info;
+        private final int density;
+        private Drawable icon;
 
         Door(LauncherActivityInfo info, int density) {
+            this.info = info;
+            this.density = density;
             name = info.getComponentName();
             user = info.getUser();
-            label = info.getLabel();
-            icon = info.getIcon(density);
+            CharSequence named = info.getLabel();
+            label = named == null ? "" : named;
+        }
+
+        /** Drawn once, when first asked for: a long list is not painted all at once. */
+        Drawable icon() {
+            if (icon == null) {
+                icon = info.getIcon(density);
+            }
+            return icon;
         }
     }
 
@@ -43,6 +59,8 @@ final class Apps {
     private final PackageManager manager;
     /** Every package with a front door, by its name, holding the first door. */
     private final Map<String, LauncherActivityInfo> doors = new HashMap<>();
+    /** Every front door, one per entry, whatever package it belongs to. */
+    private final List<LauncherActivityInfo> every = new ArrayList<>();
 
     Apps(Context context) {
         this.context = context;
@@ -55,10 +73,31 @@ final class Apps {
             if (owner.equals(context.getPackageName())) {
                 continue;
             }
+            every.add(info);
             if (!doors.containsKey(owner)) {
                 doors.put(owner, info);
             }
         }
+    }
+
+    /**
+     * Every application with a front door, by name, the way the reader's
+     * own language orders its alphabet.
+     */
+    List<Door> all() {
+        int density = context.getResources().getDisplayMetrics().densityDpi;
+        List<Door> list = new ArrayList<>();
+        for (LauncherActivityInfo info : every) {
+            list.add(new Door(info, density));
+        }
+        final Collator order = Collator.getInstance();
+        order.setStrength(Collator.SECONDARY);
+        Collections.sort(list, new Comparator<Door>() {
+            public int compare(Door a, Door b) {
+                return order.compare(a.label.toString().trim(), b.label.toString().trim());
+            }
+        });
+        return list;
     }
 
     /**

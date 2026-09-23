@@ -27,7 +27,9 @@ final class Cell extends View {
     Cell(Context context, Apps.Door door, float iconSize, boolean named) {
         super(context);
         this.door = door;
-        this.icon = door.icon == null ? null : door.icon.mutate();
+        Drawable drawn = door.icon();
+        this.icon = drawn == null ? null : drawn.getConstantState() == null
+            ? drawn : drawn.getConstantState().newDrawable().mutate();
         this.iconSize = iconSize;
         this.named = named;
         float density = context.getResources().getDisplayMetrics().density;

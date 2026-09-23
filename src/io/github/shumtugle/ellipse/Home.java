@@ -36,7 +36,8 @@ import java.util.Set;
  *
  * One screen: the wallpaper in a rounded window, a grid of four by five
  * inside it, a dock of five under it, and the bar at the foot with the
- * search field and the round button. What stands on the screen is what the
+ * search field and the round button. The field opens the list of every
+ * application. What stands on the screen is what the
  * phone itself keeps for each everyday role; nothing is moved, nothing is
  * saved, nothing is set. Everything else arrives later, one thing at a time.
  */
@@ -58,7 +59,9 @@ public final class Home extends Activity {
     private float scaled;
     private float iconSize;
 
+    private FrameLayout root;
     private Frame frame;
+    private Drawer drawer;
     private Grid grid;
     private Grid dock;
     private FrameLayout shelf;
@@ -129,6 +132,9 @@ public final class Home extends Activity {
     protected void onStop() {
         super.onStop();
         away = true;
+        /* Back from an application, the home screen is found, not the list
+           the application was picked from. */
+        drawer.sink(false);
     }
 
     @Override
@@ -139,15 +145,17 @@ public final class Home extends Activity {
         fill();
     }
 
-    /** Home is already here: pressing it again changes nothing. */
+    /** Home, pressed on the home screen, closes whatever stands over it. */
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        drawer.sink(true);
     }
 
-    /** There is nowhere further back than the home screen. */
+    /** Back closes the list; there is nowhere further back than the home screen. */
     @Override
     public void onBackPressed() {
+        drawer.sink(true);
     }
 
     // ----------------------------------------------------------- window
@@ -191,7 +199,9 @@ public final class Home extends Activity {
                     right = insets.getSystemWindowInsetRight();
                     bottom = insets.getSystemWindowInsetBottom();
                 }
-                view.setPadding(left, top, right, bottom);
+                frame.setPadding(left, top, right, bottom);
+                drawer.setPadding(left, 0, right, 0);
+                drawer.inset(top, bottom);
                 return insets;
             }
         });
@@ -228,7 +238,11 @@ public final class Home extends Activity {
         float column = (Math.min(wide, tall) - dp(16)) / (float) COLUMNS;
         iconSize = Math.max(dp(48), Math.min(dp(64), column * 0.58f));
 
+        boolean was = drawer != null && drawer.shown();
+        root = new FrameLayout(this);
         frame = new Frame(this, dp(24));
+        root.addView(frame, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         FrameLayout stage = new FrameLayout(this);
         stage.setClipChildren(false);
@@ -261,7 +275,7 @@ public final class Home extends Activity {
         bar.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
         bar.setPadding(dp(8), dp(14), dp(12), dp(14));
 
-        /* The field will be the door to every application; the search is
+        /* The field is the door to every application; the search is
            where one would start looking for one anyway. */
         field = new TextView(this);
         field.setText("");
@@ -273,7 +287,7 @@ public final class Home extends Activity {
         field.setClickable(true);
         field.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                refuse(v);
+                drawer.rise();
             }
         });
         bar.addView(field, new LinearLayout.LayoutParams(0,
@@ -293,9 +307,21 @@ public final class Home extends Activity {
         barParams.setMargins(dp(8), dp(6), dp(8), dp(10));
         frame.addView(bar, barParams);
 
+        drawer = new Drawer(this, Math.round(iconSize * 0.78f), new Drawer.Opener() {
+            public void open(Row row) {
+                int[] on = row.iconBounds();
+                launch(row, row.door(), on);
+            }
+        });
+        root.addView(drawer, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        if (was) {
+            drawer.rise();
+        }
+
         tint();
-        setContentView(frame);
-        fitBars(frame);
+        setContentView(root);
+        fitBars(root);
         still();
     }
 
@@ -308,6 +334,7 @@ public final class Home extends Activity {
         field.setHintTextColor(Tone.faint());
         field.setBackground(Tone.touch(null, dp(26)));
         blob.tint();
+        drawer.tint();
     }
 
     // ------------------------------------------------------------- fill
@@ -367,6 +394,7 @@ public final class Home extends Activity {
                 place(grid, found.role(rows[r][c], taken), c, first + r, true);
             }
         }
+        drawer.fill(found.all());
     }
 
     private void place(Grid into, Apps.Door door, int column, int row, boolean named) {
@@ -402,14 +430,22 @@ public final class Home extends Activity {
         int[] on = cell.iconBounds();
         int[] at = new int[2];
         cell.getLocationOnScreen(at);
-        Rect from = new Rect(on[0], on[1], on[0] + on[2], on[1] + on[3]);
-        Bundle grow = ActivityOptions.makeClipRevealAnimation(cell,
-            on[0] - at[0], on[1] - at[1], on[2], on[3]).toBundle();
+        launch(cell, cell.door, new int[] {on[0] - at[0], on[1] - at[1], on[2], on[3]});
+    }
+
+    /** Opens a door; the icon is given in the coordinates of the view it stands in. */
+    private void launch(View from, Apps.Door door, int[] icon) {
+        int[] at = new int[2];
+        from.getLocationOnScreen(at);
+        Rect bounds = new Rect(at[0] + icon[0], at[1] + icon[1],
+            at[0] + icon[0] + icon[2], at[1] + icon[1] + icon[3]);
+        Bundle grow = ActivityOptions.makeClipRevealAnimation(from,
+            icon[0], icon[1], icon[2], icon[3]).toBundle();
         try {
             ((LauncherApps) getSystemService(LAUNCHER_APPS_SERVICE))
-                .startMainActivity(cell.door.name, cell.door.user, from, grow);
+                .startMainActivity(door.name, door.user, bounds, grow);
         } catch (RuntimeException gone) {
-            refuse(cell);
+            refuse(from);
             later();
         }
     }
