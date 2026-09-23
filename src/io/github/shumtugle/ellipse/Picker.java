@@ -76,7 +76,7 @@ final class Picker extends FrameLayout {
 
         final android.widget.EditText field = new android.widget.EditText(context);
         field.setSingleLine(true);
-        field.setHint(Words.s("search"));
+        field.setHint(Words.s("search_widgets"));
         field.setTextColor(Tone.of(Tone.ON_SURFACE));
         field.setHintTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
         field.setBackground(Round.box(Tone.of(Tone.SURFACE_HIGH), Round.FULL));

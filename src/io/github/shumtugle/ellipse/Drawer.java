@@ -76,10 +76,10 @@ final class Drawer extends LinearLayout {
         corners(1f);
         setClickable(true);
 
+        // No heading: the line at the foot says what is being looked
+        // through, and the applications themselves say the rest.
         title = Letter.set(new TextView(context), Letter.HEADLINE_M);
-        title.setText(Words.s("drawer"));
-        title.setTextColor(Tone.of(Tone.ON_SURFACE));
-        addView(title, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
+        title.setVisibility(GONE);
 
         if (across) {
             grid = null;
@@ -143,7 +143,7 @@ final class Drawer extends LinearLayout {
         Letter.set(field, Letter.TITLE_M);
         field.setBackground(null);
         field.setSingleLine(true);
-        field.setHint(Words.s("search"));
+        field.setHint(Words.s("search_apps"));
         field.setTextColor(Tone.of(Tone.ON_SURFACE));
         field.setHintTextColor(Tone.of(Tone.ON_SURFACE_VARIANT));
         field.setInputType(android.text.InputType.TYPE_CLASS_TEXT

@@ -15,6 +15,15 @@ drawer
 # Search
 search	
 
+# Files and language
+house	
+
+# Look for an application
+search_apps	
+
+# Look for a widget
+search_widgets	
+
 # Tile
 tile	
 

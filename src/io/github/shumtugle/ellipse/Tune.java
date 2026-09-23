@@ -203,6 +203,12 @@ public final class Tune extends Activity {
         tongueSaid = words(Letter.BODY_M, "", Tone.PRIMARY);
         showcase = new Showcase();
         cases.add(showcase);
+        // The case is not an ornament: a press on it opens what it shows.
+        showcase.view.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                openSection(0, true);
+            }
+        });
         column.addView(showcase.view, spaced(20));
         cards.add(showcase.view);
         View choice = defaultSwitch();
@@ -288,8 +294,8 @@ public final class Tune extends Activity {
      * questions are answered without going in.
      */
     private static final int[] GLYPHS = {Sketch.WINDOW_FOLLOWS, Sketch.SCREENS, Sketch.DRAWER,
-        Sketch.PALETTE, Sketch.FOLDER_OPEN, Sketch.LANGUAGE};
-    private static final String[] SUBJECTS = {"tile", "screens", "drawer", "colour", "files", "language"};
+        Sketch.PALETTE, Sketch.FOLDER_OPEN};
+    private static final String[] SUBJECTS = {"tile", "screens", "drawer", "colour", "house"};
 
     private ScrollView index;
     private LinearLayout indexColumn;
@@ -368,7 +374,7 @@ public final class Tune extends Activity {
         Cards two = new Cards(new String[] {Words.s("look_mine"), Words.s("look_default")},
             new Sketch[] {new Sketch(this, Sketch.SHAPE).shape(Tile.Look.MEASURED.power, Tile.Look.MEASURED.ratio),
                 new Sketch(this, Sketch.WINDOW_RAW)},
-            standard ? 1 : 0, 112, new Picked() {
+            standard ? 1 : 0, 72, new Picked() {
                 public void picked(int which) {
                     if ((which == 1) != Keep.onDefault(Tune.this)) {
                         turnDefault(which == 1);
@@ -511,12 +517,11 @@ public final class Tune extends Activity {
                 return (Keep.night(this) == Keep.PHONE ? Words.s("theme_auto")
                     : Words.s(Keep.night(this) == Keep.DAY ? "theme_light" : "theme_dark")) + "  \u00b7  "
                     + (Keep.wall(this) ? Words.s("wallpaper") : Words.s("hue"));
-            case 4: {
+            default: {
                 String place = folderName();
-                return place != null ? place : Words.s("folder_none");
+                return (place != null ? place : Words.s("folder_none")) + "  \u00b7  "
+                    + (Words.active() ? Words.name() : Words.s("english"));
             }
-            default:
-                return Words.active() ? Words.name() : Words.s("english");
         }
     }
 
@@ -526,8 +531,18 @@ public final class Tune extends Activity {
             case 1: return screensCard();
             case 2: return drawerCard();
             case 3: return colourCard();
-            case 4: return filesCard();
-            default: return languageCard();
+            default: {
+                // One room for the household: where things are kept and in
+                // what language they are spoken of.
+                LinearLayout both = new LinearLayout(this);
+                both.setOrientation(LinearLayout.VERTICAL);
+                both.addView(filesCard());
+                LinearLayout.LayoutParams under = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                under.topMargin = Round.dp(16f);
+                both.addView(languageCard(), under);
+                return both;
+            }
         }
     }
 
@@ -1435,55 +1450,6 @@ public final class Tune extends Activity {
             });
         card.addView(immersion.view(), spaced(12));
 
-        card.addView(words(Letter.TITLE_S, Words.s("well"), Tone.ON_SURFACE_VARIANT), spaced(24));
-        final Well.Look field = Keep.well(this);
-        Cards grounds = new Cards(new String[] {Words.s("face_round"), Words.s("face_squircle"),
-                Words.s("face_tile"), Words.s("well_circle")},
-            new Sketch[] {new Sketch(this, Sketch.SHAPE).shape(16f, 1f),
-                new Sketch(this, Sketch.SHAPE).shape(4f, 1f),
-                new Sketch(this, Sketch.SHAPE).shape(look.power, look.ratio),
-                new Sketch(this, Sketch.WINDOW_ROUND)},
-            field.shape, 104, 4, new Picked() {
-                public void picked(int which) {
-                    Keep.saveWell(Tune.this, new Well.Look(which, Keep.well(Tune.this).hue,
-                        Keep.well(Tune.this).dense));
-                }
-            });
-        card.addView(grounds.view(), spaced(12));
-
-        final Cards[] tinted = new Cards[1];
-        tinted[0] = new Cards(new String[] {Words.s("ink_same"), Words.s("ink_own")},
-            new Sketch[] {new Sketch(this, Sketch.CLOSE), new Sketch(this, Sketch.PALETTE)},
-            field.hue >= 0 ? 1 : 0, 104, new Picked() {
-                public void picked(int which) {
-                    Well.Look now = Keep.well(Tune.this);
-                    Keep.saveWell(Tune.this, new Well.Look(now.shape,
-                        which == 0 ? -1 : now.hue >= 0 ? now.hue : Math.round(Tone.hue()), now.dense));
-                }
-            });
-        card.addView(tinted[0].view(), spaced(12));
-        Dial tint = new Dial(this, (field.hue < 0 ? Tone.hue() : field.hue) / 360f, new Dial.Moved() {
-            public void moved(float value, boolean done) {
-                Well.Look now = Keep.well(Tune.this);
-                Keep.saveWell(Tune.this, new Well.Look(now.shape, Math.round(value * 360f) % 360, now.dense));
-                tinted[0].select(1);
-            }
-        }).large();
-        int[] wheel = new int[13];
-        for (int i = 0; i < wheel.length; i++) {
-            wheel[i] = Tone.at(Tone.night() ? 30f : 88f, 30.0, i * 30f % 360f);
-        }
-        tint.colours(wheel);
-        card.addView(tint, wideRow());
-
-        card.addView(labelled(Words.s("density"), null), spaced(16));
-        card.addView(new Dial(this, field.dense, new Dial.Moved() {
-            public void moved(float value, boolean done) {
-                Well.Look now = Keep.well(Tune.this);
-                Keep.saveWell(Tune.this, new Well.Look(now.shape, now.hue, value));
-            }
-        }).large(), wideRow());
-
         card.addView(words(Letter.TITLE_S, Words.s("dock"), Tone.ON_SURFACE_VARIANT), spaced(24));
         Cards shelf = new Cards(new String[] {Words.s("state_none"), Words.s("dock_on")},
             new Sketch[] {new Sketch(this, Sketch.CLOSE), new Sketch(this, Sketch.EDGE)},
@@ -1540,6 +1506,56 @@ public final class Tune extends Activity {
         roles.addView(swatch(Tone.SECONDARY_CONTAINER, Tone.ON_SECONDARY_CONTAINER), weighted(1f, 8));
         roles.addView(swatch(Tone.TERTIARY_CONTAINER, Tone.ON_TERTIARY_CONTAINER), weighted(1f, 8));
         card.addView(roles, spaced(16));
+
+        card.addView(words(Letter.TITLE_S, Words.s("well"), Tone.ON_SURFACE_VARIANT), spaced(24));
+        final Well.Look field = Keep.well(this);
+        Cards grounds = new Cards(new String[] {Words.s("face_round"), Words.s("face_squircle"),
+                Words.s("face_tile"), Words.s("well_circle")},
+            new Sketch[] {new Sketch(this, Sketch.SHAPE).shape(16f, 1f),
+                new Sketch(this, Sketch.SHAPE).shape(4f, 1f),
+                new Sketch(this, Sketch.SHAPE).shape(look.power, look.ratio),
+                new Sketch(this, Sketch.WINDOW_ROUND)},
+            field.shape, 104, 4, new Picked() {
+                public void picked(int which) {
+                    Keep.saveWell(Tune.this, new Well.Look(which, Keep.well(Tune.this).hue,
+                        Keep.well(Tune.this).dense));
+                }
+            });
+        card.addView(grounds.view(), spaced(12));
+
+        final Cards[] tinted = new Cards[1];
+        tinted[0] = new Cards(new String[] {Words.s("ink_same"), Words.s("ink_own")},
+            new Sketch[] {new Sketch(this, Sketch.CLOSE), new Sketch(this, Sketch.PALETTE)},
+            field.hue >= 0 ? 1 : 0, 104, new Picked() {
+                public void picked(int which) {
+                    Well.Look now = Keep.well(Tune.this);
+                    Keep.saveWell(Tune.this, new Well.Look(now.shape,
+                        which == 0 ? -1 : now.hue >= 0 ? now.hue : Math.round(Tone.hue()), now.dense));
+                }
+            });
+        card.addView(tinted[0].view(), spaced(12));
+        Dial tint = new Dial(this, (field.hue < 0 ? Tone.hue() : field.hue) / 360f, new Dial.Moved() {
+            public void moved(float value, boolean done) {
+                Well.Look now = Keep.well(Tune.this);
+                Keep.saveWell(Tune.this, new Well.Look(now.shape, Math.round(value * 360f) % 360, now.dense));
+                tinted[0].select(1);
+            }
+        }).large();
+        int[] wheel = new int[13];
+        for (int i = 0; i < wheel.length; i++) {
+            wheel[i] = Tone.at(Tone.night() ? 30f : 88f, 30.0, i * 30f % 360f);
+        }
+        tint.colours(wheel);
+        card.addView(tint, wideRow());
+
+        card.addView(labelled(Words.s("density"), null), spaced(16));
+        card.addView(new Dial(this, field.dense, new Dial.Moved() {
+            public void moved(float value, boolean done) {
+                Well.Look now = Keep.well(Tune.this);
+                Keep.saveWell(Tune.this, new Well.Look(now.shape, now.hue, value));
+            }
+        }).large(), wideRow());
+
 
         card.addView(words(Letter.TITLE_S, Words.s("theme"), Tone.ON_SURFACE_VARIANT), spaced(24));
         Cards schemes = new Cards(new String[] {Words.s("theme_auto"), Words.s("theme_light"),

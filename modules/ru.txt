@@ -15,6 +15,15 @@ drawer	Приложения
 # Search
 search	Поиск
 
+# Files and language
+house	Файлы и язык
+
+# Look for an application
+search_apps	Поиск приложений
+
+# Look for a widget
+search_widgets	Поиск виджетов
+
 # Tile
 tile	Плитка
 

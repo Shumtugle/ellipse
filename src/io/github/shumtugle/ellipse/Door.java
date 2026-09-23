@@ -266,7 +266,7 @@ final class Door {
         rim(canvas, paint, cx, cy, r, side, dark);
         float across = r * 0.38f;
         float down = r * 0.2f;
-        float dot = r * 0.11f;
+        float dot = r * 0.125f;
         for (int row = -1; row <= 1; row += 2) {
             for (int col = -1; col <= 1; col++) {
                 float x = cx + col * across;
@@ -279,7 +279,7 @@ final class Door {
                     // Sunk into the plate: dark at the top, where the lip
                     // hides the light, and caught by it along the lower edge.
                     // Shallower than this and the holes are not there at all.
-                    paint.setShader(new LinearGradient(0f, y - dot, 0f, y + dot, 0xFF5E6166, 0xFFA7ABB1,
+                    paint.setShader(new LinearGradient(0f, y - dot, 0f, y + dot, 0xFF44474C, 0xFF8B8F95,
                         Shader.TileMode.CLAMP));
                 }
                 canvas.drawCircle(x, y, dot, paint);
