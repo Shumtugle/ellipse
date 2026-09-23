@@ -34,7 +34,10 @@ card each, opening in place to show each widget as its own picture, with
 its name, the places it takes and what it is for; a field at the top
 narrows the shelf. A widget chosen is bound (the phone may ask leave), set
 up if it wants that, and set down in the first free block of its size.
-Widgets move like anything else on the screens.
+Widgets move like anything else on the screens. A widget whose own
+layout will not come down to the places it has is laid out as large as it
+needs and drawn smaller, the same both ways, so nothing is cut off; one
+that fits is left as it is.
 
 Anything carried from a screen can be dropped on Remove, which takes the
 dock's place at the foot once the thing is carried away from its place: it is taken off (a widget lets go of its
@@ -79,7 +82,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.15.3
+  sh build.sh ellipse-1.16.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
