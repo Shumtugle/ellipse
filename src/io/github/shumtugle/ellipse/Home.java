@@ -850,28 +850,26 @@ public final class Home extends Activity {
     }
 
     /**
-     * A shortcut's picture drawn to match its card: the shortcut's mark, in
-     * the card's ink, on a disc of the card's accent. Most shortcuts are a
-     * small mark on a plain ground, and some draw their mark in a colour
-     * that only their own application knows, which elsewhere comes out as
-     * white on white; inked here, the mark is always seen. A picture that
-     * is not a mark but a whole painting keeps its own colours.
+     * A shortcut's picture drawn to match its card: its mark in the card's
+     * ink, on a disc of the card's accent. Every mark is inked, whatever
+     * colours it came in — a card of rows should read as one thing, not as
+     * a handful of red, yellow and green badges — and a mark drawn in a
+     * colour only its own application knows is seen here like the rest.
      */
     private Bitmap glyph(Drawable icon, int side, int fill, int ink) {
-        if (!(icon instanceof android.graphics.drawable.AdaptiveIconDrawable)) {
-            return Tile.render(icon, side, DISC);
-        }
-        android.graphics.drawable.AdaptiveIconDrawable layered =
-            (android.graphics.drawable.AdaptiveIconDrawable) icon;
         Drawable mark = null;
-        if (Build.VERSION.SDK_INT >= 33) {
-            mark = layered.getMonochrome();
+        if (icon instanceof android.graphics.drawable.AdaptiveIconDrawable) {
+            android.graphics.drawable.AdaptiveIconDrawable layered =
+                (android.graphics.drawable.AdaptiveIconDrawable) icon;
+            if (Build.VERSION.SDK_INT >= 33) {
+                mark = layered.getMonochrome();
+            }
+            if (mark == null) {
+                mark = layered.getForeground();
+            }
         }
         if (mark == null) {
-            mark = layered.getForeground();
-        }
-        if (mark == null) {
-            return Tile.render(icon, side, DISC);
+            mark = icon;
         }
         mark = mark.mutate();
         Bitmap made = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
@@ -879,7 +877,10 @@ public final class Home extends Activity {
         android.graphics.Paint disc = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         disc.setColor(fill);
         canvas.drawCircle(side / 2f, side / 2f, side / 2f, disc);
-        int bleed = Math.round(side * 0.25f);
+        // A layer of an icon is drawn larger than what shows of it; a
+        // picture that is a picture already fits the disc as it is.
+        int bleed = icon instanceof android.graphics.drawable.AdaptiveIconDrawable
+            ? Math.round(side * 0.25f) : -Math.round(side * 0.16f);
         mark.setBounds(-bleed, -bleed, side + bleed, side + bleed);
         mark.setColorFilter(new android.graphics.PorterDuffColorFilter(ink,
             android.graphics.PorterDuff.Mode.SRC_IN));
