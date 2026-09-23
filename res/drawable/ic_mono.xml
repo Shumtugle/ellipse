@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The three points alone, for the phone's one-colour icons. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:translateX="54" android:translateY="54" android:scaleX="0.6" android:scaleY="0.6">
+        <path android:fillColor="#FFFFFFFF" android:pathData="M-45.8,-7a9.8,9.8 0 1 0 19.6,0a9.8,9.8 0 1 0 -19.6,0z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M-19.8,-1a9.8,9.8 0 1 0 19.6,0a9.8,9.8 0 1 0 -19.6,0z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M7.5,9a16.5,16.5 0 1 0 33,0a16.5,16.5 0 1 0 -33,0z" />
+    </group>
+</vector>

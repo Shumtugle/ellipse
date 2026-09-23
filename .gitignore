@@ -3,3 +3,4 @@ out/
 keys/
 *.keystore
 *.jks
+art/*.png
