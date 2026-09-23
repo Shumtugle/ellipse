@@ -48,8 +48,74 @@ final class Things {
         return face;
     }
 
+    /**
+     * A folder with nothing in it yet. It has nothing to show of its own,
+     * so it shows itself: the tile's own outline — a circle where the
+     * icons are circles — a line about it, and the mark of a folder in the
+     * middle. As soon as anything is put in, the folder wears what it
+     * holds instead.
+     */
+    private static View hollow(Context context, Icons icons, int width, String name) {
+        final Tile.Look look = icons.look();
+        final int tall = Tile.height(width, look);
+        android.widget.FrameLayout face = new android.widget.FrameLayout(context);
+        face.setContentDescription(name);
+        face.setBackground(new Drawable() {
+
+            private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+            @Override
+            public void draw(Canvas canvas) {
+                android.graphics.Rect b = getBounds();
+                android.graphics.Path shape;
+                if (look.window == Tile.Look.RAW) {
+                    shape = new android.graphics.Path();
+                    shape.addCircle(b.exactCenterX(), b.exactCenterY(),
+                        Math.min(b.width(), b.height()) * 0.47f, android.graphics.Path.Direction.CW);
+                } else {
+                    shape = Tile.curve(b.left, b.top, b.width(), b.height(), look.power);
+                }
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor((Tone.of(Tone.ON_SURFACE) & 0x00FFFFFF) | 0x1F000000);
+                canvas.drawPath(shape, paint);
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(Math.max(1f, Round.px(1.5f)));
+                paint.setColor((Tone.of(Tone.ON_SURFACE) & 0x00FFFFFF) | 0x8C000000);
+                canvas.drawPath(shape, paint);
+            }
+
+            @Override
+            public void setAlpha(int alpha) {
+                paint.setAlpha(alpha);
+            }
+
+            @Override
+            public void setColorFilter(android.graphics.ColorFilter filter) {
+                paint.setColorFilter(filter);
+            }
+
+            @Override
+            public int getOpacity() {
+                return android.graphics.PixelFormat.TRANSLUCENT;
+            }
+        });
+        Sketch mark = new Sketch(context, Sketch.FOLDER_OPEN);
+        mark.ink(Tone.of(Tone.ON_SURFACE), (Tone.of(Tone.ON_SURFACE) & 0x00FFFFFF) | 0x80000000);
+        int side = Math.round(Math.min(width, tall) * 0.46f);
+        android.widget.FrameLayout.LayoutParams middle =
+            new android.widget.FrameLayout.LayoutParams(side, side, Gravity.CENTER);
+        face.addView(mark, middle);
+        android.widget.FrameLayout holder = new android.widget.FrameLayout(context);
+        holder.addView(face, new android.widget.FrameLayout.LayoutParams(width, tall, Gravity.CENTER));
+        holder.setBackground(Round.touch(null, Tone.of(Tone.ON_SURFACE), Round.L));
+        return holder;
+    }
+
     /** A folder: up to four small tiles, two by two. */
     static View folder(Context context, Icons icons, List<Held> held, int width, String name) {
+        if (held.isEmpty()) {
+            return hollow(context, icons, width, name);
+        }
         LinearLayout face = new LinearLayout(context);
         face.setOrientation(LinearLayout.VERTICAL);
         face.setGravity(Gravity.CENTER);
