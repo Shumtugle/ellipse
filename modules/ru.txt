@@ -54,6 +54,9 @@ rim	Кромка
 # Metal
 rim_metal	Металл
 
+# Guilloche
+rim_guilloche	Гильоше
+
 # Gold
 rim_gold	Золото
 

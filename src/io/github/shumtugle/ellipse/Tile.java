@@ -58,6 +58,8 @@ final class Tile {
         static final int BLING = 5;
         static final int BLACK = 6;
         static final int WHITE = 7;
+        /** A field of tiny pyramids, as a watch's dial is stamped: drawn, not photographed. */
+        static final int GUILLOCHE = 8;
 
         /** The window follows the tile's own shape. */
         static final int FOLLOWS = 0;
@@ -346,6 +348,9 @@ final class Tile {
                 }
                 paint.setShader(gold());
                 return;
+            case Look.GUILLOCHE:
+                paint.setShader(guilloche(Math.min(width, height * 1.27f) * 0.16f));
+                return;
             case Look.WHITE:
                 if (brushed != null) {
                     paint.setShader(repeated(brushed, Math.min(width, height * 1.27f) * 0.6f));
@@ -360,6 +365,8 @@ final class Tile {
 
     /** Pictures of materials, handed in once from the application's resources. */
     private static Bitmap wood;
+    /** The stamped dial, drawn once and kept. */
+    private static Bitmap pressed;
     private static Bitmap bling;
     private static Bitmap brushed;
 
@@ -381,6 +388,45 @@ final class Tile {
         fit.setScale(width / (float) source.getWidth(), height / (float) source.getHeight());
         shader.setLocalMatrix(fit);
         return shader;
+    }
+
+    /**
+     * A dial stamped in little pyramids, the light falling from above and
+     * to the left: every face of every pyramid catches or loses it, and the
+     * grid of them reads as one surface. It is drawn rather than
+     * photographed, so it takes whatever colour the seed gives it — steel,
+     * midnight blue, oxblood — without a picture for each.
+     */
+    private static Shader guilloche(float across) {
+        if (pressed == null) {
+            int side = 24;
+            pressed = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+            for (int y = 0; y < side; y++) {
+                for (int x = 0; x < side; x++) {
+                    // Each cell is a low pyramid: its slope decides the light.
+                    float ax = (x + 0.5f) / side * 2f - 1f;
+                    float ay = (y + 0.5f) / side * 2f - 1f;
+                    float lit = 0.5f - (ax * 0.42f + ay * 0.46f)
+                        * (Math.abs(ax) > Math.abs(ay) ? 1f : 0.85f);
+                    // The seam between cells is a fine dark line.
+                    float edge = Math.min(Math.abs(ax), Math.abs(ay)) > 0.86f ? 0.72f : 1f;
+                    int shade = Math.round(Math.max(0f, Math.min(1f, lit)) * 255f * edge);
+                    pressed.setPixel(x, y, 0xFF000000 | (shade << 16) | (shade << 8) | shade);
+                }
+            }
+        }
+        BitmapShader grain = new BitmapShader(pressed, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
+        android.graphics.Matrix size = new android.graphics.Matrix();
+        float scale = Math.max(2f, across) / pressed.getWidth();
+        size.setScale(scale, scale);
+        grain.setLocalMatrix(size);
+        // The colour under the stamping is the seed's own, a little deeper
+        // than the plates of the scheme, so the pattern is seen on it.
+        int deep = Tone.at(Tone.night() ? 30f : 62f, 26.0, Tone.hue());
+        int high = Tone.at(Tone.night() ? 46f : 78f, 22.0, Tone.hue());
+        Shader ground = new LinearGradient(0f, 0f, 0f, Math.max(4f, across * 6f), high, deep,
+            Shader.TileMode.CLAMP);
+        return new android.graphics.ComposeShader(ground, grain, android.graphics.PorterDuff.Mode.OVERLAY);
     }
 
     /** A texture laid again and again, mirrored at every seam so no seam shows. */

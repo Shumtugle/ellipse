@@ -54,6 +54,9 @@ rim
 # Metal
 rim_metal	
 
+# Guilloche
+rim_guilloche	
+
 # Gold
 rim_gold	
 

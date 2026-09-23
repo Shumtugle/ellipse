@@ -1204,11 +1204,11 @@ public final class Tune extends Activity {
         card.addView(close, wideRow());
 
         card.addView(words(Letter.TITLE_S, Words.s("rim"), Tone.ON_SURFACE_VARIANT), spaced(24));
-        final int[] order = {Tile.Look.METAL, Tile.Look.GOLD, Tile.Look.WOOD, Tile.Look.BLING,
-            Tile.Look.BLACK, Tile.Look.WHITE, Tile.Look.ACCENT, Tile.Look.BARE};
-        String[] rimNames = {Words.s("rim_metal"), Words.s("rim_gold"), Words.s("rim_wood"),
-            Words.s("rim_bling"), Words.s("rim_black"), Words.s("rim_white"), Words.s("rim_accent"),
-            Words.s("rim_bare")};
+        final int[] order = {Tile.Look.METAL, Tile.Look.GUILLOCHE, Tile.Look.GOLD, Tile.Look.WOOD,
+            Tile.Look.BLING, Tile.Look.BLACK, Tile.Look.WHITE, Tile.Look.ACCENT, Tile.Look.BARE};
+        String[] rimNames = {Words.s("rim_metal"), Words.s("rim_guilloche"), Words.s("rim_gold"),
+            Words.s("rim_wood"), Words.s("rim_bling"), Words.s("rim_black"), Words.s("rim_white"),
+            Words.s("rim_accent"), Words.s("rim_bare")};
         Sketch[] discs = new Sketch[order.length];
         int at = 0;
         for (int i = 0; i < order.length; i++) {
