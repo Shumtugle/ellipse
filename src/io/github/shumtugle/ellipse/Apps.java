@@ -80,6 +80,17 @@ final class Apps {
         }
     }
 
+    /** The door of one component, or null when it is gone. */
+    Door door(ComponentName name) {
+        int density = context.getResources().getDisplayMetrics().densityDpi;
+        for (LauncherActivityInfo info : every) {
+            if (info.getComponentName().equals(name)) {
+                return new Door(info, density);
+            }
+        }
+        return null;
+    }
+
     /**
      * Every application with a front door, by name, the way the reader's
      * own language orders its alphabet.

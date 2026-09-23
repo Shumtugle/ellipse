@@ -11,9 +11,12 @@ clock, maps, files, store, mail, music and settings on the grid. Icons are
 the system's own, without masks.
 
 The round button, marked with six dots, brings up every application, by name, one to a
-line, on plain black; Back or Home puts it away.
+line, on plain black, with a field at the foot to narrow the list. Held
+long, a line gives its icon to the finger; the list closes into the
+fingertip, and the icon is set down in any free place of the grid.
+Back, Home or the round button puts the list away.
 
-There are no settings, no folders and no saved layout yet. They return
+There are no settings and no folders yet, and what is set down cannot yet be moved or taken off. They return
 one at a time.
 
 - Android 8.0 or newer
@@ -24,7 +27,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.2.0
+  sh build.sh ellipse-1.3.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

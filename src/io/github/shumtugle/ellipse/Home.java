@@ -3,6 +3,7 @@ package io.github.shumtugle.ellipse;
 import android.app.Activity;
 import android.app.ActivityOptions;
 import android.app.WallpaperManager;
+import android.animation.ValueAnimator;
 import android.content.Intent;
 import android.content.pm.LauncherApps;
 import android.content.res.Configuration;
@@ -55,7 +56,15 @@ public final class Home extends Activity {
     private float scaled;
     private float iconSize;
 
-    private FrameLayout root;
+    private Floor root;
+    /** The icon being carried from the list to the grid, while it is. */
+    private Lift lift;
+    private Apps.Door carried;
+    private int[] landing;
+    /** Where the finger is, and how far the icon has grown out of its line toward it. */
+    private float fingerX;
+    private float fingerY;
+    private ValueAnimator growing;
     private Frame frame;
     private Drawer drawer;
     private Grid grid;
@@ -193,9 +202,15 @@ public final class Home extends Activity {
                     right = insets.getSystemWindowInsetRight();
                     bottom = insets.getSystemWindowInsetBottom();
                 }
+                /* The keyboard only ever rises over the list, so only the
+                   list's bar makes room for it; the home screen stays put. */
+                int keys = bottom;
+                if (Build.VERSION.SDK_INT >= 30) {
+                    keys = Math.max(bottom, insets.getInsets(WindowInsets.Type.ime()).bottom);
+                }
                 frame.setPadding(left, top, right, bottom);
                 drawer.setPadding(left, 0, right, 0);
-                drawer.inset(top, bottom);
+                drawer.inset(top, keys);
                 return insets;
             }
         });
@@ -233,7 +248,8 @@ public final class Home extends Activity {
         iconSize = Math.max(dp(48), Math.min(dp(64), column * 0.58f));
 
         boolean was = drawer != null && drawer.shown();
-        root = new FrameLayout(this);
+        root = new Floor(this);
+        root.carrier(carrier);
         frame = new Frame(this, dp(24));
         root.addView(frame, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -246,6 +262,7 @@ public final class Home extends Activity {
 
         grid = new Grid(this, COLUMNS, ROWS);
         grid.setPadding(dp(8), dp(16), dp(8), dp(8));
+        grid.shape(iconSize, Cell.below(this));
         stage.addView(grid, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -263,7 +280,7 @@ public final class Home extends Activity {
         bar.addView(dock, new LinearLayout.LayoutParams(0,
             Math.round(iconSize + dp(16)), 1f));
 
-        blob = new Blob(this, iconSize);
+        blob = new Blob(this, iconSize, Blob.GRID);
         blob.setContentDescription(ALL);
         blob.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -281,9 +298,16 @@ public final class Home extends Activity {
         frame.addView(bar, barParams);
 
         drawer = new Drawer(this, Math.round(iconSize * 0.78f), new Drawer.Opener() {
-            public void open(Row row) {
-                int[] on = row.iconBounds();
-                launch(row, row.door(), on);
+            public void open(View from, Apps.Door door, int[] icon) {
+                launch(from, door, icon);
+            }
+
+            public void lift(Row row, float rawX, float rawY) {
+                pick(row, rawX, rawY);
+            }
+
+            public void leave() {
+                drawer.sink(true);
             }
         });
         root.addView(drawer, new FrameLayout.LayoutParams(
@@ -350,7 +374,8 @@ public final class Home extends Activity {
     }
 
     /**
-     * Puts on the screen what the phone keeps for each role. A role with no
+     * Puts on the screen what the owner set down by hand, then what the
+     * phone keeps for each role in the places still free. A role with no
      * answer leaves its place empty: nothing is put there in its stead.
      */
     private void fill() {
@@ -360,6 +385,20 @@ public final class Home extends Activity {
         Apps found = new Apps(this);
         Set<String> taken = new HashSet<>();
 
+        boolean[][] held = new boolean[COLUMNS][ROWS];
+        for (Keep.Spot spot : Keep.placed(this)) {
+            if (spot.x < 0 || spot.y < 0 || spot.x >= COLUMNS || spot.y >= ROWS) {
+                continue;
+            }
+            Apps.Door door = found.door(spot.name);
+            if (door == null) {
+                continue;
+            }
+            place(grid, door, spot.x, spot.y, true);
+            held[spot.x][spot.y] = true;
+            taken.add(spot.name.getPackageName());
+        }
+
         Intent[] docked = dockRoles();
         for (int i = 0; i < docked.length; i++) {
             place(dock, found.role(docked[i], taken), i, 0, false);
@@ -368,7 +407,7 @@ public final class Home extends Activity {
         int first = ROWS - rows.length;
         for (int r = 0; r < rows.length; r++) {
             for (int c = 0; c < rows[r].length; c++) {
-                if (rows[r][c] != null) {
+                if (rows[r][c] != null && !held[c][first + r]) {
                     place(grid, found.role(rows[r][c], taken), c, first + r, true);
                 }
             }
@@ -433,6 +472,166 @@ public final class Home extends Activity {
     private void refuse(View v) {
         v.performHapticFeedback(Build.VERSION.SDK_INT >= 30
             ? HapticFeedbackConstants.REJECT : HapticFeedbackConstants.LONG_PRESS);
+    }
+
+    // ---------------------------------------------------------- carrying
+
+    private final Floor.Carrier carrier = new Floor.Carrier() {
+        public boolean carrying() {
+            return lift != null && carried != null;
+        }
+
+        public void move(float x, float y) {
+            hold(x, y);
+        }
+
+        public void drop(float x, float y, boolean kept) {
+            set(kept);
+        }
+    };
+
+    /** How much larger a carried icon is than one set down. */
+    private static final float LIFTED = 1.12f;
+
+    /** How far above the fingertip a carried icon rides, so the finger never hides it. */
+    private float above() {
+        return iconSize * 0.7f;
+    }
+
+    /**
+     * A held line gives up its icon. It grows from the line into the size
+     * it will have on the grid, rides a little above the finger, and the
+     * list is swallowed into that fingertip.
+     */
+    private void pick(Row row, float rawX, float rawY) {
+        if (lift != null) {
+            return;
+        }
+        int[] floorAt = new int[2];
+        root.getLocationOnScreen(floorAt);
+        float x = rawX - floorAt[0];
+        float y = rawY - floorAt[1];
+
+        int[] rowAt = new int[2];
+        row.getLocationOnScreen(rowAt);
+        int[] icon = row.iconBounds();
+        float fromX = rowAt[0] - floorAt[0] + icon[0] + icon[2] / 2f;
+        float fromY = rowAt[1] - floorAt[1] + icon[1] + icon[3] / 2f;
+
+        carried = row.door();
+        lift = new Lift(this, carried.icon(), Math.round(iconSize));
+        root.addView(lift, new FrameLayout.LayoutParams(lift.size(), lift.size()));
+        fingerX = x;
+        fingerY = y;
+        final Lift held = lift;
+        final float startX = fromX;
+        final float startY = fromY;
+        final float start = icon[2] / iconSize;
+        held.at(startX, startY);
+        held.setScaleX(start);
+        held.setScaleY(start);
+        /* The icon leaves its line and meets the finger wherever the finger
+           has gone by then, growing to its size on the grid on the way. */
+        growing = ValueAnimator.ofFloat(0f, 1f);
+        growing.setDuration(Pace.ARRIVE / 2);
+        growing.setInterpolator(Pace.EMPHASIS);
+        growing.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            public void onAnimationUpdate(ValueAnimator animation) {
+                float p = (Float) animation.getAnimatedValue();
+                held.at(startX + (fingerX - startX) * p,
+                    startY + (fingerY - above() - startY) * p);
+                float s = start + (LIFTED - start) * p;
+                held.setScaleX(s);
+                held.setScaleY(s);
+            }
+        });
+        growing.start();
+
+        row.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        drawer.swallow(x, y);
+        grid.carrying(true);
+        hold(x, y);
+    }
+
+    /** The icon follows the finger; the grid shows where it would land. */
+    private void hold(float x, float y) {
+        if (lift == null) {
+            return;
+        }
+        fingerX = x;
+        fingerY = y;
+        float cx = x;
+        float cy = y - above();
+        if (growing == null || !growing.isRunning()) {
+            lift.at(cx, cy);
+        }
+        int[] gridAt = new int[2];
+        int[] floorAt = new int[2];
+        grid.getLocationOnScreen(gridAt);
+        root.getLocationOnScreen(floorAt);
+        float gx = cx - (gridAt[0] - floorAt[0]);
+        float gy = cy - (gridAt[1] - floorAt[1]);
+        int[] under = grid.cellAt(gx, gy);
+        int[] spot = null;
+        if (under != null) {
+            spot = grid.free(under[0], under[1]) ? under : grid.nearestFree(gx, gy);
+        }
+        if (spot != null && (landing == null || spot[0] != landing[0] || spot[1] != landing[1])) {
+            grid.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+        }
+        landing = spot;
+        grid.target(spot);
+    }
+
+    /**
+     * The finger lifts. Over a free place the icon settles into it and
+     * stays; anywhere else it fades where it was let go, and nothing
+     * is changed.
+     */
+    private void set(boolean kept) {
+        final Lift going = lift;
+        final Apps.Door door = carried;
+        final int[] spot = kept ? landing : null;
+        lift = null;
+        carried = null;
+        landing = null;
+        if (growing != null) {
+            growing.cancel();
+            growing = null;
+        }
+        grid.carrying(false);
+        if (going == null) {
+            return;
+        }
+        if (spot == null) {
+            going.animate().cancel();
+            going.animate().scaleX(0.4f).scaleY(0.4f).alpha(0f)
+                .setDuration(Pace.ARRIVE / 2).setInterpolator(Pace.EMPHASIS)
+                .withEndAction(new Runnable() {
+                    public void run() {
+                        root.removeView(going);
+                    }
+                }).start();
+            return;
+        }
+        int[] gridAt = new int[2];
+        int[] floorAt = new int[2];
+        grid.getLocationOnScreen(gridAt);
+        root.getLocationOnScreen(floorAt);
+        float[] c = grid.centre(spot[0], spot[1]);
+        float tx = gridAt[0] - floorAt[0] + c[0] - going.size() / 2f;
+        float ty = gridAt[1] - floorAt[1] + c[1] - going.size() / 2f;
+        Keep.place(this, door.name, spot[0], spot[1]);
+        going.animate().cancel();
+        going.animate().translationX(tx).translationY(ty).scaleX(1f).scaleY(1f)
+            .setDuration(Pace.ARRIVE).setInterpolator(Pace.SPRING)
+            .withEndAction(new Runnable() {
+                public void run() {
+                    fill();
+                    root.removeView(going);
+                }
+            }).start();
+        grid.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
     }
 
     // ----------------------------------------------------------- motion

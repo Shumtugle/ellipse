@@ -45,6 +45,15 @@ final class Cell extends View {
         setContentDescription(door.label);
     }
 
+    /** How tall the name under an icon stands, with the air above it. */
+    static float below(Context context) {
+        float density = context.getResources().getDisplayMetrics().density;
+        float scaled = context.getResources().getDisplayMetrics().scaledDensity;
+        TextPaint probe = new TextPaint();
+        probe.setTextSize(12.5f * scaled);
+        return 6f * density - probe.ascent() + probe.descent();
+    }
+
     private float top() {
         float tall = iconSize;
         if (named) {
