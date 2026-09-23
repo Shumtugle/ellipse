@@ -33,7 +33,7 @@ import java.util.List;
  * Every application, by name, one to a line, on plain black. No title: a
  * list of every application says what it is by being one. At its foot
  * stands the bar the home screen already knows, here with a field to
- * narrow the list and the round button that leads back.
+ * narrow the list and the round button of the list's own menu.
  *
  * Held long, a line gives up its icon to the finger, and the black closes
  * over the list into that fingertip, leaving the home screen underneath
@@ -48,12 +48,12 @@ final class Drawer extends FrameLayout {
         /** A line was held: its icon is to be carried from a point of the screen. */
         void lift(Row row, float rawX, float rawY);
 
-        /** The way back was asked for. */
-        void leave();
+        /** The list's own menu was asked for. */
+        void menu(View from);
     }
 
     private static final String SEARCH = "Search";
-    private static final String BACK = "Back";
+    private static final String MENU = "Menu";
 
     private final Opener opener;
     private final ListView list;
@@ -167,12 +167,11 @@ final class Drawer extends FrameLayout {
         bar.addView(field, new LinearLayout.LayoutParams(0,
             ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
-        blob = new Blob(context, dp(56), Blob.LEAVE);
-        blob.setContentDescription(BACK);
+        blob = new Blob(context, dp(56), Blob.MENU);
+        blob.setContentDescription(MENU);
         blob.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                blob.depart();
-                opener.leave();
+                opener.menu(v);
             }
         });
         bar.addView(blob);
@@ -297,7 +296,6 @@ final class Drawer extends FrameLayout {
         animate().cancel();
         animate().alpha(1f).translationY(0f).setDuration(Pace.ARRIVE)
             .setInterpolator(Pace.EMPHASIS).withEndAction(null).start();
-        blob.write();
     }
 
     /** Sinks back where it came from; at once, when nobody is looking. */

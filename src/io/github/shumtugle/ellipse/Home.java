@@ -306,8 +306,10 @@ public final class Home extends Activity {
                 pick(row, rawX, rawY);
             }
 
-            public void leave() {
-                drawer.sink(true);
+            /* The menu of the list has nothing in it yet: it answers with
+               the phone's own short no until it does. */
+            public void menu(View from) {
+                refuse(from);
             }
         });
         root.addView(drawer, new FrameLayout.LayoutParams(
