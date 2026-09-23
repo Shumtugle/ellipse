@@ -9,7 +9,8 @@ import android.view.ViewGroup;
 
 /**
  * A plain grid of equal places. Each child is told its column and row and
- * gets exactly one place; nothing spans, nothing floats.
+ * how many places it takes across and down, one by one unless it says
+ * otherwise; nothing floats.
  *
  * While an icon is carried over it, the grid shows where it could land: a
  * faint point in every free place, and a ring of the accent round the one
@@ -42,8 +43,20 @@ final class Grid extends ViewGroup {
     }
 
     void put(View child, int column, int row) {
-        child.setTag(new int[] {column, row});
+        put(child, column, row, 1, 1);
+    }
+
+    void put(View child, int column, int row, int across, int down) {
+        child.setTag(new int[] {column, row, across, down});
         addView(child);
+    }
+
+    private static int across(int[] at) {
+        return at.length > 2 ? at[2] : 1;
+    }
+
+    private static int down(int[] at) {
+        return at.length > 3 ? at[3] : 1;
     }
 
     /** How icons stand in their places: their size, and how tall the name under them is. */
@@ -85,7 +98,8 @@ final class Grid extends ViewGroup {
     boolean free(int column, int row) {
         for (int i = 0; i < getChildCount(); i++) {
             int[] at = (int[]) getChildAt(i).getTag();
-            if (at[0] == column && at[1] == row) {
+            if (column >= at[0] && column < at[0] + across(at)
+                && row >= at[1] && row < at[1] + down(at)) {
                 return false;
             }
         }
@@ -148,11 +162,13 @@ final class Grid extends ViewGroup {
         int width = MeasureSpec.getSize(widthSpec);
         int height = MeasureSpec.getSize(heightSpec);
         setMeasuredDimension(width, height);
-        int w = Math.round(cellWidth());
-        int h = Math.round(cellHeight());
+        float w = cellWidth();
+        float h = cellHeight();
         for (int i = 0; i < getChildCount(); i++) {
-            getChildAt(i).measure(MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY));
+            View child = getChildAt(i);
+            int[] at = (int[]) child.getTag();
+            child.measure(MeasureSpec.makeMeasureSpec(Math.round(w * across(at)), MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(Math.round(h * down(at)), MeasureSpec.EXACTLY));
         }
     }
 

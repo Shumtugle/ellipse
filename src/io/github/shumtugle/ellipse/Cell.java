@@ -27,9 +27,24 @@ final class Cell extends View {
     private String note;
     private final TextPaint small = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
+    /** The label shown under the icon: the door's, or one given. */
+    private final CharSequence label;
+
     Cell(Context context, Apps.Door door, float iconSize, boolean named) {
+        this(context, door, null, door.label, iconSize, named);
+    }
+
+    /** A place that is not one application: a folder, or a door of our own. */
+    Cell(Context context, Drawable icon, CharSequence label, float iconSize) {
+        this(context, null, icon, label, iconSize, true);
+    }
+
+    private Cell(Context context, Apps.Door door, Drawable icon, CharSequence label,
+                 float iconSize, boolean named) {
         super(context);
         this.door = door;
+        this.icon = icon;
+        this.label = label == null ? "" : label;
         this.iconSize = iconSize;
         this.named = named;
         float density = context.getResources().getDisplayMetrics().density;
@@ -45,7 +60,7 @@ final class Cell extends View {
         small.setTextAlign(Paint.Align.CENTER);
         small.setColor(Tone.primary());
         setClickable(true);
-        setContentDescription(door.label);
+        setContentDescription(this.label);
     }
 
     /** Sets a quiet line under the name, in the accent: a word about the application. */
@@ -81,7 +96,7 @@ final class Cell extends View {
         setPivotX(w / 2f);
         setPivotY(top() + iconSize / 2f);
         if (named) {
-            shown = TextUtils.ellipsize(door.label == null ? "" : door.label, words,
+            shown = TextUtils.ellipsize(label, words,
                 w - gap * 1.5f, TextUtils.TruncateAt.END);
         }
     }
@@ -121,7 +136,7 @@ final class Cell extends View {
         float x = (getWidth() - iconSize) / 2f;
         /* The icon is asked for when first seen: a page nobody turns to
            never paints its icons at all. */
-        if (icon == null) {
+        if (icon == null && door != null) {
             icon = door.icon();
         }
         if (icon != null) {

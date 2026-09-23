@@ -21,6 +21,8 @@ final class Tone {
     private static float hue = 38f;
     private static float rich = 0.58f;
     private static int accent = shade(0.58f, 1f);
+    /** The design system's containers and their inks, first, second and third. */
+    private static final int[] held = new int[6];
 
     private Tone() {
     }
@@ -40,7 +42,47 @@ final class Tone {
             rich = 0.58f;
             accent = shade(rich, 1f);
         }
+        if (Build.VERSION.SDK_INT >= 31) {
+            held[0] = context.getColor(android.R.color.system_accent1_700);
+            held[1] = context.getColor(android.R.color.system_accent1_100);
+            held[2] = context.getColor(android.R.color.system_accent2_700);
+            held[3] = context.getColor(android.R.color.system_accent2_100);
+            held[4] = context.getColor(android.R.color.system_accent3_700);
+            held[5] = context.getColor(android.R.color.system_accent3_100);
+        } else {
+            float third = (hue + 60f) % 360f;
+            held[0] = shade(Math.min(0.7f, rich + 0.1f), 0.34f);
+            held[1] = shade(0.18f, 0.96f);
+            held[2] = shade(rich * 0.4f, 0.28f);
+            held[3] = shade(0.10f, 0.94f);
+            held[4] = Color.HSVToColor(new float[] {third, 0.45f, 0.32f});
+            held[5] = Color.HSVToColor(new float[] {third, 0.12f, 0.96f});
+        }
         return was != accent;
+    }
+
+    static int primaryContainer() {
+        return held[0];
+    }
+
+    static int onPrimaryContainer() {
+        return held[1];
+    }
+
+    static int secondaryContainer() {
+        return held[2];
+    }
+
+    static int onSecondaryContainer() {
+        return held[3];
+    }
+
+    static int tertiaryContainer() {
+        return held[4];
+    }
+
+    static int onTertiaryContainer() {
+        return held[5];
     }
 
     private static int shade(float sat, float val) {

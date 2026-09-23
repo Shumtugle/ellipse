@@ -133,6 +133,81 @@ final class Apps {
     }
 
     /**
+     * The applications signed by the same hand as the phone's store, by
+     * name, leaving out those already standing somewhere. Empty when the
+     * phone has no store.
+     */
+    List<Door> vendor(Set<String> taken) {
+        List<Door> list = new ArrayList<>();
+        ResolveInfo store = manager.resolveActivity(
+            new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MARKET), 0);
+        if (store == null || store.activityInfo == null) {
+            return list;
+        }
+        String hand = store.activityInfo.packageName;
+        for (Door door : all(Keep.BY_NAME)) {
+            String owner = door.name.getPackageName();
+            if (taken.contains(owner)) {
+                continue;
+            }
+            if (owner.equals(hand)
+                || manager.checkSignatures(hand, owner) == PackageManager.SIGNATURE_MATCH) {
+                list.add(door);
+            }
+        }
+        return list;
+    }
+
+    /**
+     * A name for such a folder, read from the applications themselves: the
+     * part of their package names most of them share after the first,
+     * with a capital.
+     */
+    static String vendorName(List<Door> doors) {
+        Map<String, Integer> counted = new HashMap<>();
+        String best = null;
+        int most = 0;
+        for (Door door : doors) {
+            String[] parts = door.name.getPackageName().split("\\.");
+            if (parts.length < 2) {
+                continue;
+            }
+            String part = parts[1];
+            int n = (counted.containsKey(part) ? counted.get(part) : 0) + 1;
+            counted.put(part, n);
+            if (n > most) {
+                most = n;
+                best = part;
+            }
+        }
+        if (best == null || best.length() == 0) {
+            return "Apps";
+        }
+        return best.substring(0, 1).toUpperCase(java.util.Locale.ROOT) + best.substring(1);
+    }
+
+    /** The phone's own applications, by name, leaving out those already standing somewhere. */
+    List<Door> system(Set<String> taken) {
+        List<Door> list = new ArrayList<>();
+        for (Door door : all(Keep.BY_NAME)) {
+            String owner = door.name.getPackageName();
+            if (taken.contains(owner)) {
+                continue;
+            }
+            try {
+                ApplicationInfo info = manager.getApplicationInfo(owner, 0);
+                if ((info.flags & (ApplicationInfo.FLAG_SYSTEM
+                    | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0) {
+                    list.add(door);
+                }
+            } catch (PackageManager.NameNotFoundException gone) {
+                // Gone since the list was read.
+            }
+        }
+        return list;
+    }
+
+    /**
      * The application that answers a role, or null. The phone's own choice
      * wins; with no choice made, a system application that answers is taken
      * before one installed later, and one already standing elsewhere on the

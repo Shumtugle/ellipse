@@ -19,8 +19,15 @@ the list's menu: the list stands A to Z, newest first, or most recently
 updated first, and either runs down in lines or across in pages of four
 by five icons with their names.
 
-Three screens stand side by side from the start, the middle one home;
-they turn sideways, with points under them and a ring round the home one. A long press on a screen opens its menu beside
+Three screens stand side by side from the start, the middle one home.
+The home screen carries the home screen's own clock across its top, drawn
+the design system's way — a scalloped dial, the hour and the date, the
+phone's charge — and four everyday applications at its foot. The screen
+before it holds a folder of the applications signed by the same hand as
+the phone's store, named after them; the screen after it, a folder of the
+phone's own applications, the phone's settings, and a door to this home
+screen's settings, still to come. Screens
+turn sideways, with points under them and a ring round the home one. A long press on a screen opens its menu beside
 the finger: add a screen, and on any screen but the home one, make it the
 home screen. Adding shortcuts, widgets and folders is offered but not yet
 done. Home returns to the home screen.
@@ -43,7 +50,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.7.0
+  sh build.sh ellipse-1.8.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

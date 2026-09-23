@@ -60,7 +60,8 @@ public final class Home extends Activity {
     private static final String ALL = "All applications";
 
     private final Handler main = new Handler(Looper.getMainLooper());
-    private final List<Cell> cells = new ArrayList<>();
+    /** Everything set out on the screens and in the dock, in the order it was set out. */
+    private final List<View> cells = new ArrayList<>();
 
     private float density;
     private float scaled;
@@ -83,6 +84,7 @@ public final class Home extends Activity {
     private Grid grid;
     private Menu menu;
     private Fresh fresh;
+    private Tray tray;
     /** What a vertical pull is doing, while one is under way. */
     private int pull;
     private static final int PULL_OPEN = 1;
@@ -166,6 +168,7 @@ public final class Home extends Activity {
         drawer.sink(false);
         menu.hide(false);
         fresh.close(false);
+        tray.close(false);
     }
 
     @Override
@@ -182,6 +185,10 @@ public final class Home extends Activity {
         super.onNewIntent(intent);
         if (menu.shown()) {
             menu.hide(true);
+            return;
+        }
+        if (tray.shown()) {
+            tray.close(true);
             return;
         }
         if (drawer.shown()) {
@@ -209,6 +216,10 @@ public final class Home extends Activity {
         }
         if (drawer.menuShown()) {
             drawer.shutMenu(true);
+            return;
+        }
+        if (tray.shown()) {
+            tray.close(true);
             return;
         }
         if (drawer.shown()) {
@@ -275,6 +286,7 @@ public final class Home extends Activity {
                 drawer.setPadding(left, 0, right, 0);
                 drawer.inset(top, keys);
                 fresh.inset(top);
+                tray.setPadding(left, top, right, bottom);
                 return insets;
             }
         });
@@ -394,6 +406,18 @@ public final class Home extends Activity {
         root.addView(fresh, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        tray = new Tray(this, iconSize, new Tray.Hand() {
+            public void open(View from, Apps.Door door, int[] icon) {
+                launch(from, door, icon);
+            }
+
+            public void lift(View from, Apps.Door door, int[] icon) {
+                pick(from, door, icon, root.fingerX() + rootLeft(), root.fingerY() + rootTop());
+            }
+        });
+        root.addView(tray, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         menu = new Menu(this, root, new Menu.Listener() {
             public void picked(int section, int key) {
                 act(key);
@@ -432,41 +456,23 @@ public final class Home extends Activity {
         };
     }
 
-    /**
-     * The rows of the grid nearest the dock, top to bottom, left to right;
-     * a null leaves its place empty.
-     */
-    private static Intent[][] gridRoles() {
-        return new Intent[][] {
-            {
-                new Intent(Intent.ACTION_VIEW, Uri.parse("https:")),
-                null,
-                null,
-                null
-            },
-            {
-                category(Intent.CATEGORY_APP_CALENDAR),
-                new Intent(AlarmClock.ACTION_SHOW_ALARMS),
-                category(Intent.CATEGORY_APP_MAPS),
-                category(Intent.CATEGORY_APP_FILES)
-            },
-            {
-                category(Intent.CATEGORY_APP_MARKET),
-                category(Intent.CATEGORY_APP_EMAIL),
-                category(Intent.CATEGORY_APP_MUSIC),
-                new Intent(Settings.ACTION_SETTINGS)
-            }
-        };
-    }
-
     private static Intent category(String name) {
         return new Intent(Intent.ACTION_MAIN).addCategory(name);
     }
 
+    /** The words of the default set-out. */
+    private static final String SYSTEM = "System";
+    private static final String OWN = "Ellipse";
+
     /**
-     * Puts on the screen what the owner set down by hand, then what the
-     * phone keeps for each role in the places still free. A role with no
-     * answer leaves its place empty: nothing is put there in its stead.
+     * Puts on the screens what the owner set down by hand, then the
+     * default set-out in the places still free. On the home screen, the
+     * clock across the top and four everyday applications at the foot; on
+     * the screen before it, a folder of the applications signed by the same
+     * hand as the phone's store; on the screen after it, a folder of the
+     * phone's own applications, the phone's settings and this home screen's
+     * own. A role with no answer leaves its place empty: nothing is put
+     * there in its stead.
      */
     private void fill() {
         int showing = pages.isEmpty() ? Keep.home(this) : screens.page();
@@ -497,8 +503,6 @@ public final class Home extends Activity {
         }
         grid = pages.get(0);
 
-        int roles = Math.min(Keep.roles(this), pages.size() - 1);
-        boolean[][] held = new boolean[COLUMNS][ROWS];
         for (Keep.Spot spot : spots) {
             if (spot.x < 0 || spot.y < 0 || spot.x >= COLUMNS || spot.y >= ROWS) {
                 continue;
@@ -508,9 +512,6 @@ public final class Home extends Activity {
                 continue;
             }
             place(pages.get(spot.screen), door, spot.x, spot.y, true);
-            if (spot.screen == roles) {
-                held[spot.x][spot.y] = true;
-            }
             taken.add(spot.name.getPackageName());
         }
 
@@ -518,18 +519,115 @@ public final class Home extends Activity {
         for (int i = 0; i < docked.length; i++) {
             place(dock, found.role(docked[i], taken), i, 0, false);
         }
-        Intent[][] rows = gridRoles();
-        int first = ROWS - rows.length;
-        for (int r = 0; r < rows.length; r++) {
-            for (int c = 0; c < rows[r].length; c++) {
-                if (rows[r][c] != null && !held[c][first + r]) {
-                    place(pages.get(roles), found.role(rows[r][c], taken), c, first + r, true);
+
+        int home = Math.min(Keep.roles(this), count - 1);
+        Grid middle = pages.get(home);
+        if (free(middle, 0, 0, COLUMNS, 2)) {
+            Almanac clock = new Almanac(this, new Almanac.Hand() {
+                public void pressed(String window, View from, android.graphics.RectF box) {
+                    look(window, from, box);
                 }
+            });
+            middle.put(clock, 0, 0, COLUMNS, 2);
+            cells.add(clock);
+        }
+        Intent[] everyday = {
+            new Intent(Intent.ACTION_VIEW, Uri.parse("https:")),
+            category(Intent.CATEGORY_APP_MARKET),
+            category(Intent.CATEGORY_APP_CALENDAR),
+            category(Intent.CATEGORY_APP_MAPS)
+        };
+        for (int c = 0; c < everyday.length; c++) {
+            if (middle.free(c, ROWS - 1)) {
+                place(middle, found.role(everyday[c], taken), c, ROWS - 1, true);
             }
         }
+
+        if (home + 1 < count) {
+            Grid after = pages.get(home + 1);
+            Apps.Door settings = found.role(new Intent(Settings.ACTION_SETTINGS), taken);
+            if (after.free(1, ROWS - 1)) {
+                place(after, settings, 1, ROWS - 1, true);
+            }
+            if (after.free(2, ROWS - 1)) {
+                Cell own = new Cell(this, getPackageManager().getApplicationIcon(getApplicationInfo()),
+                    OWN, iconSize);
+                own.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        /* The settings of this home screen are still to come. */
+                        refuse(v);
+                    }
+                });
+                after.put(own, 2, ROWS - 1);
+                cells.add(own);
+            }
+        }
+        List<Apps.Door> vendor = found.vendor(taken);
+        if (home - 1 >= 0 && !vendor.isEmpty() && pages.get(home - 1).free(0, ROWS - 1)) {
+            folder(pages.get(home - 1), Apps.vendorName(vendor), vendor, 0, ROWS - 1);
+        }
+        for (Apps.Door door : vendor) {
+            taken.add(door.name.getPackageName());
+        }
+        List<Apps.Door> system = found.system(taken);
+        if (home + 1 < count && !system.isEmpty() && pages.get(home + 1).free(0, ROWS - 1)) {
+            folder(pages.get(home + 1), SYSTEM, system, 0, ROWS - 1);
+        }
+
         drawer.fill(found.all(Keep.order(this)));
         screens.home(Keep.home(this));
         screens.show(showing, false);
+    }
+
+    /** Whether a block of places on a grid is all free. */
+    private static boolean free(Grid grid, int x, int y, int across, int down) {
+        for (int c = x; c < x + across; c++) {
+            for (int r = y; r < y + down; r++) {
+                if (!grid.free(c, r)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    /** A folder on a screen: its face, and the card it opens into. */
+    private void folder(Grid into, final CharSequence name, final List<Apps.Door> doors,
+                        int column, int row) {
+        final Cell cell = new Cell(this, new Stack(doors), name, iconSize);
+        cell.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                int[] at = new int[2];
+                int[] floorAt = new int[2];
+                cell.getLocationOnScreen(at);
+                root.getLocationOnScreen(floorAt);
+                int[] icon = cell.localIcon();
+                tray.show(name, doors, at[0] - floorAt[0] + icon[0] + icon[2] / 2f,
+                    at[1] - floorAt[1] + icon[1] + icon[3] / 2f);
+            }
+        });
+        into.put(cell, column, row);
+        cells.add(cell);
+    }
+
+    /** A window of the clock was pressed: what it shows about is opened out of it. */
+    private void look(String window, View from, android.graphics.RectF box) {
+        Intent open;
+        if (Almanac.DIAL.equals(window)) {
+            open = new Intent(AlarmClock.ACTION_SHOW_ALARMS);
+        } else if (Almanac.TIME.equals(window)) {
+            open = category(Intent.CATEGORY_APP_CALENDAR);
+        } else {
+            open = new Intent(Intent.ACTION_POWER_USAGE_SUMMARY);
+        }
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(open, ActivityOptions.makeClipRevealAnimation(from,
+                Math.round(box.left), Math.round(box.top),
+                Math.round(box.width()), Math.round(box.height())).toBundle());
+        } catch (RuntimeException none) {
+            refuse(from);
+        }
     }
 
     // ------------------------------------------------------------- menu
@@ -726,6 +824,9 @@ public final class Home extends Activity {
         if (fresh.shown()) {
             fresh.close(true);
         }
+        if (tray.shown()) {
+            tray.close(true);
+        }
         grid.carrying(true);
         hold(x, y);
     }
@@ -918,7 +1019,7 @@ public final class Home extends Activity {
     private final Floor.Hand pulling = new Floor.Hand() {
         public boolean pullable(boolean up) {
             pull = 0;
-            if (lift != null || menu.shown() || drawer.menuShown()) {
+            if (lift != null || menu.shown() || drawer.menuShown() || tray.shown()) {
                 return false;
             }
             if (fresh.shown()) {
@@ -974,14 +1075,14 @@ public final class Home extends Activity {
      * poured them onto the screen.
      */
     private void arrive() {
-        List<Cell> order = new ArrayList<>();
-        for (Cell cell : cells) {
+        List<View> order = new ArrayList<>();
+        for (View cell : cells) {
             if (cell.getParent() == dock) {
                 order.add(cell);
             }
         }
         for (int row = ROWS - 1; row >= 0; row--) {
-            for (Cell cell : cells) {
+            for (View cell : cells) {
                 if (cell.getParent() != dock && ((int[]) cell.getTag())[1] == row) {
                     order.add(cell);
                 }
@@ -989,7 +1090,7 @@ public final class Home extends Activity {
         }
         float rise = dp(28);
         for (int i = 0; i < order.size(); i++) {
-            Cell cell = order.get(i);
+            View cell = order.get(i);
             cell.setAlpha(0f);
             cell.setTranslationY(rise);
             cell.setScaleX(0.86f);
