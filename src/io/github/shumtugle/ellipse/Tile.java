@@ -349,7 +349,7 @@ final class Tile {
                 paint.setShader(gold());
                 return;
             case Look.GUILLOCHE:
-                paint.setShader(guilloche(Math.min(width, height * 1.27f) * 0.16f));
+                paint.setShader(guilloche(Math.min(width, height * 1.27f) * 0.055f));
                 return;
             case Look.WHITE:
                 if (brushed != null) {
@@ -399,17 +399,27 @@ final class Tile {
      */
     private static Shader guilloche(float across) {
         if (pressed == null) {
-            int side = 24;
+            int side = 16;
             pressed = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
             for (int y = 0; y < side; y++) {
                 for (int x = 0; x < side; x++) {
-                    // Each cell is a low pyramid: its slope decides the light.
+                    // Each cell is a pyramid of four flat faces, lit from
+                    // above and the left: a face is one tone all over, so the
+                    // grid reads as stamped metal and not as rows of lenses.
                     float ax = (x + 0.5f) / side * 2f - 1f;
                     float ay = (y + 0.5f) / side * 2f - 1f;
-                    float lit = 0.5f - (ax * 0.42f + ay * 0.46f)
-                        * (Math.abs(ax) > Math.abs(ay) ? 1f : 0.85f);
-                    // The seam between cells is a fine dark line.
-                    float edge = Math.min(Math.abs(ax), Math.abs(ay)) > 0.86f ? 0.72f : 1f;
+                    float lit;
+                    if (Math.abs(ax) > Math.abs(ay)) {
+                        lit = ax < 0f ? 0.80f : 0.30f;
+                    } else {
+                        lit = ay < 0f ? 0.92f : 0.18f;
+                    }
+                    // The ridge between two faces catches the light along a line.
+                    if (Math.abs(Math.abs(ax) - Math.abs(ay)) < 1.4f / side) {
+                        lit = Math.min(1f, lit + 0.12f);
+                    }
+                    // The seam where four pyramids meet is a fine dark line.
+                    float edge = Math.min(Math.abs(ax), Math.abs(ay)) > 1f - 1.2f / side ? 0.55f : 1f;
                     int shade = Math.round(Math.max(0f, Math.min(1f, lit)) * 255f * edge);
                     pressed.setPixel(x, y, 0xFF000000 | (shade << 16) | (shade << 8) | shade);
                 }

@@ -129,7 +129,12 @@ public final class Tune extends Activity {
     private final List<Cast.Seal> seals = new ArrayList<Cast.Seal>();
     /** The cases of tiles on show: the one in the contents, and the tile subject's own while it is open. */
     private final List<Showcase> cases = new ArrayList<Showcase>();
-    private final Drawable[] faces = new Drawable[4];
+    /**
+     * The icons shown in the case: six of them, three to a row, at the size
+     * they will stand at on a screen — a piece of the home screen rather
+     * than four ornaments.
+     */
+    private final Drawable[] faces = new Drawable[6];
 
     private Tile.Look look;
     private Layout grid;
@@ -623,6 +628,24 @@ public final class Tune extends Activity {
         }
 
         page = new ScrollView(this);
+        if (pageCase != null) {
+            // Nothing is chosen blind: the case rises with the room until it
+            // reaches the top, and then stays there while the rest goes by
+            // under it, so every dial is seen in what it changes.
+            final View shown = pageCase.view;
+            final LinearLayout stack = column;
+            shown.setTranslationZ(Round.px(6f));
+            page.getViewTreeObserver().addOnScrollChangedListener(
+                new android.view.ViewTreeObserver.OnScrollChangedListener() {
+                    public void onScrollChanged() {
+                        if (page == null || shown.getParent() != stack) {
+                            return;
+                        }
+                        float rest = shown.getTop();
+                        shown.setTranslationY(Math.max(0f, page.getScrollY() - rest));
+                    }
+                });
+        }
         page.setOverScrollMode(View.OVER_SCROLL_NEVER);
         page.setVerticalScrollBarEnabled(false);
         page.addView(column);
@@ -920,7 +943,7 @@ public final class Tune extends Activity {
     private final class Showcase {
 
         final FrameLayout view;
-        final ImageView[] tiles = new ImageView[4];
+        final ImageView[] tiles = new ImageView[6];
         final TextView label;
         final Cast.Front front;
 
@@ -928,18 +951,18 @@ public final class Tune extends Activity {
             view = new FrameLayout(Tune.this);
             LinearLayout inside = new LinearLayout(Tune.this);
             inside.setOrientation(LinearLayout.VERTICAL);
-            inside.setPadding(Round.dp(22f), Round.dp(30f), Round.dp(22f), Round.dp(24f));
+            inside.setPadding(Round.dp(18f), Round.dp(22f), Round.dp(18f), Round.dp(18f));
             for (int r = 0; r < 2; r++) {
                 LinearLayout row = new LinearLayout(Tune.this);
                 row.setOrientation(LinearLayout.HORIZONTAL);
                 row.setGravity(Gravity.CENTER);
-                for (int c = 0; c < 2; c++) {
+                for (int c = 0; c < 3; c++) {
                     ImageView tile = new ImageView(Tune.this);
                     tile.setScaleType(ImageView.ScaleType.CENTER);
                     // As tall as a tile will be before there is one, so the
                     // case does not grow under the reader when the icons come.
                     tile.setMinimumHeight(stoodHeight());
-                    tiles[r * 2 + c] = tile;
+                    tiles[r * 3 + c] = tile;
                     row.addView(tile, new LinearLayout.LayoutParams(0,
                         ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
                 }
@@ -1093,7 +1116,7 @@ public final class Tune extends Activity {
     /** The width of a tile in the case: two to a row, with air around them. */
     private int tileSide() {
         int width = getResources().getDisplayMetrics().widthPixels;
-        return Math.round((width - Round.dp(76f)) / 2f * 0.84f);
+        return Math.round((width - Round.dp(76f)) / 3f * 0.88f);
     }
 
     /** How tall a tile stands in the case in the present look, its shadow included. */
@@ -1273,6 +1296,19 @@ public final class Tune extends Activity {
                 }
             });
         card.addView(lights.view(), spaced(12));
+
+        // The colour of a tile is not kept here but in the room of colour;
+        // rather than leave the owner hunting for it, this goes there.
+        card.addView(button(Words.s("colour"), false, new View.OnClickListener() {
+            public void onClick(View v) {
+                closeSection();
+                root.postDelayed(new Runnable() {
+                    public void run() {
+                        openSection(3, true);
+                    }
+                }, Pace.SHEET);
+            }
+        }), spaced(20));
         return card;
     }
 
