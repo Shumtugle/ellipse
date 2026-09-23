@@ -29,10 +29,12 @@ import java.util.Set;
 
 /**
  * The settings of the home screen, in the shape settings of home screens
- * have come to take: a field for finding at the top, the rooms of the
- * settings one under another, each with its drawing, its name and a line
- * about what is in it. A room opens sideways, with its name large at its head; Back
- * leaves it, and Back again leaves the settings.
+ * have come to take: the rooms of the settings one under another, each
+ * with its drawing, its name and a line about what is in it, and at the
+ * foot the bar every listing screen here has, a field to find a setting
+ * and the round button of a small menu. A room opens sideways, with its
+ * name large at its head; Back leaves it, and Back again leaves the
+ * settings.
  *
  * Inside a room a line is one of four things: a switch, a choice that
  * opens the application's one menu beside it, a deed, or a door to a
@@ -109,7 +111,9 @@ public final class Tune extends Activity {
     private static final int RESET = 2;
     private static final int DEFAULT = 3;
 
-    private static final String SEARCH = "Search";
+    private static final String SEARCH = "Search settings";
+    private static final String BE_HOME = "Make default home screen";
+    private static final String RESTART_LINE = "Restart launcher";
     private static final String AGAIN = "Tap again to reset everything";
     private static final String LATER = "Coming in a later version";
     private static final String ALREADY = "Ellipse is the home screen now";
@@ -150,6 +154,8 @@ public final class Tune extends Activity {
                         GRIDS, GRID_VALUES),
                     toggle("Endless scrolling", "Past the last page comes the first again",
                         Keep.LIST_ENDLESS, false),
+                    toggle("Page indicator", "Points under the pages",
+                        Keep.LIST_DOTS, true),
                     door(-1, "Hidden apps", "Left out of the list and its search", HIDDEN)
                 };
             case LOOK:
@@ -210,7 +216,7 @@ public final class Tune extends Activity {
     private FrameLayout host;
     private LinearLayout root;
     private FrameLayout head;
-    private View pill;
+    private Foot foot;
     private EditText field;
     private TextView heading;
     private ScrollView scroll;
@@ -257,45 +263,6 @@ public final class Tune extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         head = new FrameLayout(this);
-        LinearLayout bar = new LinearLayout(this);
-        bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
-        bar.setPadding(dp(20), dp(6), dp(16), dp(6));
-        Glyph lens = new Glyph(this, Glyph.SEARCH, dp(24));
-        lens.tint(Tone.faint());
-        bar.addView(lens);
-        field = new EditText(this);
-        field.setBackground(null);
-        field.setHint(SEARCH);
-        field.setHintTextColor(Tone.faint());
-        field.setTextColor(Tone.onSurface());
-        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
-        field.setSingleLine(true);
-        field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        field.setImeOptions(EditorInfo.IME_ACTION_SEARCH | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
-        field.setPadding(dp(18), dp(12), dp(8), dp(12));
-        field.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence t, int a, int b, int c) {
-            }
-
-            public void onTextChanged(CharSequence t, int a, int b, int c) {
-            }
-
-            public void afterTextChanged(Editable t) {
-                if (room() == ROOT) {
-                    fill();
-                }
-            }
-        });
-        bar.addView(field, new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        FrameLayout.LayoutParams barParams = new FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        barParams.setMargins(dp(16), dp(12), dp(16), dp(8));
-        head.addView(bar, barParams);
-        pill = bar;
-
         heading = new TextView(this);
         heading.setTextSize(TypedValue.COMPLEX_UNIT_PX, 34f * scaled);
         heading.setTextColor(Tone.onSurface());
@@ -313,6 +280,40 @@ public final class Tune extends Activity {
         scroll.addView(rows);
         root.addView(scroll, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        foot = new Foot(this, host, SEARCH, new Foot.Owner() {
+            public Menu.Section[] sections() {
+                return new Menu.Section[] {new Menu.Section(null,
+                    new String[] {BE_HOME, RESTART_LINE}, new int[] {DEFAULT, RESTART})};
+            }
+
+            public void picked(int section, int key) {
+                if (key == DEFAULT) {
+                    askToBeHome();
+                } else if (key == RESTART) {
+                    restart();
+                }
+            }
+
+            public void leave() {
+                finish();
+            }
+
+            public void typed(String text) {
+                /* Whatever room stands open, finding starts from all of them. */
+                if (text.length() > 0 && !path.isEmpty()) {
+                    path.clear();
+                    show(0);
+                    return;
+                }
+                if (room() == ROOT) {
+                    fill();
+                }
+            }
+        });
+        root.addView(foot, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        field = foot.field();
 
         menu = new Menu(this, host, new Menu.Listener() {
             public void picked(int section, int key) {
@@ -337,7 +338,8 @@ public final class Tune extends Activity {
                     bottom = insets.getSystemWindowInsetBottom();
                 }
                 head.setPadding(0, top, 0, 0);
-                rows.setPadding(0, dp(4), 0, dp(16) + bottom);
+                rows.setPadding(0, dp(4), 0, dp(16));
+                foot.lift(bottom);
                 return insets;
             }
         });
@@ -350,7 +352,6 @@ public final class Tune extends Activity {
         armed = 0L;
         menu.hide(false);
         boolean inRoom = room() != ROOT;
-        pill.setVisibility(inRoom ? View.GONE : View.VISIBLE);
         heading.setVisibility(inRoom ? View.VISIBLE : View.GONE);
         heading.setText(nameOf(room()));
         if (inRoom) {
@@ -654,6 +655,10 @@ public final class Tune extends Activity {
     public void onBackPressed() {
         if (menu.shown()) {
             menu.hide(true);
+            return;
+        }
+        if (foot.menuShown()) {
+            foot.shutMenu(true);
             return;
         }
         if (!path.isEmpty()) {

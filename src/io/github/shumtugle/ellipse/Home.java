@@ -550,6 +550,10 @@ public final class Home extends Activity {
                 tune(from);
             }
 
+            public void home() {
+                drawer.sink(true);
+            }
+
             public void order(int order) {
                 Keep.saveOrder(Home.this, order);
                 drawer.reorder(new Apps(Home.this).all(order));
@@ -592,6 +596,10 @@ public final class Home extends Activity {
                 shelf.close(true);
                 takeWidget(info);
             }
+
+            public void settings() {
+                tune(screens);
+            }
         });
         root.addView(shelf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -600,6 +608,10 @@ public final class Home extends Activity {
             public void chosen(int key) {
                 chooser.close(true);
                 make(key);
+            }
+
+            public void settings() {
+                tune(screens);
             }
         });
         root.addView(chooser, new FrameLayout.LayoutParams(
@@ -740,7 +752,7 @@ public final class Home extends Activity {
             String slot = Keep.dockSlot(this, i);
             dockHeld[i] = "";
             if (slot != null && (slot.equals(Keep.OWN_THING) || slot.startsWith(Keep.SHORTCUT_THING))) {
-                Cell cell = slot.equals(Keep.OWN_THING) ? ownCell() : pinnedCell(slot);
+                Cell cell = slot.equals(Keep.OWN_THING) ? ownCell(false) : pinnedCell(slot, false);
                 if (cell != null) {
                     dockThing(cell, slot, i);
                 }
@@ -860,7 +872,7 @@ public final class Home extends Activity {
         }
         int listGrid = Keep.number(this, Keep.LIST_GRID, 45);
         drawer.grid(Keep.columns(listGrid), Keep.rows(listGrid),
-            Keep.flag(this, Keep.LIST_ENDLESS, false));
+            Keep.flag(this, Keep.LIST_ENDLESS, false), Keep.flag(this, Keep.LIST_DOTS, true));
         drawer.fill(listed);
         screens.home(Keep.home(this));
         screens.show(showing, false);
@@ -900,8 +912,8 @@ public final class Home extends Activity {
 
     /** The door to this home screen's own settings. */
     /** The door to this home screen's settings: not its own icon, but a face of their own. */
-    private Cell ownCell() {
-        Cell own = new Cell(this, getDrawable(R.mipmap.door), OWN, iconSize);
+    private Cell ownCell(boolean named) {
+        Cell own = new Cell(this, getDrawable(R.mipmap.door), OWN, iconSize, named);
         own.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 tune(v);
@@ -911,7 +923,7 @@ public final class Home extends Activity {
     }
 
     private void ownDoor(Grid page, int column, int row) {
-        Cell own = ownCell();
+        Cell own = ownCell(true);
         page.put(own, column, row);
         cells.add(own);
         stand(page, own, Keep.OWN_THING);
@@ -2159,7 +2171,7 @@ public final class Home extends Activity {
     }
 
     /** A pinned shortcut as a cell with its own picture and name; none if it is no longer pinned. */
-    private Cell pinnedCell(String token) {
+    private Cell pinnedCell(String token, boolean named) {
         final android.content.pm.ShortcutInfo info = pinnedInfo(token);
         if (info == null) {
             return null;
@@ -2171,7 +2183,7 @@ public final class Home extends Activity {
             icon = null;
         }
         CharSequence label = info.getShortLabel();
-        final Cell cell = new Cell(this, icon, label == null ? "" : label, iconSize);
+        final Cell cell = new Cell(this, icon, label == null ? "" : label, iconSize, named);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 try {
@@ -2190,7 +2202,7 @@ public final class Home extends Activity {
         if (!page.free(spot.x, spot.y)) {
             return;
         }
-        Cell cell = pinnedCell(spot.token);
+        Cell cell = pinnedCell(spot.token, true);
         if (cell == null) {
             return;
         }

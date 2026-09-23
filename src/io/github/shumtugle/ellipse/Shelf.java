@@ -45,9 +45,13 @@ final class Shelf extends FrameLayout {
         int[] span(AppWidgetProviderInfo info);
 
         void chosen(AppWidgetProviderInfo info);
+
+        /** The launcher's settings were asked for from the shelf's menu. */
+        void settings();
     }
 
-    private static final String WIDGETS = "Widgets";
+    private static final String WIDGETS = "Search widgets";
+    private static final String SETTINGS = "Settings";
     private static final String ONE = "1 widget";
     private static final String MANY = " widgets";
 
@@ -68,7 +72,7 @@ final class Shelf extends FrameLayout {
     private final Hand hand;
     private final float density;
     private final float scaled;
-    private final LinearLayout head;
+    private final Foot foot;
     private final EditText field;
     private final ScrollView scroll;
     private final LinearLayout cards;
@@ -88,42 +92,6 @@ final class Shelf extends FrameLayout {
         column.setOrientation(LinearLayout.VERTICAL);
         addView(column, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
-        head = new LinearLayout(context);
-        head.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout pill = new LinearLayout(context);
-        pill.setOrientation(LinearLayout.HORIZONTAL);
-        pill.setGravity(Gravity.CENTER_VERTICAL);
-        pill.setPadding(dp(20), dp(6), dp(16), dp(6));
-        Glyph lens = new Glyph(context, Glyph.SEARCH, dp(24));
-        pill.addView(lens);
-        field = new EditText(context);
-        field.setBackground(null);
-        field.setHint(WIDGETS);
-        field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
-        field.setSingleLine(true);
-        field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        field.setImeOptions(EditorInfo.IME_ACTION_SEARCH | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
-        field.setPadding(dp(18), dp(12), dp(8), dp(12));
-        field.addTextChangedListener(new TextWatcher() {
-            public void beforeTextChanged(CharSequence t, int a, int b, int c) {
-            }
-
-            public void onTextChanged(CharSequence t, int a, int b, int c) {
-            }
-
-            public void afterTextChanged(Editable t) {
-                build();
-            }
-        });
-        pill.addView(field, new LinearLayout.LayoutParams(0,
-            ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        LinearLayout.LayoutParams pillParams = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        pillParams.setMargins(dp(16), dp(12), dp(16), dp(8));
-        head.addView(pill, pillParams);
-        column.addView(head);
-        pill.setTag(lens);
-
         scroll = new ScrollView(context);
         scroll.setVerticalScrollBarEnabled(false);
         scroll.setOverScrollMode(OVER_SCROLL_NEVER);
@@ -134,6 +102,27 @@ final class Shelf extends FrameLayout {
         scroll.addView(cards);
         column.addView(scroll, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        foot = new Foot(context, this, WIDGETS, new Foot.Owner() {
+            public Menu.Section[] sections() {
+                return new Menu.Section[] {new Menu.Section(null, new String[] {SETTINGS}, new int[] {0})};
+            }
+
+            public void picked(int section, int key) {
+                Shelf.this.hand.settings();
+            }
+
+            public void leave() {
+                close(true);
+            }
+
+            public void typed(String text) {
+                build();
+            }
+        });
+        column.addView(foot, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        field = foot.field();
     }
 
     private int dp(float value) {
@@ -142,8 +131,8 @@ final class Shelf extends FrameLayout {
 
     /** Keeps the field clear of the status bar and the last card clear of the foot. */
     void inset(int top, int bottom) {
-        head.setPadding(0, top, 0, 0);
-        scroll.setPadding(0, 0, 0, bottom);
+        scroll.setPadding(0, top, 0, 0);
+        foot.lift(bottom);
     }
 
     boolean shown() {
@@ -199,12 +188,8 @@ final class Shelf extends FrameLayout {
             return;
         }
         shown = false;
-        InputMethodManager keys = (InputMethodManager)
-            getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        if (keys != null) {
-            keys.hideSoftInputFromWindow(field.getWindowToken(), 0);
-        }
-        field.clearFocus();
+        foot.shutMenu(false);
+        foot.hideKeys();
         animate().cancel();
         if (!slowly) {
             setVisibility(GONE);
@@ -222,11 +207,7 @@ final class Shelf extends FrameLayout {
 
     private void tint() {
         setBackgroundColor(Tone.surface());
-        View pill = head.getChildAt(0);
-        pill.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
-        ((Glyph) pill.getTag()).tint(Tone.faint());
-        field.setTextColor(Tone.onSurface());
-        field.setHintTextColor(Tone.faint());
+        foot.tint();
     }
 
     /** The cards, narrowed by the field; the one opened stays open. */

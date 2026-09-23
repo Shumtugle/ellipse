@@ -86,6 +86,7 @@ final class Keep {
     static final String AUTO_ADD = "auto_add";
     static final String LIST_GRID = "list_grid";
     static final String LIST_ENDLESS = "list_endless";
+    static final String LIST_DOTS = "list_dots";
     static final String CLOCK = "clock";
     static final String ON_BACK = "on_back";
     static final String ON_UP = "on_up";

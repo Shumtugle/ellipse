@@ -67,7 +67,7 @@ final class Menu {
         void closing();
     }
 
-    private static final float WIDTH = 304f;
+    private static final float WIDTH = 272f;
     private static final int DANGER = 0xFFE8674A;
 
     private final Context context;
@@ -123,15 +123,15 @@ final class Menu {
         head = new LinearLayout(context);
         head.setOrientation(LinearLayout.HORIZONTAL);
         head.setGravity(Gravity.CENTER_VERTICAL);
-        head.setPadding(dp(18), dp(4), dp(4), dp(6));
+        head.setPadding(dp(16), dp(2), dp(2), dp(2));
         title = new TextView(context);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
         title.setSingleLine(true);
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         button = new FrameLayout(context);
-        buttonGlyph = new Glyph(context, Glyph.GEAR, dp(28));
-        button.addView(buttonGlyph, new FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER));
+        buttonGlyph = new Glyph(context, Glyph.GEAR, dp(24));
+        button.addView(buttonGlyph, new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (!onSecond && second != null) {
@@ -141,7 +141,7 @@ final class Menu {
                 }
             }
         });
-        head.addView(button, new LinearLayout.LayoutParams(dp(52), dp(52)));
+        head.addView(button, new LinearLayout.LayoutParams(dp(44), dp(44)));
         card.addView(head);
 
         scroll = new android.widget.ScrollView(context);
@@ -184,7 +184,7 @@ final class Menu {
             if (glyph >= 0) {
                 buttonGlyph.setKind(glyph);
                 buttonGlyph.tint(Tone.onSurface());
-                button.setBackground(Tone.touch(Tone.box(Tone.container(), dp(26), 0f), dp(26)));
+                button.setBackground(Tone.touch(Tone.box(Tone.container(), dp(22), 0f), dp(22)));
             }
         }
         for (int s = 0; s < sections.length; s++) {
@@ -232,25 +232,25 @@ final class Menu {
         made.setBackground(Tone.touch(Tone.box(fill, dp(22), 0f), dp(22)));
         boolean pictured = (section.icons != null && i < section.icons.length && section.icons[i] != null)
             || (section.glyphs != null && i < section.glyphs.length && section.glyphs[i] >= 0);
-        made.setPadding(dp(pictured ? 14 : 18), dp(pictured ? 12 : 16), dp(18), dp(pictured ? 12 : 16));
+        made.setPadding(dp(pictured ? 12 : 16), dp(pictured ? 9 : 13), dp(16), dp(pictured ? 9 : 13));
         if (section.icons != null && i < section.icons.length && section.icons[i] != null) {
             android.widget.ImageView picture = new android.widget.ImageView(context);
             picture.setImageDrawable(section.icons[i]);
-            made.addView(picture, new LinearLayout.LayoutParams(dp(40), dp(40)));
+            made.addView(picture, new LinearLayout.LayoutParams(dp(34), dp(34)));
         } else if (section.glyphs != null && i < section.glyphs.length && section.glyphs[i] >= 0) {
             FrameLayout frame = new FrameLayout(context);
-            Glyph drawing = new Glyph(context, section.glyphs[i], dp(28));
+            Glyph drawing = new Glyph(context, section.glyphs[i], dp(24));
             drawing.tint(ink);
-            frame.addView(drawing, new FrameLayout.LayoutParams(dp(28), dp(28), Gravity.CENTER));
-            made.addView(frame, new LinearLayout.LayoutParams(dp(40), dp(40)));
+            frame.addView(drawing, new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+            made.addView(frame, new LinearLayout.LayoutParams(dp(34), dp(34)));
         }
         TextView words = new TextView(context);
         words.setText(section.lines[i]);
-        words.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
+        words.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         words.setSingleLine(true);
         words.setEllipsize(android.text.TextUtils.TruncateAt.END);
         words.setTextColor(ink);
-        words.setPadding(pictured ? dp(16) : 0, 0, 0, 0);
+        words.setPadding(pictured ? dp(14) : 0, 0, 0, 0);
         made.addView(words, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         made.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -319,8 +319,8 @@ final class Menu {
      * leaving the host; when it points, its point is drawn toward the thing.
      */
     private void place(boolean arriving) {
-        float nib = pointing ? dp(12) : 0f;
-        card.setPadding(dp(8), dp(10), dp(8), dp(10));
+        float nib = pointing ? dp(10) : 0f;
+        card.setPadding(dp(6), dp(8), dp(6), dp(8));
         LinearLayout.LayoutParams fit = (LinearLayout.LayoutParams) scroll.getLayoutParams();
         fit.height = ViewGroup.LayoutParams.WRAP_CONTENT;
         scroll.setLayoutParams(fit);
@@ -347,9 +347,9 @@ final class Menu {
         boolean above = y > host.getHeight() / 2f;
         float top = above ? y - anchorGap - h : y + anchorGap;
         top = Math.max(edge, Math.min(host.getHeight() - edge - h, top));
-        card.setPadding(dp(8), dp(10) + (pointing && !above ? Math.round(nib) : 0),
-            dp(8), dp(10) + (pointing && above ? Math.round(nib) : 0));
-        card.setBackground(new Balloon(Tone.containerHigh(), dp(28), pointing ? nib : 0f,
+        card.setPadding(dp(6), dp(8) + (pointing && !above ? Math.round(nib) : 0),
+            dp(6), dp(8) + (pointing && above ? Math.round(nib) : 0));
+        card.setBackground(new Balloon(Tone.containerHigh(), dp(24), pointing ? nib : 0f,
             x - left, !above));
 
         card.setTranslationX(left - host.getPaddingLeft());

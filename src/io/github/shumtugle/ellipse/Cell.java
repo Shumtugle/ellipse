@@ -39,6 +39,11 @@ final class Cell extends View {
         this(context, null, icon, label, iconSize, true);
     }
 
+    /** The same, named under its icon or not: in the dock names are left out. */
+    Cell(Context context, Drawable icon, CharSequence label, float iconSize, boolean named) {
+        this(context, null, icon, label, iconSize, named);
+    }
+
     private Cell(Context context, Apps.Door door, Drawable icon, CharSequence label,
                  float iconSize, boolean named) {
         super(context);

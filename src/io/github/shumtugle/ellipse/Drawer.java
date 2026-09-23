@@ -54,9 +54,12 @@ final class Drawer extends FrameLayout {
 
         /** The launcher's settings were asked for from the list's menu. */
         void settings(View from);
+
+        /** The cross of the open menu was pressed: back to the home screen. */
+        void home();
     }
 
-    private static final String SEARCH = "Search";
+    private static final String SEARCH = "Search apps";
     private static final String MENU = "Menu";
     /**
      * The menu: the order, which is changed often and so stays at hand,
@@ -210,7 +213,9 @@ final class Drawer extends FrameLayout {
         blob.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (menu.shown()) {
+                    /* The cross leads home. */
                     shutMenu(true);
+                    opener.home();
                 } else {
                     openMenu();
                 }
@@ -236,10 +241,11 @@ final class Drawer extends FrameLayout {
     }
 
     /** The grid of the pages, and whether they go round; the pages are laid out again. */
-    void grid(int columns, int rows, boolean endless) {
+    void grid(int columns, int rows, boolean endless, boolean dots) {
         this.columns = columns;
         this.rows = rows;
         pager.endless(endless);
+        pager.dots(dots);
         paginate();
     }
 

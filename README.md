@@ -68,7 +68,12 @@ each marked new or updated — and a push upward sends it away. An icon
 carried to a side edge and held there turns the screens.
 
 The settings open from that door, or from the menu of a long press on a
-screen: a field for finding at the top, and the rooms one under another. Desktop: the dock, the grid of the screens, endless scrolling, the
+screen: the rooms one under another.
+
+Every screen that lists things — all apps, the shelf of widgets, the
+makers of shortcuts, the settings — has the same bar at its foot: a field
+saying what it finds, and a round button with three marks for the
+screen's menu; open, the marks become a cross, and the cross leads home. Desktop: the dock, the grid of the screens, endless scrolling, the
 page points, and new apps set down by themselves. All apps: lines or
 pages, the grid of a page, endless scrolling, and apps left out of the
 list. Look: the clock (icon styles are to come). Gestures: what a swipe up,
@@ -93,7 +98,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.18.0
+  sh build.sh ellipse-1.19.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
