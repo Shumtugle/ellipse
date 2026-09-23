@@ -21,6 +21,9 @@ final class Floor extends FrameLayout {
 
     private Carrier carrier;
     private boolean taken;
+    /** Where the finger last was on the floor, for a long press to open beside. */
+    private float fingerX;
+    private float fingerY;
 
     Floor(Context context) {
         super(context);
@@ -30,8 +33,18 @@ final class Floor extends FrameLayout {
         this.carrier = carrier;
     }
 
+    float fingerX() {
+        return fingerX;
+    }
+
+    float fingerY() {
+        return fingerY;
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
+        fingerX = event.getX();
+        fingerY = event.getY();
         if (carrier == null || !carrier.carrying()) {
             taken = false;
             return super.dispatchTouchEvent(event);

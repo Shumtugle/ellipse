@@ -19,6 +19,12 @@ the list's menu: the list stands A to Z, newest first, or most recently
 updated first, and either runs down in lines or across in pages of four
 by five icons with their names.
 
+Screens stand side by side and turn sideways, with points under them and
+a ring round the home one. A long press on a screen opens its menu beside
+the finger: add a screen, and on any screen but the home one, make it the
+home screen. Adding shortcuts, widgets and folders is offered but not yet
+done. Home returns to the home screen.
+
 There are no settings and no folders yet, and what is set down cannot yet be moved or taken off. They return
 one at a time.
 
@@ -30,7 +36,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.5.0
+  sh build.sh ellipse-1.6.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

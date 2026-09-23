@@ -33,9 +33,10 @@ import java.util.Set;
 /**
  * The home screen, and in this version the whole application.
  *
- * One screen: the wallpaper in a rounded window with a grid of four by
- * five inside it, and under it the bar, which is the dock: four places and
- * the round button that opens the list of every application. What stands on the screen is what the
+ * Screens side by side: the wallpaper in a rounded window with a grid of
+ * four by five inside it, turned sideways, and under it the bar, which is
+ * the dock: four places and the round button that opens the list of every
+ * application. A long press on a screen opens its menu beside the finger. What stands on the screen is what the
  * phone itself keeps for each everyday role; nothing is moved, nothing is
  * saved, nothing is set. Everything else arrives later, one thing at a time.
  */
@@ -67,7 +68,11 @@ public final class Home extends Activity {
     private ValueAnimator growing;
     private Frame frame;
     private Drawer drawer;
+    /** The screens, and the grid of each; the one an icon is carried over, while it is. */
+    private Pager screens;
+    private final List<Grid> pages = new ArrayList<>();
     private Grid grid;
+    private Menu menu;
     private Grid dock;
     private LinearLayout bar;
     private Blob blob;
@@ -138,6 +143,7 @@ public final class Home extends Activity {
         /* Back from an application, the home screen is found, not the list
            the application was picked from. */
         drawer.sink(false);
+        menu.hide(false);
     }
 
     @Override
@@ -152,7 +158,17 @@ public final class Home extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        drawer.sink(true);
+        if (menu.shown()) {
+            menu.hide(true);
+            return;
+        }
+        if (drawer.shown()) {
+            drawer.sink(true);
+            return;
+        }
+        /* Home on the home screen, nothing standing over it: back to the
+           screen Home belongs to. */
+        screens.show(Keep.home(this), true);
     }
 
     /**
@@ -161,6 +177,10 @@ public final class Home extends Activity {
      */
     @Override
     public void onBackPressed() {
+        if (menu.shown()) {
+            menu.hide(true);
+            return;
+        }
         if (drawer.menuShown()) {
             drawer.shutMenu(true);
             return;
@@ -267,10 +287,8 @@ public final class Home extends Activity {
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         frame.cut(stage);
 
-        grid = new Grid(this, COLUMNS, ROWS);
-        grid.setPadding(dp(8), dp(16), dp(8), dp(8));
-        grid.shape(iconSize, Cell.below(this));
-        stage.addView(grid, new FrameLayout.LayoutParams(
+        screens = new Pager(this);
+        stage.addView(screens, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         /* The bar is the dock: four places in the pill at the foot, no
@@ -325,6 +343,15 @@ public final class Home extends Activity {
         root.addView(drawer, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         drawer.order(Keep.order(this), Keep.view(this));
+
+        menu = new Menu(this, root, new Menu.Listener() {
+            public void picked(int section, int key) {
+                act(key);
+            }
+
+            public void closing() {
+            }
+        });
         if (was) {
             drawer.rise();
         }
@@ -392,14 +419,36 @@ public final class Home extends Activity {
      * answer leaves its place empty: nothing is put there in its stead.
      */
     private void fill() {
-        grid.removeAllViews();
+        int showing = pages.isEmpty() ? Keep.home(this) : screens.page();
+        screens.removeAllViews();
+        pages.clear();
         dock.removeAllViews();
         cells.clear();
         Apps found = new Apps(this);
         Set<String> taken = new HashSet<>();
+        List<Keep.Spot> spots = Keep.placed(this);
+
+        int count = Keep.screens(this);
+        for (Keep.Spot spot : spots) {
+            count = Math.max(count, spot.screen + 1);
+        }
+        for (int i = 0; i < count; i++) {
+            Grid page = new Grid(this, COLUMNS, ROWS);
+            page.setPadding(dp(8), dp(16), dp(8), 0);
+            page.shape(iconSize, Cell.below(this));
+            page.setOnLongClickListener(new View.OnLongClickListener() {
+                public boolean onLongClick(View v) {
+                    ask(v);
+                    return true;
+                }
+            });
+            screens.addView(page);
+            pages.add(page);
+        }
+        grid = pages.get(0);
 
         boolean[][] held = new boolean[COLUMNS][ROWS];
-        for (Keep.Spot spot : Keep.placed(this)) {
+        for (Keep.Spot spot : spots) {
             if (spot.x < 0 || spot.y < 0 || spot.x >= COLUMNS || spot.y >= ROWS) {
                 continue;
             }
@@ -407,8 +456,10 @@ public final class Home extends Activity {
             if (door == null) {
                 continue;
             }
-            place(grid, door, spot.x, spot.y, true);
-            held[spot.x][spot.y] = true;
+            place(pages.get(spot.screen), door, spot.x, spot.y, true);
+            if (spot.screen == 0) {
+                held[spot.x][spot.y] = true;
+            }
             taken.add(spot.name.getPackageName());
         }
 
@@ -421,11 +472,67 @@ public final class Home extends Activity {
         for (int r = 0; r < rows.length; r++) {
             for (int c = 0; c < rows[r].length; c++) {
                 if (rows[r][c] != null && !held[c][first + r]) {
-                    place(grid, found.role(rows[r][c], taken), c, first + r, true);
+                    place(pages.get(0), found.role(rows[r][c], taken), c, first + r, true);
                 }
             }
         }
         drawer.fill(found.all(Keep.order(this)));
+        screens.home(Keep.home(this));
+        screens.show(showing, false);
+    }
+
+    // ------------------------------------------------------------- menu
+
+    private static final String[] ASKS = {
+        "Add screen", "Add shortcut", "Add widget", "Add folder", "Make home screen"
+    };
+    private static final int ADD_SCREEN = 0;
+    private static final int ADD_SHORTCUT = 1;
+    private static final int ADD_WIDGET = 2;
+    private static final int ADD_FOLDER = 3;
+    private static final int MAKE_HOME = 4;
+
+    /**
+     * A long press on a screen: its menu grows out of the fingertip. On a
+     * screen that is not the home one, it offers to make it so.
+     */
+    private void ask(View on) {
+        boolean home = screens.page() == Keep.home(this);
+        int count = home ? 4 : 5;
+        String[] lines = new String[count];
+        int[] keys = new int[count];
+        for (int i = 0; i < count; i++) {
+            lines[i] = ASKS[i];
+            keys[i] = i;
+        }
+        on.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        menu.show(new Menu.Section[] {new Menu.Section(null, lines, keys)},
+            root.fingerX(), root.fingerY(), dp(20));
+    }
+
+    private void act(int key) {
+        menu.hide(true);
+        switch (key) {
+            case ADD_SCREEN:
+                /* A new screen is added at the end, and the screens slide
+                   over to it: an empty page is shown, not announced. */
+                int count = pages.size() + 1;
+                Keep.saveScreens(this, count);
+                fill();
+                screens.show(count - 1, true);
+                break;
+            case MAKE_HOME:
+                Keep.saveHome(this, screens.page());
+                screens.home(screens.page());
+                screens.performHapticFeedback(Build.VERSION.SDK_INT >= 30
+                    ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.VIRTUAL_KEY);
+                break;
+            default:
+                /* Shortcuts, widgets and folders arrive one at a time; until
+                   then the line answers with the phone's own short no. */
+                refuse(screens);
+                break;
+        }
     }
 
     private void place(Grid into, Apps.Door door, int column, int row, boolean named) {
@@ -531,6 +638,7 @@ public final class Home extends Activity {
         float fromY = rowAt[1] - floorAt[1] + icon[1] + icon[3] / 2f;
 
         carried = door;
+        grid = pages.get(screens.page());
         lift = new Lift(this, carried.icon(), Math.round(iconSize));
         root.addView(lift, new FrameLayout.LayoutParams(lift.size(), lift.size()));
         fingerX = x;
@@ -633,7 +741,7 @@ public final class Home extends Activity {
         float[] c = grid.centre(spot[0], spot[1]);
         float tx = gridAt[0] - floorAt[0] + c[0] - going.size() / 2f;
         float ty = gridAt[1] - floorAt[1] + c[1] - going.size() / 2f;
-        Keep.place(this, door.name, spot[0], spot[1]);
+        Keep.place(this, door.name, screens.page(), spot[0], spot[1]);
         going.animate().cancel();
         going.animate().translationX(tx).translationY(ty).scaleX(1f).scaleY(1f)
             .setDuration(Pace.ARRIVE).setInterpolator(Pace.SPRING)
@@ -662,7 +770,7 @@ public final class Home extends Activity {
         }
         for (int row = ROWS - 1; row >= 0; row--) {
             for (Cell cell : cells) {
-                if (cell.getParent() == grid && ((int[]) cell.getTag())[1] == row) {
+                if (cell.getParent() != dock && ((int[]) cell.getTag())[1] == row) {
                     order.add(cell);
                 }
             }
@@ -685,10 +793,10 @@ public final class Home extends Activity {
      * and comes to its place, while the application shrinks back into it.
      */
     private void settle() {
-        grid.setScaleX(0.94f);
-        grid.setScaleY(0.94f);
-        grid.setAlpha(0.6f);
-        grid.animate().scaleX(1f).scaleY(1f).alpha(1f)
+        screens.setScaleX(0.94f);
+        screens.setScaleY(0.94f);
+        screens.setAlpha(0.6f);
+        screens.animate().scaleX(1f).scaleY(1f).alpha(1f)
             .setStartDelay(0L).setDuration(Pace.ARRIVE)
             .setInterpolator(Pace.EMPHASIS).start();
     }

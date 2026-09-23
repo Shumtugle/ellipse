@@ -83,12 +83,8 @@ final class Drawer extends FrameLayout {
     private List<Apps.Door> every = new ArrayList<>();
     private List<Apps.Door> doors = new ArrayList<>();
     private boolean shown;
-    /** The menu: a card that grows out of the round button, and the veil that closes it. */
-    private final View veil;
-    private final LinearLayout card;
-    private final TextView[] captions = new TextView[SECTIONS.length];
-    private final TextView[][] choices = new TextView[SECTIONS.length][];
-    private boolean menu;
+    /** The list's menu, grown out of the round button. */
+    private final Menu menu;
     private int order;
     private int view;
     /** The pages, when the list is laid out across, and the icon size on them. */
@@ -212,7 +208,7 @@ final class Drawer extends FrameLayout {
         blob.setContentDescription(MENU);
         blob.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if (menu) {
+                if (menu.shown()) {
                     shutMenu(true);
                 } else {
                     openMenu();
@@ -226,56 +222,15 @@ final class Drawer extends FrameLayout {
         barParams.setMargins(dp(8), dp(6), dp(8), dp(10));
         column.addView(bar, barParams);
 
-        veil = new View(context);
-        veil.setVisibility(GONE);
-        veil.setClickable(true);
-        veil.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                shutMenu(true);
+        menu = new Menu(context, this, new Menu.Listener() {
+            public void picked(int section, int key) {
+                choose(section, key);
+            }
+
+            public void closing() {
+                turn(0f);
             }
         });
-        addView(veil, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
-
-        card = new LinearLayout(context);
-        card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(8), dp(14), dp(8), dp(8));
-        card.setElevation(dp(6));
-        card.setVisibility(GONE);
-        card.setClickable(true);
-
-        for (int group = 0; group < SECTIONS.length; group++) {
-            TextView caption = new TextView(context);
-            caption.setText(SECTIONS[group].toUpperCase(java.util.Locale.ROOT));
-            caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scaled);
-            caption.setLetterSpacing(0.12f);
-            caption.setPadding(dp(16), group == 0 ? 0 : dp(14), dp(16), dp(8));
-            card.addView(caption);
-            captions[group] = caption;
-
-            choices[group] = new TextView[CHOICES[group].length];
-            for (int i = 0; i < CHOICES[group].length; i++) {
-                final int section = group;
-                final int key = KEYS[group][i];
-                TextView choice = new TextView(context);
-                choice.setText(CHOICES[group][i]);
-                choice.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
-                choice.setSingleLine(true);
-                choice.setGravity(Gravity.CENTER_VERTICAL);
-                choice.setPadding(dp(16), dp(13), dp(16), dp(13));
-                choice.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        choose(section, key);
-                    }
-                });
-                LinearLayout.LayoutParams choiceParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                choiceParams.topMargin = dp(2);
-                card.addView(choice, choiceParams);
-                choices[group][i] = choice;
-            }
-        }
-        addView(card, new LayoutParams(dp(248), LayoutParams.WRAP_CONTENT,
-            Gravity.BOTTOM | Gravity.END));
         tint();
     }
 
@@ -285,94 +240,36 @@ final class Drawer extends FrameLayout {
         this.view = view;
         list.setVisibility(view == Keep.PAGES ? GONE : VISIBLE);
         pager.setVisibility(view == Keep.PAGES ? VISIBLE : GONE);
-        mark();
-    }
-
-    /** What is chosen wears the accent; the rest stays plain. */
-    private void mark() {
-        int[] now = {order, view};
-        for (int group = 0; group < choices.length; group++) {
-            for (int i = 0; i < choices[group].length; i++) {
-                boolean on = KEYS[group][i] == now[group];
-                int fill = on ? ((0x2E << 24) | (Tone.primary() & 0x00FFFFFF)) : 0x00000000;
-                choices[group][i].setBackground(Tone.touch(Tone.box(fill, dp(20), 0f), dp(20)));
-                choices[group][i].setTextColor(on ? Tone.primary() : Tone.onSurface());
-            }
-        }
     }
 
     boolean menuShown() {
-        return menu;
+        return menu.shown();
     }
 
     /**
      * The card grows out of the round button, the three marks of which
-     * draw together into a cross as it does; its lines follow one after
-     * another, like icons arriving on the screen.
+     * draw together into a cross as it does.
      */
     private void openMenu() {
-        if (menu) {
-            return;
-        }
-        menu = true;
         hideKeys();
-        mark();
-        LayoutParams params = (LayoutParams) card.getLayoutParams();
-        params.bottomMargin = getHeight() - bar.getTop() + dp(8);
-        params.rightMargin = dp(8);
-        card.setLayoutParams(params);
-        card.measure(MeasureSpec.makeMeasureSpec(dp(248), MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-        /* The pivot is the centre of the button, below the card and near
-           its right edge, so the card seems to come out of the button. */
-        float blobFromRight = getWidth() - getPaddingRight() - dp(8)
-            - (column.getLeft() + bar.getLeft() + blob.getLeft() + blob.getWidth() / 2f);
-        card.setPivotX(dp(248) - blobFromRight);
-        card.setPivotY(card.getMeasuredHeight() + dp(8) + bar.getHeight() / 2f);
-        card.setVisibility(VISIBLE);
-        veil.setVisibility(VISIBLE);
-        card.animate().cancel();
-        card.setAlpha(0f);
-        card.setScaleX(0.2f);
-        card.setScaleY(0.2f);
-        card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(Pace.ARRIVE)
-            .setInterpolator(Pace.EMPHASIS).withEndAction(null).start();
-        for (int i = 0; i < card.getChildCount(); i++) {
-            View line = card.getChildAt(i);
-            line.animate().cancel();
-            line.setAlpha(0f);
-            line.setTranslationY(dp(10));
-            line.animate().alpha(1f).translationY(0f).setStartDelay(Pace.STEP * (i + 1))
-                .setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
-        }
+        Menu.Section sort = new Menu.Section(SECTIONS[0], CHOICES[0], KEYS[0]);
+        sort.chosen = order;
+        Menu.Section shape = new Menu.Section(SECTIONS[1], CHOICES[1], KEYS[1]);
+        shape.chosen = view;
+        float x = column.getLeft() + bar.getLeft() + blob.getLeft() + blob.getWidth() / 2f;
+        float y = column.getTop() + bar.getTop() + blob.getTop() + blob.getHeight() / 2f;
+        menu.show(new Menu.Section[] {sort, shape}, x, y, blob.getHeight() / 2f + dp(22));
         turn(1f);
     }
 
-    /** Back into the button it came from; at once, when nobody is looking. */
     void shutMenu(boolean slowly) {
-        if (!menu) {
-            return;
-        }
-        menu = false;
-        veil.setVisibility(GONE);
-        card.animate().cancel();
+        menu.hide(slowly);
         if (!slowly) {
-            card.setVisibility(GONE);
             if (turning != null) {
                 turning.cancel();
             }
             blob.open(0f);
-            return;
         }
-        card.animate().alpha(0f).scaleX(0.2f).scaleY(0.2f).setDuration(Pace.ARRIVE / 2)
-            .setInterpolator(Pace.EMPHASIS).withEndAction(new Runnable() {
-                public void run() {
-                    if (!menu) {
-                        card.setVisibility(GONE);
-                    }
-                }
-            }).start();
-        turn(0f);
     }
 
     private void turn(float to) {
@@ -397,9 +294,9 @@ final class Drawer extends FrameLayout {
             shutMenu(true);
             return;
         }
+        menu.choose(section, key);
         if (section == 0) {
             order = key;
-            mark();
             opener.order(key);
         } else {
             order(order, key);
@@ -535,11 +432,6 @@ final class Drawer extends FrameLayout {
             field.setTextCursorDrawable(caret);
         }
         blob.tint();
-        card.setBackground(Tone.box(Tone.containerHigh(), dp(28), dp(0.5f)));
-        for (TextView caption : captions) {
-            caption.setTextColor(Tone.faint());
-        }
-        mark();
         for (int i = 0; i < list.getChildCount(); i++) {
             ((Row) list.getChildAt(i)).tint();
         }

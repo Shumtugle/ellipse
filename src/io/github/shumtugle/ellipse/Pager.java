@@ -33,6 +33,8 @@ final class Pager extends ViewGroup {
     private float lastX;
     private boolean dragging;
     private int page;
+    private int home = -1;
+    private final Paint ring = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Turn turn;
 
     Pager(Context context) {
@@ -44,6 +46,13 @@ final class Pager extends ViewGroup {
         density = context.getResources().getDisplayMetrics().density;
         setWillNotDraw(false);
         setClipChildren(false);
+        ring.setStyle(Paint.Style.STROKE);
+    }
+
+    /** Which page is the home one, ringed among the points; none by default. */
+    void home(int which) {
+        home = which;
+        invalidate();
     }
 
     void turn(Turn turn) {
@@ -209,7 +218,13 @@ final class Pager extends ViewGroup {
         for (int i = 0; i < count; i++) {
             float near = Math.max(0f, 1f - Math.abs(at - i));
             point.setColor(near > 0.5f ? Tone.primary() : Tone.faint());
-            canvas.drawCircle(left + gap * i, y, (2.5f + 1.5f * near) * density, point);
+            float r = (2.5f + 1.5f * near) * density;
+            canvas.drawCircle(left + gap * i, y, r, point);
+            if (i == home) {
+                ring.setColor(point.getColor());
+                ring.setStrokeWidth(1.2f * density);
+                canvas.drawCircle(left + gap * i, y, r + 2.5f * density, ring);
+            }
         }
     }
 }

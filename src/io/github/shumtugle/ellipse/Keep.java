@@ -16,11 +16,13 @@ final class Keep {
     /** One application set down on the grid. */
     static final class Spot {
         final ComponentName name;
+        final int screen;
         final int x;
         final int y;
 
-        Spot(ComponentName name, int x, int y) {
+        Spot(ComponentName name, int screen, int x, int y) {
             this.name = name;
+            this.screen = screen;
             this.x = x;
             this.y = y;
         }
@@ -29,6 +31,8 @@ final class Keep {
     private static final String PLACED = "placed";
     private static final String ORDER = "order";
     private static final String VIEW = "view";
+    private static final String SCREENS = "screens";
+    private static final String HOME = "home";
 
     /** How the list of every application is laid out: lines down, or pages across. */
     static final int LINES = 0;
@@ -63,21 +67,46 @@ final class Keep {
         store(context).edit().putInt(VIEW, view).apply();
     }
 
-    /** One line per spot: column, row and the door, apart by tabs. */
+    /** How many screens stand side by side; never fewer than one. */
+    static int screens(Context context) {
+        return Math.max(1, store(context).getInt(SCREENS, 1));
+    }
+
+    static void saveScreens(Context context, int count) {
+        store(context).edit().putInt(SCREENS, Math.max(1, count)).apply();
+    }
+
+    /** Which screen Home returns to, counted from the left. */
+    static int home(Context context) {
+        int home = store(context).getInt(HOME, 0);
+        return home < 0 || home >= screens(context) ? 0 : home;
+    }
+
+    static void saveHome(Context context, int screen) {
+        store(context).edit().putInt(HOME, screen).apply();
+    }
+
+    /**
+     * One line per spot: screen, column, row and the door, apart by tabs.
+     * A line of the first versions has no screen and stands on the first.
+     */
     static List<Spot> placed(Context context) {
         List<Spot> list = new ArrayList<>();
         String kept = store(context).getString(PLACED, "");
         for (String line : kept.split("\n")) {
             String[] part = line.split("\t");
-            if (part.length != 3) {
+            if (part.length != 3 && part.length != 4) {
                 continue;
             }
-            ComponentName name = ComponentName.unflattenFromString(part[2]);
+            int shift = part.length - 3;
+            ComponentName name = ComponentName.unflattenFromString(part[2 + shift]);
             if (name == null) {
                 continue;
             }
             try {
-                list.add(new Spot(name, Integer.parseInt(part[0]), Integer.parseInt(part[1])));
+                int screen = shift == 1 ? Integer.parseInt(part[0]) : 0;
+                list.add(new Spot(name, screen, Integer.parseInt(part[shift]),
+                    Integer.parseInt(part[1 + shift])));
             } catch (NumberFormatException broken) {
                 // A line that cannot be read is let go.
             }
@@ -86,16 +115,17 @@ final class Keep {
     }
 
     /** Sets a door down in a place; whatever the owner had put there before gives way. */
-    static void place(Context context, ComponentName name, int x, int y) {
+    static void place(Context context, ComponentName name, int screen, int x, int y) {
         StringBuilder out = new StringBuilder();
         for (Spot spot : placed(context)) {
-            if (spot.x == x && spot.y == y) {
+            if (spot.screen == screen && spot.x == x && spot.y == y) {
                 continue;
             }
-            out.append(spot.x).append('\t').append(spot.y).append('\t')
-                .append(spot.name.flattenToString()).append('\n');
+            out.append(spot.screen).append('\t').append(spot.x).append('\t').append(spot.y)
+                .append('\t').append(spot.name.flattenToString()).append('\n');
         }
-        out.append(x).append('\t').append(y).append('\t').append(name.flattenToString());
+        out.append(screen).append('\t').append(x).append('\t').append(y).append('\t')
+            .append(name.flattenToString());
         store(context).edit().putString(PLACED, out.toString()).apply();
     }
 }
