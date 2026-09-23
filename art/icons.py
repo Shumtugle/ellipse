@@ -3,7 +3,8 @@ Draws the two icons of the home screen, each in two layers as the phone
 wants them: a round face of warm grey paper with a fine grain, and on it
 the thing itself with its own soft shadow.
 
-  launcher  three points, two red and a larger gold one, going on
+  launcher  three points of ink, two red on a ruled line and a larger gold
+            one slid below it and running off at the edge
   settings  the head of a spanner, set off the middle, its handle running
             out past the edge, the jaws worn bright where bolts have turned
 
@@ -80,29 +81,64 @@ def preview(back, front, name):
 GREY = (201, 198, 193)
 
 # ------------------------------------------------------------- launcher
+#
+# Not beads: ink. Each point is set down by a pen on paper, so its edge is
+# not a circle but wanders a little, the ink is thicker at the rim where it
+# dried, and the grain of the paper shows through it. Two stand on a faint
+# ruled line in red ink; the third, larger, in gold ink, has slid below the
+# line and runs off at the edge of the icon.
 
-POINTS = [(-36, -7, 9.8, (196, 52, 42)), (-10, -1, 9.8, (196, 52, 42)), (24, 9, 16.5, (214, 154, 42))]
+rng = np.random.default_rng(5)
+LINE = 7.5
+POINTS = [(-34, LINE - 9.6, 9.6, (150, 38, 30)), (-8, LINE - 9.0, 9.0, (150, 38, 30)),
+          (40, 17, 16.5, (178, 128, 40))]
 
-mask = Image.new("L", (N, N), 0)
-d = ImageDraw.Draw(mask)
-for x, y, r, _ in POINTS:
-    disc(d, x, y, r, 255)
+
+def blot(x, y, r, seed):
+    """An outline that wanders around a circle: a few slow waves and a little jitter."""
+    g = np.random.default_rng(seed)
+    waves = [(k, g.uniform(0.02, 0.06) / k ** 0.6, g.uniform(0, 2 * math.pi)) for k in (2, 3, 5, 7)]
+    pts = []
+    for i in range(180):
+        a = 2 * math.pi * i / 180
+        k = 1 + sum(amp * math.sin(n * a + ph) for n, amp, ph in waves) + g.normal(0, 0.006)
+        pts.append(px(x + math.cos(a) * r * k, y + math.sin(a) * r * k))
+    return pts
+
+
+grain = Image.fromarray(np.clip(rng.normal(200, 40, (N // 4, N // 4)), 0, 255).astype(np.uint8), "L")
+grain = grain.resize((N, N), Image.BILINEAR).filter(ImageFilter.GaussianBlur(1.5))
+
 front = Image.new("RGBA", (N, N), (0, 0, 0, 0))
-front = Image.alpha_composite(front, shadow_of(mask, 2.2, 3.4, 2.6, 0.34))
-for x, y, r, colour in POINTS:
+# the ruled line, in soft pencil, fainter at its ends
+rule = Image.new("L", (N, N), 0)
+ImageDraw.Draw(rule).line([px(-70, LINE + 0.4), px(70, LINE - 0.2)], fill=255, width=int(0.9 * U))
+fade = Image.new("L", (N, N), 0)
+ImageDraw.Draw(fade).ellipse((C - 58 * U, C - 58 * U, C + 58 * U, C + 58 * U), fill=255)
+rule = ImageChops.multiply(rule, fade.filter(ImageFilter.GaussianBlur(14 * U)))
+front = Image.alpha_composite(front, solid(rule.point(lambda v: int(v * 0.32)), (96, 92, 88, 255)))
+for i, (x, y, r, colour) in enumerate(POINTS):
     one = Image.new("L", (N, N), 0)
-    disc(ImageDraw.Draw(one), x, y, r, 255)
-    front = Image.alpha_composite(front, solid(one, colour + (255,)))
-    # the lower edge a little deeper, the upper left caught by light: a bead, not a stamp
-    dark = Image.new("L", (N, N), 0)
-    disc(ImageDraw.Draw(dark), x + r * 0.16, y + r * 0.2, r * 0.95, 255)
-    dark = ImageChops.subtract(one, dark).filter(ImageFilter.GaussianBlur(r * 0.08 * U))
-    front = Image.alpha_composite(front, solid(ImageChops.multiply(dark, one).point(lambda v: int(v * 0.5)),
-                                               (60, 20, 10, 255)))
-    glint = Image.new("L", (N, N), 0)
-    disc(ImageDraw.Draw(glint), x - r * 0.38, y - r * 0.4, r * 0.26, 255)
-    glint = glint.filter(ImageFilter.GaussianBlur(r * 0.1 * U))
-    front = Image.alpha_composite(front, solid(glint.point(lambda v: int(v * 0.55)), (255, 244, 220, 255)))
+    ImageDraw.Draw(one).polygon(blot(x, y, r, 40 + i), fill=255)
+    one = one.filter(ImageFilter.GaussianBlur(0.35 * U))
+    # the paper shows through: the ink is a touch uneven, never a flat fill
+    body = ImageChops.multiply(one, grain.point(lambda v: 205 + v * 50 // 255))
+    front = Image.alpha_composite(front, solid(body, colour + (255,)))
+    # where ink dries, it gathers at the rim
+    rim = ImageChops.subtract(one, one.filter(ImageFilter.MinFilter(int(1.6 * U) | 1)))
+    rim = rim.filter(ImageFilter.GaussianBlur(0.5 * U))
+    darker = tuple(int(c * 0.72) for c in colour)
+    front = Image.alpha_composite(front, solid(rim.point(lambda v: int(v * 0.7)), darker + (255,)))
+    if i == 2:
+        # gold ink carries fine flakes of metal
+        flakes = Image.new("L", (N, N), 0)
+        dfl = ImageDraw.Draw(flakes)
+        for _ in range(36):
+            a, t = rng.uniform(0, 2 * math.pi), math.sqrt(rng.uniform(0, 1)) * r * 0.92
+            fx, fy = px(x + math.cos(a) * t, y + math.sin(a) * t)
+            q = rng.uniform(0.2, 0.42) * U
+            dfl.ellipse((fx - q, fy - q, fx + q, fy + q), fill=int(rng.uniform(60, 140)))
+        front = Image.alpha_composite(front, solid(ImageChops.multiply(flakes, one), (240, 208, 130, 255)))
 back = paper(11, GREY)
 back.save(RES + "ic_back.jpg", quality=88, optimize=True)
 save(front, "ic_fg.png")
