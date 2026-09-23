@@ -39,15 +39,23 @@ layout will not come down to the places it has is laid out as large as it
 needs and drawn smaller, the same both ways, so nothing is cut off; one
 that fits is left as it is.
 
-Anything carried from a screen can be dropped on Remove, which takes the
-dock's place at the foot once the thing is carried away from its place: it is taken off (a widget lets go of its
+A long press on anything opens its menu beside it: an app's own shortcuts
+with their pictures, App info and Uninstall; Rename and Resize for a
+folder, Resize for a widget; and, set apart, Remove. Moving the finger on
+closes the menu and carries the thing. The round button at the dock's end
+becomes a bin while something is carried from a place; it is taken off (a widget lets go of its
 place, the clock is switched off in the settings). A widget or a folder
 held and let go where it stood is offered to reshape: a frame whose sides
 are taken anywhere along them, a corner taking two, drawn across whole
 places, never over what stands beside it; a touch outside ends it. A folder larger than one place opens up on the
 screen as a card with its apps in it, two small icons to a place; the
-last place shows how many more there are. Adding shortcuts and folders is
-offered but not yet done. Home returns to the home screen.
+last place shows how many more there are. Apps can be set into the
+dock, and taken out of it. Add folder makes a folder of one's own, named
+at once; apps are dropped into it. Add shortcut offers every app's own
+shortcut makers. A screen with nothing on it can be removed. Other apps
+can ask to put a shortcut or a widget on the home screen: a card asks,
+and it is set down in the first free place. Apps of a work profile are
+listed with their badge. An app that leaves the phone leaves no trace. Home returns to the home screen.
 
 Gestures: a pull upward anywhere on the screens draws the list of every
 application after the finger, and a pull downward on the list at its top
@@ -75,14 +83,14 @@ There are no folders of one's own yet, and what is set down cannot yet be moved 
 one at a time.
 
 - Android 8.0 or newer
-- One permission: to lower the phone's own shade on a swipe down
+- Two permissions: to lower the phone's own shade on a swipe down, and to ask for an app to be uninstalled
 - No dependencies: platform APIs only, built without Gradle
 
 ## Build
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.16.2
+  sh build.sh ellipse-1.17.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

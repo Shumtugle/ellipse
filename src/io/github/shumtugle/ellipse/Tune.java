@@ -545,12 +545,12 @@ public final class Tune extends Activity {
             name.setPadding(dp(20), 0, dp(12), 0);
             made.addView(name, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            final Toggle toggle = new Toggle(this, hidden.contains(door.name.flattenToString()));
+            final Toggle toggle = new Toggle(this, hidden.contains(door.token()));
             made.addView(toggle);
             made.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     toggle.set(!toggle.on());
-                    Keep.hide(Tune.this, door.name, toggle.on());
+                    Keep.hide(Tune.this, door.token(), toggle.on());
                 }
             });
             rows.addView(made);

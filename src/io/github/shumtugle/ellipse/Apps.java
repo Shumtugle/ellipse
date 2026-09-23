@@ -33,6 +33,8 @@ final class Apps {
         final ComponentName name;
         final UserHandle user;
         final CharSequence label;
+        /** Which of the phone's profiles it lives in: nought for the owner's own, a number for a work profile. */
+        final long serial;
         private final LauncherActivityInfo info;
         private final int density;
         private Drawable icon;
@@ -46,17 +48,23 @@ final class Apps {
             this.density = density;
             name = info.getComponentName();
             user = info.getUser();
+            serial = Apps.serialOf(user);
             installed = info.getFirstInstallTime();
             CharSequence named = info.getLabel();
             label = named == null ? "" : named;
         }
 
-        /** Drawn once, when first asked for: a long list is not painted all at once. */
+        /** Drawn once, when first asked for: a long list is not painted all at once. A work app wears its badge. */
         Drawable icon() {
             if (icon == null) {
-                icon = info.getIcon(density);
+                icon = serial == 0 ? info.getIcon(density) : info.getBadgedIcon(density);
             }
             return icon;
+        }
+
+        /** How it is kept: its component, and after an at sign its profile when that is not the owner's own. */
+        String token() {
+            return Apps.token(name, serial);
         }
     }
 
@@ -67,15 +75,79 @@ final class Apps {
     /** Every front door, one per entry, whatever package it belongs to. */
     private final List<LauncherActivityInfo> every = new ArrayList<>();
 
+    private static android.os.UserManager users;
+
+    /** The number a profile is known by: nought for the owner's own. */
+    static long serialOf(UserHandle user) {
+        if (user == null || user.equals(Process.myUserHandle()) || users == null) {
+            return 0L;
+        }
+        return users.getSerialNumberForUser(user);
+    }
+
+    /** The profile a number stands for; the owner's own for nought or a number no longer known. */
+    static UserHandle userOf(long serial) {
+        if (serial == 0L || users == null) {
+            return Process.myUserHandle();
+        }
+        UserHandle user = users.getUserForSerialNumber(serial);
+        return user == null ? Process.myUserHandle() : user;
+    }
+
+    static String token(ComponentName name, long serial) {
+        return serial == 0L ? name.flattenToString() : name.flattenToString() + "@" + serial;
+    }
+
+    /** The component a kept word names, or none if it names something else. */
+    static ComponentName nameOf(String token) {
+        if (token == null || token.startsWith("#")) {
+            return null;
+        }
+        int at = token.indexOf('@');
+        return ComponentName.unflattenFromString(at < 0 ? token : token.substring(0, at));
+    }
+
+    static long serialOf(String token) {
+        int at = token == null ? -1 : token.indexOf('@');
+        if (at < 0) {
+            return 0L;
+        }
+        try {
+            return Long.parseLong(token.substring(at + 1));
+        } catch (NumberFormatException broken) {
+            return 0L;
+        }
+    }
+
     Apps(Context context) {
         this.context = context;
         manager = context.getPackageManager();
+        users = (android.os.UserManager) context.getSystemService(Context.USER_SERVICE);
         LauncherApps apps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
         UserHandle me = Process.myUserHandle();
-        List<LauncherActivityInfo> all = apps.getActivityList(null, me);
+        /* Every profile of the phone: the owner's own first, then work. */
+        List<UserHandle> profiles = new ArrayList<>();
+        profiles.add(me);
+        for (UserHandle other : apps.getProfiles()) {
+            if (!other.equals(me)) {
+                profiles.add(other);
+            }
+        }
+        List<LauncherActivityInfo> all = new ArrayList<>();
+        for (UserHandle profile : profiles) {
+            try {
+                all.addAll(apps.getActivityList(null, profile));
+            } catch (SecurityException closed) {
+                // A profile that is switched off keeps its apps to itself.
+            }
+        }
         for (LauncherActivityInfo info : all) {
             String owner = info.getComponentName().getPackageName();
-            if (owner.equals(context.getPackageName())) {
+            if (owner.equals(context.getPackageName()) && info.getUser().equals(me)) {
+                continue;
+            }
+            if (!info.getUser().equals(me)) {
+                every.add(info);
                 continue;
             }
             every.add(info);
@@ -87,13 +159,23 @@ final class Apps {
 
     /** The door of one component, or null when it is gone. */
     Door door(ComponentName name) {
+        return door(name, 0L);
+    }
+
+    Door door(ComponentName name, long serial) {
         int density = context.getResources().getDisplayMetrics().densityDpi;
         for (LauncherActivityInfo info : every) {
-            if (info.getComponentName().equals(name)) {
+            if (info.getComponentName().equals(name) && serialOf(info.getUser()) == serial) {
                 return new Door(info, density);
             }
         }
         return null;
+    }
+
+    /** The door a kept word names, or none if it is gone or names something else. */
+    Door door(String token) {
+        ComponentName name = nameOf(token);
+        return name == null ? null : door(name, serialOf(token));
     }
 
     /**
@@ -147,7 +229,7 @@ final class Apps {
         String hand = store.activityInfo.packageName;
         for (Door door : all(Keep.BY_NAME)) {
             String owner = door.name.getPackageName();
-            if (taken.contains(owner)) {
+            if (taken.contains(owner) || door.serial != 0L) {
                 continue;
             }
             if (owner.equals(hand)
@@ -191,7 +273,7 @@ final class Apps {
         List<Door> list = new ArrayList<>();
         for (Door door : all(Keep.BY_NAME)) {
             String owner = door.name.getPackageName();
-            if (taken.contains(owner)) {
+            if (taken.contains(owner) || door.serial != 0L) {
                 continue;
             }
             try {

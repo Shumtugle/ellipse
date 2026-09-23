@@ -43,6 +43,13 @@ final class Floor extends FrameLayout {
 
     private final int slop;
     private Carrier carrier;
+    /**
+     * After a long press has opened a thing's menu, the same finger moving
+     * on starts carrying the thing instead; this is how that is begun.
+     */
+    private Runnable armed;
+    private float armedX;
+    private float armedY;
     private Hand hand;
     private boolean taken;
     private boolean deciding;
@@ -67,6 +74,12 @@ final class Floor extends FrameLayout {
         this.hand = hand;
     }
 
+    void arm(Runnable begin) {
+        armed = begin;
+        armedX = fingerX;
+        armedY = fingerY;
+    }
+
     float fingerX() {
         return fingerX;
     }
@@ -86,6 +99,18 @@ final class Floor extends FrameLayout {
     public boolean dispatchTouchEvent(MotionEvent event) {
         fingerX = event.getX();
         fingerY = event.getY();
+        if (armed != null) {
+            int action = event.getActionMasked();
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL
+                || action == MotionEvent.ACTION_DOWN) {
+                armed = null;
+            } else if (action == MotionEvent.ACTION_MOVE
+                && Math.hypot(fingerX - armedX, fingerY - armedY) > slop * 2) {
+                Runnable begin = armed;
+                armed = null;
+                begin.run();
+            }
+        }
         if (carrier != null && carrier.carrying()) {
             deciding = false;
             pulling = false;

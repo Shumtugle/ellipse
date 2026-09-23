@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="11602"
-    android:versionName="1.16.2">
+    android:versionCode="11700"
+    android:versionName="1.17.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
     <!-- A pull downward on bare screens may lower the phone's own shade,
          the notices or the quick settings, if the owner asks for it. -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+    <!-- Uninstall, from an app's own menu on the home screen, is asked of
+         the phone, which then asks the owner. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <!-- Since Android 11 an application sees only the others it names here.
          A home screen names every application with a front door, and the
@@ -104,6 +107,22 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <!-- Where other applications ask to put a shortcut or a widget on
+             the home screen. -->
+        <activity
+            android:name=".Pin"
+            android:exported="true"
+            android:theme="@style/Glass"
+            android:excludeFromRecents="true"
+            android:autoRemoveFromRecents="true"
+            android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.content.pm.action.CONFIRM_PIN_SHORTCUT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.content.pm.action.CONFIRM_PIN_APPWIDGET" />
             </intent-filter>
         </activity>
         <!-- The settings: reached from the home screen's own door on its

@@ -29,7 +29,7 @@ final class Keep {
 
         Spot(String token, int screen, int x, int y) {
             this.token = token;
-            this.name = token.startsWith("#") ? null : ComponentName.unflattenFromString(token);
+            this.name = Apps.nameOf(token);
             this.screen = screen;
             this.x = x;
             this.y = y;
@@ -135,12 +135,12 @@ final class Keep {
             new java.util.HashSet<String>()));
     }
 
-    static void hide(Context context, ComponentName name, boolean hide) {
+    static void hide(Context context, String token, boolean hide) {
         java.util.Set<String> set = hidden(context);
         if (hide) {
-            set.add(name.flattenToString());
+            set.add(token);
         } else {
-            set.remove(name.flattenToString());
+            set.remove(token);
         }
         store(context).edit().putStringSet(HIDDEN, set).apply();
         touch(context);
@@ -153,6 +153,200 @@ final class Keep {
 
     private static void touch(Context context) {
         store(context).edit().putInt(STAMP, stamp(context) + 1).apply();
+    }
+
+    // ---------------------------------------------------------------- dock
+
+    private static final String DOCK_SLOT = "dock.";
+    private static final String FOLDER = "folder.";
+    private static final String FOLDER_NEXT = "folder.next";
+    private static final String PENDING = "pending";
+    static final String FOLDER_THING = "#folder:";
+    static final String SHORTCUT_THING = "#shortcut:";
+
+    /**
+     * What stands in a place of the dock: an app as it is kept, an empty
+     * word for a place emptied by hand, or none while the place still
+     * belongs to the everyday role that fills it by default.
+     */
+    static String dockSlot(Context context, int slot) {
+        String key = DOCK_SLOT + slot;
+        return store(context).contains(key) ? store(context).getString(key, "") : null;
+    }
+
+    static void saveDockSlot(Context context, int slot, String token) {
+        store(context).edit().putString(DOCK_SLOT + slot, token == null ? "" : token).apply();
+    }
+
+    // ------------------------------------------------------------- folders
+
+    /** A new folder of one's own, empty, with a name; its number. */
+    static int newFolder(Context context, String name) {
+        int id = store(context).getInt(FOLDER_NEXT, 1);
+        store(context).edit().putInt(FOLDER_NEXT, id + 1)
+            .putString(FOLDER + id + ".name", name).putString(FOLDER + id + ".items", "").apply();
+        return id;
+    }
+
+    static String folderName(Context context, int id) {
+        return store(context).getString(FOLDER + id + ".name", "Folder");
+    }
+
+    static void renameFolder(Context context, int id, String name) {
+        store(context).edit().putString(FOLDER + id + ".name", name).apply();
+    }
+
+    /** What a folder of one's own holds, as it is kept, in the order it was put in. */
+    static List<String> folderItems(Context context, int id) {
+        List<String> list = new ArrayList<>();
+        for (String line : store(context).getString(FOLDER + id + ".items", "").split("\n")) {
+            if (line.length() > 0) {
+                list.add(line);
+            }
+        }
+        return list;
+    }
+
+    private static void saveFolderItems(Context context, int id, List<String> items) {
+        StringBuilder out = new StringBuilder();
+        for (String item : items) {
+            if (out.length() > 0) {
+                out.append('\n');
+            }
+            out.append(item);
+        }
+        store(context).edit().putString(FOLDER + id + ".items", out.toString()).apply();
+    }
+
+    static void folderAdd(Context context, int id, String token) {
+        List<String> items = folderItems(context, id);
+        items.remove(token);
+        items.add(token);
+        saveFolderItems(context, id, items);
+    }
+
+    static void folderRemove(Context context, int id, String token) {
+        List<String> items = folderItems(context, id);
+        items.remove(token);
+        saveFolderItems(context, id, items);
+    }
+
+    // -------------------------------------------------------------- pending
+
+    /**
+     * Things another application asked to put on the home screen while it
+     * was not in front: the home screen sets them down the next time it is.
+     */
+    static void queue(Context context, String token) {
+        String was = store(context).getString(PENDING, "");
+        store(context).edit().putString(PENDING, was.length() == 0 ? token : was + "\n" + token).apply();
+        touch(context);
+    }
+
+    static List<String> takeQueue(Context context) {
+        List<String> list = new ArrayList<>();
+        for (String line : store(context).getString(PENDING, "").split("\n")) {
+            if (line.length() > 0) {
+                list.add(line);
+            }
+        }
+        store(context).edit().remove(PENDING).apply();
+        return list;
+    }
+
+    // -------------------------------------------------------------- screens
+
+    /**
+     * Takes a screen away: what stood on the screens after it moves one to
+     * the left, and home and the everyday roles follow their screens.
+     */
+    static void dropScreen(Context context, int screen) {
+        List<Spot> kept = new ArrayList<>();
+        for (Spot spot : placed(context)) {
+            if (spot.screen == screen) {
+                continue;
+            }
+            kept.add(spot.screen > screen ? new Spot(spot.token, spot.screen - 1, spot.x, spot.y) : spot);
+        }
+        write(context, kept);
+        int count = screens(context);
+        int home = home(context);
+        int roles = roles(context);
+        SharedPreferences.Editor edit = store(context).edit();
+        edit.putInt(SCREENS, Math.max(1, count - 1));
+        edit.putInt(HOME, home > screen ? home - 1 : (home == screen ? Math.max(0, home - 1) : home));
+        edit.putInt(ROLES, roles > screen ? roles - 1 : (roles == screen ? Math.max(0, roles - 1) : roles));
+        edit.apply();
+    }
+
+    // --------------------------------------------------------------- purge
+
+    /**
+     * An application has left the phone: every trace of it here goes too,
+     * from the screens, the dock, folders, the recent and the hidden. It
+     * returns the words of pinned shortcuts taken away, so they can be let
+     * go of as well.
+     */
+    static void purge(Context context, String owner, long serial) {
+        List<Spot> kept = new ArrayList<>();
+        for (Spot spot : placed(context)) {
+            if (!belongs(spot.token, owner, serial)) {
+                kept.add(spot);
+            }
+        }
+        write(context, kept);
+        SharedPreferences.Editor edit = store(context).edit();
+        for (int slot = 0; slot < 8; slot++) {
+            String token = dockSlot(context, slot);
+            if (token != null && belongs(token, owner, serial)) {
+                edit.putString(DOCK_SLOT + slot, "");
+            }
+        }
+        edit.apply();
+        int next = store(context).getInt(FOLDER_NEXT, 1);
+        for (int id = 1; id < next; id++) {
+            List<String> items = folderItems(context, id);
+            List<String> stay = new ArrayList<>();
+            for (String item : items) {
+                if (!belongs(item, owner, serial)) {
+                    stay.add(item);
+                }
+            }
+            if (stay.size() != items.size()) {
+                saveFolderItems(context, id, stay);
+            }
+        }
+        List<String> recent = recent(context);
+        StringBuilder out = new StringBuilder();
+        for (String token : recent) {
+            if (!belongs(token, owner, serial)) {
+                out.append(out.length() > 0 ? "\n" : "").append(token);
+            }
+        }
+        java.util.Set<String> hidden = hidden(context);
+        java.util.Iterator<String> each = hidden.iterator();
+        while (each.hasNext()) {
+            if (belongs(each.next(), owner, serial)) {
+                each.remove();
+            }
+        }
+        store(context).edit().putString(RECENT, out.toString()).putStringSet(HIDDEN, hidden).apply();
+        touch(context);
+    }
+
+    /** Whether a kept word is an app, or a pinned shortcut, of a package in a profile. */
+    static boolean belongs(String token, String owner, long serial) {
+        if (token.startsWith(SHORTCUT_THING)) {
+            String rest = token.substring(SHORTCUT_THING.length());
+            return rest.startsWith(owner + "/") && Apps.serialOf(token) == serial;
+        }
+        ComponentName name = Apps.nameOf(token);
+        return name != null && name.getPackageName().equals(owner) && Apps.serialOf(token) == serial;
+    }
+
+    /** Lets the home screen know, on its return, that it must set itself out again. */
+    static void nudge(Context context) {
+        touch(context);
     }
 
     /** Everything kept is forgotten: the next start is a first start. */
@@ -213,27 +407,26 @@ final class Keep {
         return roles < 0 || roles >= screens(context) ? 0 : roles;
     }
 
-    /** The applications last opened from here, the latest first. */
-    static List<ComponentName> recent(Context context) {
-        List<ComponentName> list = new ArrayList<>();
+    /** The applications last opened from here, the latest first, as they are kept. */
+    static List<String> recent(Context context) {
+        List<String> list = new ArrayList<>();
         for (String line : store(context).getString(RECENT, "").split("\n")) {
-            ComponentName name = ComponentName.unflattenFromString(line);
-            if (name != null) {
-                list.add(name);
+            if (line.length() > 0 && Apps.nameOf(line) != null) {
+                list.add(line);
             }
         }
         return list;
     }
 
-    static void opened(Context context, ComponentName name) {
-        StringBuilder out = new StringBuilder(name.flattenToString());
+    static void opened(Context context, String token) {
+        StringBuilder out = new StringBuilder(token);
         int count = 1;
-        for (ComponentName was : recent(context)) {
+        for (String was : recent(context)) {
             if (count >= RECENT_KEPT) {
                 break;
             }
-            if (!was.equals(name)) {
-                out.append('\n').append(was.flattenToString());
+            if (!was.equals(token)) {
+                out.append('\n').append(was);
                 count++;
             }
         }
@@ -268,7 +461,7 @@ final class Keep {
             }
             int shift = part.length - 3;
             String token = part[2 + shift];
-            if (!token.startsWith("#") && ComponentName.unflattenFromString(token) == null) {
+            if (!token.startsWith("#") && Apps.nameOf(token) == null) {
                 continue;
             }
             try {

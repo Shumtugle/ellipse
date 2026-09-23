@@ -25,6 +25,9 @@ final class Blob extends View {
     private final float size;
     private final int kind;
     private float open;
+    /** While something is carried from the screens, the button becomes the way off them. */
+    private boolean bin;
+    private boolean binOver;
 
     Blob(Context context, float sizePx, int kind) {
         super(context);
@@ -32,8 +35,41 @@ final class Blob extends View {
         this.kind = kind;
         setClickable(true);
         mark.setStrokeCap(Paint.Cap.ROUND);
-        mark.setStrokeWidth(sizePx * 0.09f);
+        mark.setStrokeWidth(sizePx * 0.08f);
         tint();
+    }
+
+    /** Becomes the bin, or stops being it: a cross on the colour of taking away. */
+    void bin(boolean on) {
+        if (bin == on) {
+            return;
+        }
+        bin = on;
+        binOver = false;
+        invalidate();
+        animate().scaleX(1f).scaleY(1f).setDuration(Pace.PRESS).start();
+    }
+
+    boolean binning() {
+        return bin;
+    }
+
+    /** The finger comes over the bin, or leaves it. */
+    void binOver(boolean now) {
+        if (!bin || now == binOver) {
+            return;
+        }
+        binOver = now;
+        float s = now ? 1.18f : 1f;
+        animate().scaleX(s).scaleY(s).setDuration(Pace.PRESS).setInterpolator(Pace.SPRING).start();
+        if (now) {
+            performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+        }
+        invalidate();
+    }
+
+    boolean binOver() {
+        return bin && binOver;
     }
 
     /** How far the menu stands open, from shut to open. */
@@ -68,6 +104,17 @@ final class Blob extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         float centre = size / 2f;
+        if (bin) {
+            fill.setColor(binOver ? 0xFFD9472F : 0xFFE8674A);
+            canvas.drawCircle(centre, centre, centre, fill);
+            mark.setColor(0xFFFFFFFF);
+            float arm = size * 0.16f;
+            canvas.drawLine(centre - arm, centre - arm, centre + arm, centre + arm, mark);
+            canvas.drawLine(centre + arm, centre - arm, centre - arm, centre + arm, mark);
+            fill.setColor(Tone.primary());
+            mark.setColor(Tone.onAccent());
+            return;
+        }
         canvas.drawCircle(centre, centre, centre, fill);
         if (kind == MENU) {
             float step = size * 0.17f;

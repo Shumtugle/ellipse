@@ -24,4 +24,16 @@
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:colorEdgeEffect">@color/clear</item>
     </style>
+
+    <!-- A card over whatever is behind it, for a question asked from
+         another application. -->
+    <style name="Glass" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@color/clear</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">@color/clear</item>
+        <item name="android:navigationBarColor">@color/clear</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

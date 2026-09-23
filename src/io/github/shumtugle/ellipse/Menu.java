@@ -27,6 +27,8 @@ final class Menu {
         final String[] lines;
         final int[] keys;
         int chosen = -1;
+        /** A small picture before each line, where there is one. */
+        android.graphics.drawable.Drawable[] icons;
 
         Section(String caption, String[] lines, int[] keys) {
             this.caption = caption;
@@ -49,6 +51,9 @@ final class Menu {
     private final Listener listener;
     private final View veil;
     private final LinearLayout card;
+    /** What the card holds, in a scroll of its own for a menu taller than most of the screen. */
+    private final android.widget.ScrollView scroll;
+    private final LinearLayout body;
     private final float density;
     private final float scaled;
     private Section[] sections = new Section[0];
@@ -78,6 +83,14 @@ final class Menu {
         card.setElevation(dp(6));
         card.setVisibility(View.GONE);
         card.setClickable(true);
+        scroll = new android.widget.ScrollView(context);
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        body = new LinearLayout(context);
+        body.setOrientation(LinearLayout.VERTICAL);
+        scroll.addView(body);
+        card.addView(scroll, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         host.addView(card, new FrameLayout.LayoutParams(dp(WIDTH),
             ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START));
     }
@@ -101,7 +114,7 @@ final class Menu {
     }
 
     private void build() {
-        card.removeAllViews();
+        body.removeAllViews();
         card.setBackground(Tone.box(Tone.containerHigh(), dp(28), dp(0.5f)));
         for (int s = 0; s < sections.length; s++) {
             Section section = sections[s];
@@ -113,7 +126,7 @@ final class Menu {
                 LinearLayout.LayoutParams ruleParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(1)));
                 ruleParams.setMargins(dp(16), dp(8), dp(16), dp(6));
-                card.addView(rule, ruleParams);
+                body.addView(rule, ruleParams);
             }
             if (section.caption != null) {
                 TextView caption = new TextView(context);
@@ -122,7 +135,7 @@ final class Menu {
                 caption.setLetterSpacing(0.12f);
                 caption.setTextColor(Tone.faint());
                 caption.setPadding(dp(16), dp(s == 0 ? 6 : 14), dp(16), dp(8));
-                card.addView(caption);
+                body.addView(caption);
             }
             for (int i = 0; i < section.lines.length; i++) {
                 final int which = s;
@@ -137,6 +150,13 @@ final class Menu {
                 int fill = on ? ((0x2E << 24) | (Tone.primary() & 0x00FFFFFF)) : 0x00000000;
                 line.setBackground(Tone.touch(Tone.box(fill, dp(20), 0f), dp(20)));
                 line.setTextColor(on ? Tone.primary() : Tone.onSurface());
+                if (section.icons != null && i < section.icons.length && section.icons[i] != null) {
+                    android.graphics.drawable.Drawable icon = section.icons[i].mutate();
+                    icon.setBounds(0, 0, dp(26), dp(26));
+                    line.setCompoundDrawables(icon, null, null, null);
+                    line.setCompoundDrawablePadding(dp(14));
+                    line.setPadding(dp(12), dp(10), dp(16), dp(10));
+                }
                 line.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         listener.picked(which, key);
@@ -145,7 +165,7 @@ final class Menu {
                 LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 params.topMargin = dp(2);
-                card.addView(line, params);
+                body.addView(line, params);
             }
         }
     }
@@ -159,8 +179,19 @@ final class Menu {
         this.sections = sections;
         shown = true;
         build();
+        LinearLayout.LayoutParams fit = (LinearLayout.LayoutParams) scroll.getLayoutParams();
+        fit.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+        scroll.setLayoutParams(fit);
         card.measure(View.MeasureSpec.makeMeasureSpec(dp(WIDTH), View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        float most = host.getHeight() * 0.7f;
+        if (card.getMeasuredHeight() > most) {
+            fit.height = Math.round(most) - card.getPaddingTop() - card.getPaddingBottom();
+            scroll.setLayoutParams(fit);
+            scroll.scrollTo(0, 0);
+            card.measure(View.MeasureSpec.makeMeasureSpec(dp(WIDTH), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        }
         float w = dp(WIDTH);
         float h = card.getMeasuredHeight();
         float edge = dp(8);
@@ -185,8 +216,8 @@ final class Menu {
         card.setScaleY(0.2f);
         card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(Pace.ARRIVE)
             .setInterpolator(Pace.EMPHASIS).withEndAction(null).start();
-        for (int i = 0; i < card.getChildCount(); i++) {
-            View line = card.getChildAt(i);
+        for (int i = 0; i < body.getChildCount(); i++) {
+            View line = body.getChildAt(i);
             line.setAlpha(0f);
             line.setTranslationY(dp(10));
             line.animate().alpha(1f).translationY(0f).setStartDelay(Pace.STEP * (i + 1))
