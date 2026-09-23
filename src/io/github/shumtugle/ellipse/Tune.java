@@ -576,6 +576,12 @@ public final class Tune extends Activity {
                 ? HapticFeedbackConstants.REJECT : HapticFeedbackConstants.LONG_PRESS);
             return;
         }
+        /* The widgets set on the screens are let go along with everything else. */
+        try {
+            new android.appwidget.AppWidgetHost(getApplicationContext(), Home.WIDGET_HOST).deleteHost();
+        } catch (RuntimeException gone) {
+            // There was nothing to let go.
+        }
         Keep.reset(this);
         restart();
     }

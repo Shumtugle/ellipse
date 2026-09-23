@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="11302"
-    android:versionName="1.13.2">
+    android:versionCode="11400"
+    android:versionName="1.14.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -20,6 +20,11 @@
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- Applications that offer widgets, so the shelf of widgets can
+             show them even when they have no front door of their own. -->
+        <intent>
+            <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
         </intent>
         <intent>
             <action android:name="android.intent.action.DIAL" />

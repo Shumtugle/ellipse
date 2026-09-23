@@ -12,7 +12,7 @@ import android.view.View;
  * twenty four, in one stroke weight: a magnifier, a gear, a brush, three
  * dots in a ring, a turning arrow, an arrow turning back, a phone, a grid
  * of dots, a palette, a stroke of a finger, a box with an arrow out of
- * it, and a globe.
+ * it, a globe, and a chevron pointing down.
  */
 final class Glyph extends View {
 
@@ -28,6 +28,7 @@ final class Glyph extends View {
     static final int HANDS = 9;
     static final int BACKUP = 10;
     static final int LANGUAGE = 11;
+    static final int CHEVRON = 12;
 
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -178,6 +179,12 @@ final class Glyph extends View {
                 oval.set(8f * u, 3f * u, 16f * u, 21f * u);
                 canvas.drawOval(oval, line);
                 canvas.drawLine(3f * u, 12f * u, 21f * u, 12f * u, line);
+                break;
+            case CHEVRON:
+                path.moveTo(6f * u, 9f * u);
+                path.lineTo(12f * u, 15f * u);
+                path.lineTo(18f * u, 9f * u);
+                canvas.drawPath(path, line);
                 break;
             default:
                 break;

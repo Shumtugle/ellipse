@@ -29,8 +29,13 @@ phone's own applications, the phone's settings, and the door to this home
 screen's settings. Screens
 turn sideways, with points under them and a ring round the home one. A long press on a screen opens its menu beside
 the finger: add a screen, and on any screen but the home one, make it the
-home screen. Adding shortcuts, widgets and folders is offered but not yet
-done. Home returns to the home screen.
+home screen. Add widget opens the shelf of widgets: every app that offers any, one
+card each, opening in place to show each widget as its own picture, with
+its name, the places it takes and what it is for; a field at the top
+narrows the shelf. A widget chosen is bound (the phone may ask leave), set
+up if it wants that, and set down in the first free block of its size.
+Widgets move like anything else on the screens. Adding shortcuts and
+folders is offered but not yet done. Home returns to the home screen.
 
 Gestures: a pull upward anywhere on the screens draws the list of every
 application after the finger, and a pull downward on the list at its top
@@ -65,7 +70,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.13.2
+  sh build.sh ellipse-1.14.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

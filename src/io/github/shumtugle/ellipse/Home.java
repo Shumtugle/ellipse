@@ -96,6 +96,17 @@ public final class Home extends Activity {
     private Menu menu;
     private Fresh fresh;
     private Tray tray;
+    /** Other applications' widgets: the shelf they are chosen from, and the host they live in. */
+    private Shelf shelf;
+    private Piece.Host host;
+    private android.appwidget.AppWidgetManager widgets;
+    /** A widget on its way to a screen, while the phone asks leave for it or it is set up. */
+    private int pendingWidget = -1;
+    private int pendingPage;
+    static final int WIDGET_HOST = 0x454C;
+    private static final int ASK_BIND = 11;
+    private static final int ASK_SETUP = 12;
+    private static final String WIDGET = "#widget:";
     /** What a vertical pull is doing, while one is under way. */
     private int pull;
     private static final int PULL_OPEN = 1;
@@ -147,6 +158,8 @@ public final class Home extends Activity {
         super.onCreate(saved);
         Tone.read(this);
         Keep.settle(this);
+        widgets = android.appwidget.AppWidgetManager.getInstance(this);
+        host = new Piece.Host(getApplicationContext(), WIDGET_HOST);
         glass();
         build();
         fill();
@@ -181,8 +194,24 @@ public final class Home extends Activity {
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+        try {
+            host.startListening();
+        } catch (RuntimeException busy) {
+            // The widgets will draw themselves once the service answers.
+        }
+    }
+
+    @Override
     protected void onStop() {
         super.onStop();
+        try {
+            host.stopListening();
+        } catch (RuntimeException busy) {
+            // Nothing was listening.
+        }
+        shelf.close(false);
         away = true;
         /* Back from an application, the home screen is found, not the list
            the application was picked from. */
@@ -206,6 +235,10 @@ public final class Home extends Activity {
         super.onNewIntent(intent);
         if (menu.shown()) {
             menu.hide(true);
+            return;
+        }
+        if (shelf.shown()) {
+            shelf.close(true);
             return;
         }
         if (tray.shown()) {
@@ -238,6 +271,10 @@ public final class Home extends Activity {
     public void onBackPressed() {
         if (menu.shown()) {
             menu.hide(true);
+            return;
+        }
+        if (shelf.shown()) {
+            shelf.close(true);
             return;
         }
         if (drawer.menuShown()) {
@@ -318,6 +355,8 @@ public final class Home extends Activity {
                 drawer.inset(top, keys);
                 fresh.inset(top);
                 tray.setPadding(left, top, right, bottom);
+                shelf.setPadding(left, 0, right, 0);
+                shelf.inset(top, keys);
                 return insets;
             }
         });
@@ -458,6 +497,19 @@ public final class Home extends Activity {
         root.addView(tray, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        shelf = new Shelf(this, new Shelf.Hand() {
+            public int[] span(android.appwidget.AppWidgetProviderInfo info) {
+                return widgetSpan(info);
+            }
+
+            public void chosen(android.appwidget.AppWidgetProviderInfo info) {
+                shelf.close(true);
+                takeWidget(info);
+            }
+        });
+        root.addView(shelf, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         menu = new Menu(this, root, new Menu.Listener() {
             public void picked(int section, int key) {
                 act(key);
@@ -583,6 +635,8 @@ public final class Home extends Activity {
                     if (page.free(spot.x, spot.y)) {
                         ownDoor(page, spot.x, spot.y);
                     }
+                } else if (spot.token.startsWith(WIDGET)) {
+                    widget(page, spot);
                 } else {
                     folders.add(spot);
                 }
@@ -817,6 +871,10 @@ public final class Home extends Activity {
                 break;
             case SETTINGS:
                 tune(screens);
+                break;
+            case ADD_WIDGET:
+                pendingPage = screens.page();
+                shelf.show();
                 break;
             case MAKE_HOME:
                 Keep.saveHome(this, screens.page());
@@ -1182,6 +1240,165 @@ public final class Home extends Activity {
         }
     };
 
+    // ----------------------------------------------------------- widgets
+
+    /**
+     * How many places across and down a widget takes: what it asks for, if
+     * it says so in places; otherwise its least size in places of this
+     * grid, rounded up, and never more than the grid has.
+     */
+    private int[] widgetSpan(android.appwidget.AppWidgetProviderInfo info) {
+        Grid page = pages.isEmpty() ? null : pages.get(Math.min(screens.page(), pages.size() - 1));
+        float wide = page == null || page.cellWidth() <= 0
+            ? (getResources().getDisplayMetrics().widthPixels - dp(16)) / (float) columns : page.cellWidth();
+        float tall = page == null || page.cellHeight() <= 0 ? wide * 1.2f : page.cellHeight();
+        int across;
+        int down;
+        if (Build.VERSION.SDK_INT >= 31 && info.targetCellWidth > 0 && info.targetCellHeight > 0) {
+            across = info.targetCellWidth;
+            down = info.targetCellHeight;
+        } else {
+            across = (int) Math.ceil(info.minWidth / wide);
+            down = (int) Math.ceil(info.minHeight / tall);
+        }
+        return new int[] {Math.max(1, Math.min(columns, across)), Math.max(1, Math.min(rows, down))};
+    }
+
+    /** A widget chosen from the shelf: leave is asked for it if the phone wants that, then it is set up. */
+    private void takeWidget(android.appwidget.AppWidgetProviderInfo info) {
+        int id = host.allocateAppWidgetId();
+        pendingWidget = id;
+        boolean bound = widgets.bindAppWidgetIdIfAllowed(id, info.getProfile(), info.provider, null);
+        if (bound) {
+            setUp(id);
+            return;
+        }
+        Intent ask = new Intent(android.appwidget.AppWidgetManager.ACTION_APPWIDGET_BIND);
+        ask.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, id);
+        ask.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider);
+        ask.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_PROVIDER_PROFILE, info.getProfile());
+        try {
+            startActivityForResult(ask, ASK_BIND);
+        } catch (RuntimeException none) {
+            drop(id);
+            refuse(screens);
+        }
+    }
+
+    /** A widget that wants to be set up first opens its own window for that. */
+    private void setUp(int id) {
+        android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
+        if (info == null) {
+            drop(id);
+            refuse(screens);
+            return;
+        }
+        if (info.configure != null) {
+            try {
+                host.startAppWidgetConfigureActivityForResult(this, id, 0, ASK_SETUP, null);
+                return;
+            } catch (RuntimeException none) {
+                // It cannot be set up from here; it is set down as it is.
+            }
+        }
+        setWidget(id);
+    }
+
+    @Override
+    protected void onActivityResult(int asked, int answer, Intent data) {
+        super.onActivityResult(asked, answer, data);
+        int id = pendingWidget;
+        if (id < 0 || (asked != ASK_BIND && asked != ASK_SETUP)) {
+            return;
+        }
+        if (answer != RESULT_OK) {
+            drop(id);
+            return;
+        }
+        if (asked == ASK_BIND) {
+            setUp(id);
+        } else {
+            setWidget(id);
+        }
+    }
+
+    private void drop(int id) {
+        try {
+            host.deleteAppWidgetId(id);
+        } catch (RuntimeException gone) {
+            // Already let go.
+        }
+        pendingWidget = -1;
+    }
+
+    /**
+     * Sets a widget down in the first free block of its size: on the
+     * screen the shelf was opened from, else on any other. With no room
+     * anywhere, it is let go and the phone says no.
+     */
+    private void setWidget(int id) {
+        pendingWidget = -1;
+        android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
+        if (info == null) {
+            drop(id);
+            return;
+        }
+        int[] span = widgetSpan(info);
+        List<Integer> order = new ArrayList<>();
+        order.add(Math.min(pendingPage, pages.size() - 1));
+        for (int i = 0; i < pages.size(); i++) {
+            if (!order.contains(i)) {
+                order.add(i);
+            }
+        }
+        for (int screen : order) {
+            Grid page = pages.get(screen);
+            for (int r = 0; r + span[1] <= rows; r++) {
+                for (int c = 0; c + span[0] <= columns; c++) {
+                    if (page.free(c, r, span[0], span[1])) {
+                        if (!Keep.laid(this)) {
+                            Keep.lay(this, standing);
+                        }
+                        Keep.place(this, WIDGET + id + ":" + span[0] + ":" + span[1], screen, c, r);
+                        fill();
+                        screens.show(screen, true);
+                        screens.performHapticFeedback(Build.VERSION.SDK_INT >= 30
+                            ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.VIRTUAL_KEY);
+                        return;
+                    }
+                }
+            }
+        }
+        drop(id);
+        refuse(screens);
+    }
+
+    /** A widget kept on a screen, made anew from its host; gone if its application is. */
+    private void widget(Grid page, Keep.Spot spot) {
+        String[] part = spot.token.substring(WIDGET.length()).split(":");
+        if (part.length != 3) {
+            return;
+        }
+        int id;
+        int across;
+        int down;
+        try {
+            id = Integer.parseInt(part[0]);
+            across = Math.min(columns, Integer.parseInt(part[1]));
+            down = Math.min(rows, Integer.parseInt(part[2]));
+        } catch (NumberFormatException broken) {
+            return;
+        }
+        android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
+        if (info == null || !page.free(spot.x, spot.y, across, down)) {
+            return;
+        }
+        android.appwidget.AppWidgetHostView view = host.createView(this, id, info);
+        page.put(view, spot.x, spot.y, across, down);
+        cells.add(view);
+        stand(page, view, spot.token);
+    }
+
     // ------------------------------------------------------------- shade
 
     /**
@@ -1285,7 +1502,7 @@ public final class Home extends Activity {
     private final Floor.Hand pulling = new Floor.Hand() {
         public boolean pullable(boolean up) {
             pull = 0;
-            if (lift != null || menu.shown() || drawer.menuShown() || tray.shown()) {
+            if (lift != null || menu.shown() || drawer.menuShown() || tray.shown() || shelf.shown()) {
                 return false;
             }
             if (fresh.shown()) {
