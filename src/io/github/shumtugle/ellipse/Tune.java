@@ -373,29 +373,27 @@ public final class Tune extends Activity {
      * sees it. Going to it keeps what was mine, whole, to come back to.
      */
     private View defaultSwitch() {
-        final boolean standard = Keep.onDefault(this);
+        // Not a pair of standing states but a deed and, for a little
+        // while, its undoing: the look goes back to the default, and until
+        // something is set by hand there is still a way back to what was.
+        final boolean back = Keep.onDefault(this);
         LinearLayout made = new LinearLayout(this);
         made.setOrientation(LinearLayout.VERTICAL);
-        Cards two = new Cards(new String[] {Words.s("look_mine"), Words.s("look_default")},
-            new Sketch[] {new Sketch(this, Sketch.SHAPE).shape(Tile.Look.MEASURED.power, Tile.Look.MEASURED.ratio),
-                new Sketch(this, Sketch.WINDOW_RAW)},
-            standard ? 1 : 0, 72, new Picked() {
-                public void picked(int which) {
-                    if ((which == 1) != Keep.onDefault(Tune.this)) {
-                        turnDefault(which == 1);
-                    }
+        made.addView(button(Words.s(back ? "look_back" : "look_default"), false,
+            new View.OnClickListener() {
+                public void onClick(View v) {
+                    turnDefault(!back);
                 }
-            });
-        made.addView(two.view());
+            }), new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Round.dp(52f)));
         return made;
     }
 
     /**
-     * To the default, keeping mine; or back to mine. The default is whole:
-     * its settings and its own first layout, the clock at the head and the
-     * dock at the foot. Mine is set aside whole, the layout with it, and
-     * comes back as it was. Then the settings are read again from what is
-     * kept, and the room lights anew in its look.
+     * The look set back to the default, or back to what it was before that.
+     * Only the look is touched: the screens, what stands on them and the
+     * language are the owner's work and are left alone. What was is kept
+     * only until the owner sets something by hand; after that there is
+     * nothing to go back to, and the way back is no longer offered.
      */
     private void turnDefault(boolean standard) {
         try {

@@ -411,8 +411,8 @@ door_keyhole	Скважина
 # Bare glass
 door_glass	Пустое стекло
 
-# My own
-look_mine	Моё
+# Back as it was
+look_back	Вернуть как было
 
 # Default
 look_default	По умолчанию

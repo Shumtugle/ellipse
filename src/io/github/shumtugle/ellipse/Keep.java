@@ -59,6 +59,7 @@ public final class Keep {
     }
 
     public static void saveLook(Context context, float hue, float rich, boolean wall) {
+        moved(context);
         mark(store(context).edit().putFloat("hue", hue).putFloat("rich", rich)
             .putBoolean("wall", wall), context);
     }
@@ -78,6 +79,7 @@ public final class Keep {
     }
 
     static void saveTile(Context context, Tile.Look look) {
+        moved(context);
         mark(store(context).edit().putFloat("power", look.power)
             .putFloat("ratio", look.ratio).putInt("rim", look.rim).putFloat("zoom", look.zoom)
             .putFloat("thick", look.width).putInt("window", look.window).putBoolean("gloss", look.gloss),
@@ -283,8 +285,9 @@ public final class Keep {
         "power", "ratio", "thick", "zoom", "door", "well_shape", "well_hue", "well_dense"};
 
     static void toDefault(Context context, JSONObject mine) throws JSONException {
-        store(context).edit().putString("mine", mine.toString()).apply();
         restore(context, only(defaults()));
+        // Written after the restoring, since restoring a look lets go of it.
+        store(context).edit().putString("mine", mine.toString()).apply();
     }
 
     static void toMine(Context context) {
@@ -292,6 +295,17 @@ public final class Keep {
         store(context).edit().remove("mine").apply();
         if (mine != null) {
             restore(context, only(mine));
+        }
+    }
+
+    /**
+     * A look set by hand: whatever was kept to go back to is no longer what
+     * was, so it is let go. The way back is offered for as long as nothing
+     * has been touched since, and no longer.
+     */
+    private static void moved(Context context) {
+        if (store(context).contains("mine")) {
+            store(context).edit().remove("mine").apply();
         }
     }
 
@@ -358,6 +372,7 @@ public final class Keep {
     }
 
     static void saveNight(Context context, int wish) {
+        moved(context);
         mark(store(context).edit().putInt("night", wish), context);
     }
 
@@ -375,6 +390,7 @@ public final class Keep {
     }
 
     static void saveWell(Context context, Well.Look look) {
+        moved(context);
         mark(store(context).edit().putInt("well_shape", look.shape).putInt("well_hue", look.hue)
             .putFloat("well_dense", look.dense), context);
     }
@@ -443,6 +459,7 @@ public final class Keep {
     }
 
     static void saveDoor(Context context, int face) {
+        moved(context);
         mark(store(context).edit().putInt("door", face), context);
     }
 
