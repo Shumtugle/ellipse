@@ -53,6 +53,21 @@ final class Grid extends ViewGroup {
         addView(child);
     }
 
+    /** Sets a thing already standing here into another block, at once. */
+    void reshape(View child, int column, int row, int across, int down) {
+        child.setTag(new int[] {column, row, across, down});
+        requestLayout();
+    }
+
+    /** Where a block of places stands, in the grid's own coordinates. */
+    android.graphics.RectF block(int column, int row, int across, int down) {
+        float w = cellWidth();
+        float h = cellHeight();
+        float left = getPaddingLeft() + column * w;
+        float top = getPaddingTop() + row * h;
+        return new android.graphics.RectF(left, top, left + across * w, top + down * h);
+    }
+
     private static int across(int[] at) {
         return at.length > 2 ? at[2] : 1;
     }
@@ -98,7 +113,15 @@ final class Grid extends ViewGroup {
     }
 
     boolean free(int column, int row) {
+        return free(column, row, (View) null);
+    }
+
+    /** Whether a place is free, not counting one thing that may stand on it. */
+    boolean free(int column, int row, View besides) {
         for (int i = 0; i < getChildCount(); i++) {
+            if (getChildAt(i) == besides) {
+                continue;
+            }
             int[] at = (int[]) getChildAt(i).getTag();
             if (column >= at[0] && column < at[0] + across(at)
                 && row >= at[1] && row < at[1] + down(at)) {
@@ -130,12 +153,16 @@ final class Grid extends ViewGroup {
 
     /** Whether a block of places is inside the grid and all free. */
     boolean free(int column, int row, int across, int down) {
+        return free(column, row, across, down, null);
+    }
+
+    boolean free(int column, int row, int across, int down, View besides) {
         if (column < 0 || row < 0 || column + across > columns || row + down > rows) {
             return false;
         }
         for (int c = column; c < column + across; c++) {
             for (int r = row; r < row + down; r++) {
-                if (!free(c, r)) {
+                if (!free(c, r, besides)) {
                     return false;
                 }
             }

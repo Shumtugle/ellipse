@@ -98,6 +98,12 @@ public final class Home extends Activity {
     private Tray tray;
     /** Other applications' widgets: the shelf they are chosen from, and the host they live in. */
     private Shelf shelf;
+    /** Where things are taken off the screens, and the frame they are reshaped in. */
+    private Bin bin;
+    private Reach reach;
+    private float carryStartX;
+    private float carryStartY;
+    private boolean carryMoved;
     private Piece.Host host;
     private android.appwidget.AppWidgetManager widgets;
     /** A widget on its way to a screen, while the phone asks leave for it or it is set up. */
@@ -212,6 +218,9 @@ public final class Home extends Activity {
             // Nothing was listening.
         }
         shelf.close(false);
+        if (reach != null && !reach.ended()) {
+            reach.end();
+        }
         away = true;
         /* Back from an application, the home screen is found, not the list
            the application was picked from. */
@@ -233,6 +242,10 @@ public final class Home extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (reach != null && !reach.ended()) {
+            reach.end();
+            return;
+        }
         if (menu.shown()) {
             menu.hide(true);
             return;
@@ -269,6 +282,10 @@ public final class Home extends Activity {
      */
     @Override
     public void onBackPressed() {
+        if (reach != null && !reach.ended()) {
+            reach.end();
+            return;
+        }
         if (menu.shown()) {
             menu.hide(true);
             return;
@@ -357,6 +374,9 @@ public final class Home extends Activity {
                 tray.setPadding(left, top, right, bottom);
                 shelf.setPadding(left, 0, right, 0);
                 shelf.inset(top, keys);
+                FrameLayout.LayoutParams binAt = (FrameLayout.LayoutParams) bin.getLayoutParams();
+                binAt.topMargin = top + dp(20);
+                bin.setLayoutParams(binAt);
                 return insets;
             }
         });
@@ -510,6 +530,11 @@ public final class Home extends Activity {
         root.addView(shelf, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        bin = new Bin(this);
+        root.addView(bin, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
+        reach = null;
+
         menu = new Menu(this, root, new Menu.Listener() {
             public void picked(int section, int key) {
                 act(key);
@@ -646,10 +671,10 @@ public final class Home extends Activity {
             }
             List<Apps.Door> vendor = found.vendor(taken);
             for (Keep.Spot spot : folders) {
-                if (Keep.VENDOR_THING.equals(spot.token) && !vendor.isEmpty()
+                if (Keep.VENDOR_THING.equals(base(spot.token)) && !vendor.isEmpty()
                     && pages.get(spot.screen).free(spot.x, spot.y)) {
                     folder(pages.get(spot.screen), Apps.vendorName(vendor), vendor, spot.x, spot.y,
-                        Keep.VENDOR_THING);
+                        spot.token);
                 }
             }
             for (Apps.Door door : vendor) {
@@ -657,9 +682,9 @@ public final class Home extends Activity {
             }
             List<Apps.Door> system = found.system(taken);
             for (Keep.Spot spot : folders) {
-                if (Keep.SYSTEM_THING.equals(spot.token) && !system.isEmpty()
+                if (Keep.SYSTEM_THING.equals(base(spot.token)) && !system.isEmpty()
                     && pages.get(spot.screen).free(spot.x, spot.y)) {
-                    folder(pages.get(spot.screen), SYSTEM, system, spot.x, spot.y, Keep.SYSTEM_THING);
+                    folder(pages.get(spot.screen), SYSTEM, system, spot.x, spot.y, spot.token);
                 }
             }
         } else {
@@ -777,6 +802,41 @@ public final class Home extends Activity {
     /** A folder on a screen: its face, and the card it opens into. */
     private void folder(Grid into, final CharSequence name, final List<Apps.Door> doors,
                         int column, int row, String token) {
+        int[] span = folderSpan(token);
+        int across = Math.min(columns - column, span[0]);
+        int down = Math.min(rows - row, span[1]);
+        if (across * down > 1 && into.free(column, row, across, down)) {
+            float cell = (getResources().getDisplayMetrics().widthPixels - dp(16)) / (float) columns;
+            float small = Math.min(iconSize * 0.62f, (cell / 2f - dp(8)) * 0.86f);
+            final Nest nest = new Nest(this, name, doors, across, down, small, new Nest.Hand() {
+                public void open(View from, Apps.Door door, int[] icon) {
+                    launch(from, door, icon);
+                }
+
+                public void more(View from) {
+                    int[] at = new int[2];
+                    int[] floorAt = new int[2];
+                    from.getLocationOnScreen(at);
+                    root.getLocationOnScreen(floorAt);
+                    tray.show(name, doors, at[0] - floorAt[0] + from.getWidth() / 2f,
+                        at[1] - floorAt[1] + from.getHeight() / 2f);
+                }
+
+                public void hold(View which) {
+                    move(which);
+                }
+            });
+            into.put(nest, column, row, across, down);
+            cells.add(nest);
+            stand(into, nest, token);
+            nest.setOnLongClickListener(new View.OnLongClickListener() {
+                public boolean onLongClick(View v) {
+                    move(v);
+                    return true;
+                }
+            });
+            return;
+        }
         final Cell cell = new Cell(this, new Stack(doors), name, iconSize);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -1088,6 +1148,12 @@ public final class Home extends Activity {
             tray.close(true);
         }
         grid.carrying(true);
+        carryStartX = x;
+        carryStartY = y;
+        carryMoved = false;
+        if (whence != null) {
+            bin.show();
+        }
         hold(x, y);
     }
 
@@ -1098,11 +1164,23 @@ public final class Home extends Activity {
         }
         fingerX = x;
         fingerY = y;
+        if (!carryMoved && Math.hypot(x - carryStartX, y - carryStartY) > dp(14)) {
+            carryMoved = true;
+        }
         edge(x);
         float cx = x;
         float cy = y - above();
         if (growing == null || !growing.isRunning()) {
             lift.at(cx, cy);
+        }
+        /* Over the bin, nothing on the grid is offered: the thing is about to go. */
+        boolean binned = origin != null && bin.holds(x, y);
+        bin.over(binned);
+        lift.setAlpha(binned ? 0.55f : 1f);
+        if (binned) {
+            landing = null;
+            grid.target(null);
+            return;
         }
         int[] gridAt = new int[2];
         int[] floorAt = new int[2];
@@ -1127,7 +1205,43 @@ public final class Home extends Activity {
         final Lift going = lift;
         final String token = carried;
         final int[] whence = origin;
-        final int[] spot = kept ? landing : null;
+        final boolean binned = kept && whence != null && bin.over();
+        final boolean still = kept && whence != null && !carryMoved;
+        bin.hide();
+        if (still) {
+            /* Held and let go without moving: it stays where it stood, and
+               a thing that can take another size is offered to reshape. */
+            grid.carrying(false);
+            grid = pages.get(whence[0]);
+            landing = new int[] {whence[1], whence[2]};
+        }
+        final int[] spot = kept && !binned ? landing : null;
+        final String reshape = still && resizable(token) ? token : null;
+        if (binned && going != null) {
+            lift = null;
+            carried = null;
+            origin = null;
+            landing = null;
+            edge(-1f);
+            if (growing != null) {
+                growing.cancel();
+                growing = null;
+            }
+            grid.carrying(false);
+            removeThing(token, whence);
+            float bx = bin.getLeft() + bin.getWidth() / 2f - going.wide() / 2f;
+            float by = bin.getTop() + bin.getHeight() / 2f - going.tall() / 2f;
+            going.animate().cancel();
+            going.animate().translationX(bx).translationY(by).scaleX(0.15f).scaleY(0.15f).alpha(0f)
+                .setDuration(Pace.ARRIVE / 2).setInterpolator(Pace.EMPHASIS)
+                .withEndAction(new Runnable() {
+                    public void run() {
+                        root.removeView(going);
+                    }
+                }).start();
+            screens.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            return;
+        }
         final int across = carriedAcross;
         final int down = carriedDown;
         lift = null;
@@ -1176,6 +1290,9 @@ public final class Home extends Activity {
                 public void run() {
                     fill();
                     root.removeView(going);
+                    if (reshape != null) {
+                        reshapeAt(reshape, whence[0], spot[0], spot[1]);
+                    }
                 }
             }).start();
         grid.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
@@ -1239,6 +1356,144 @@ public final class Home extends Activity {
             main.postDelayed(this, EDGE_WAIT + Pace.ARRIVE);
         }
     };
+
+    // --------------------------------------------------- taking off, reshaping
+
+    /**
+     * A thing dropped on the bin is taken off its screen. A widget lets go
+     * of its place with its application; the clock is switched off in the
+     * settings, where it can be switched on again.
+     */
+    private void removeThing(String token, int[] whence) {
+        Keep.remove(this, whence[0], whence[1], whence[2]);
+        if (token.startsWith(WIDGET)) {
+            try {
+                drop(Integer.parseInt(token.substring(WIDGET.length()).split(":")[0]));
+            } catch (NumberFormatException broken) {
+                // Nothing to let go.
+            }
+        } else if (Keep.CLOCK_THING.equals(token)) {
+            Keep.saveFlag(this, Keep.CLOCK, false);
+            stamp = Keep.stamp(this);
+        }
+        fill();
+    }
+
+    /** The word before the size, for things kept with one. */
+    private static String base(String token) {
+        if (token.startsWith(WIDGET)) {
+            return WIDGET;
+        }
+        int colon = token.indexOf(':');
+        return colon < 0 ? token : token.substring(0, colon);
+    }
+
+    /** The size a folder is kept with: one place, unless it says more. */
+    private static int[] folderSpan(String token) {
+        String[] part = token.split(":");
+        if (part.length == 3) {
+            try {
+                return new int[] {Math.max(1, Integer.parseInt(part[1])), Math.max(1, Integer.parseInt(part[2]))};
+            } catch (NumberFormatException broken) {
+                // One place, then.
+            }
+        }
+        return new int[] {1, 1};
+    }
+
+    private boolean resizable(String token) {
+        if (token == null) {
+            return false;
+        }
+        String word = base(token);
+        if (Keep.VENDOR_THING.equals(word) || Keep.SYSTEM_THING.equals(word)) {
+            return true;
+        }
+        if (WIDGET.equals(word)) {
+            android.appwidget.AppWidgetProviderInfo info = widgetOf(token);
+            return info != null && info.resizeMode != android.appwidget.AppWidgetProviderInfo.RESIZE_NONE;
+        }
+        return false;
+    }
+
+    private android.appwidget.AppWidgetProviderInfo widgetOf(String token) {
+        try {
+            return widgets.getAppWidgetInfo(Integer.parseInt(token.substring(WIDGET.length()).split(":")[0]));
+        } catch (RuntimeException broken) {
+            return null;
+        }
+    }
+
+    /**
+     * The frame for reshaping what stands in a place: a folder to any size
+     * from one place to the whole screen; a widget within the bounds and
+     * the directions its application allows.
+     */
+    private void reshapeAt(final String token, final int screen, final int column, final int row) {
+        if (screen >= pages.size()) {
+            return;
+        }
+        final Grid page = pages.get(screen);
+        View thing = null;
+        for (java.util.Map.Entry<View, String> each : things.entrySet()) {
+            if (token.equals(each.getValue()) && each.getKey().getParent() == page) {
+                thing = each.getKey();
+            }
+        }
+        if (thing == null) {
+            return;
+        }
+        int[] at = (int[]) thing.getTag();
+        int[] block = {at[0], at[1], at.length > 2 ? at[2] : 1, at.length > 3 ? at[3] : 1};
+        int minA = 1;
+        int minD = 1;
+        int maxA = columns;
+        int maxD = rows;
+        boolean wide = true;
+        boolean tall = true;
+        if (token.startsWith(WIDGET)) {
+            android.appwidget.AppWidgetProviderInfo info = widgetOf(token);
+            if (info == null) {
+                return;
+            }
+            float cw = page.cellWidth();
+            float ch = page.cellHeight();
+            wide = (info.resizeMode & android.appwidget.AppWidgetProviderInfo.RESIZE_HORIZONTAL) != 0;
+            tall = (info.resizeMode & android.appwidget.AppWidgetProviderInfo.RESIZE_VERTICAL) != 0;
+            int least = info.minResizeWidth > 0 ? info.minResizeWidth : info.minWidth;
+            int leastTall = info.minResizeHeight > 0 ? info.minResizeHeight : info.minHeight;
+            minA = wide ? Math.max(1, (int) Math.ceil(least / cw)) : block[2];
+            minD = tall ? Math.max(1, (int) Math.ceil(leastTall / ch)) : block[3];
+            maxA = wide ? columns : block[2];
+            maxD = tall ? rows : block[3];
+            if (Build.VERSION.SDK_INT >= 31) {
+                if (wide && info.maxResizeWidth > 0) {
+                    maxA = Math.max(minA, Math.min(columns, (int) Math.floor(info.maxResizeWidth / cw)));
+                }
+                if (tall && info.maxResizeHeight > 0) {
+                    maxD = Math.max(minD, Math.min(rows, (int) Math.floor(info.maxResizeHeight / ch)));
+                }
+            }
+            minA = Math.min(minA, block[2]);
+            minD = Math.min(minD, block[3]);
+        }
+        reach = new Reach(this, page, thing, block, minA, minD, maxA, maxD, wide, tall, new Reach.Done() {
+            public void done(int c, int r, int a, int d) {
+                String word = base(token);
+                String kept;
+                if (WIDGET.equals(word)) {
+                    kept = WIDGET + token.substring(WIDGET.length()).split(":")[0] + ":" + a + ":" + d;
+                } else {
+                    kept = a == 1 && d == 1 ? word : word + ":" + a + ":" + d;
+                }
+                Keep.reshape(Home.this, screen, column, row, kept, c, r);
+                fill();
+            }
+        });
+        root.addView(reach, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        screens.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+    }
 
     // ----------------------------------------------------------- widgets
 
@@ -1502,7 +1757,8 @@ public final class Home extends Activity {
     private final Floor.Hand pulling = new Floor.Hand() {
         public boolean pullable(boolean up) {
             pull = 0;
-            if (lift != null || menu.shown() || drawer.menuShown() || tray.shown() || shelf.shown()) {
+            if (lift != null || menu.shown() || drawer.menuShown() || tray.shown() || shelf.shown()
+                || (reach != null && !reach.ended())) {
                 return false;
             }
             if (fresh.shown()) {

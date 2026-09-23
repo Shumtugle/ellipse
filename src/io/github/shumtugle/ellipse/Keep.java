@@ -319,6 +319,30 @@ final class Keep {
         write(context, kept);
     }
 
+    /** Takes away whatever stands in a place. */
+    static void remove(Context context, int screen, int x, int y) {
+        List<Spot> kept = new ArrayList<>();
+        for (Spot spot : placed(context)) {
+            if (!(spot.screen == screen && spot.x == x && spot.y == y)) {
+                kept.add(spot);
+            }
+        }
+        write(context, kept);
+    }
+
+    /** The thing in one place is kept again under a new word and in a new place: a new size, as a rule. */
+    static void reshape(Context context, int screen, int x, int y, String token, int toX, int toY) {
+        List<Spot> kept = new ArrayList<>();
+        for (Spot spot : placed(context)) {
+            if (spot.screen == screen && spot.x == x && spot.y == y) {
+                kept.add(new Spot(token, screen, toX, toY));
+            } else {
+                kept.add(spot);
+            }
+        }
+        write(context, kept);
+    }
+
     /**
      * Whether the screens are set out by hand now. Until something that
      * came with the default set-out is first moved, the default is laid

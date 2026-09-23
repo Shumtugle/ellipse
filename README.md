@@ -34,8 +34,17 @@ card each, opening in place to show each widget as its own picture, with
 its name, the places it takes and what it is for; a field at the top
 narrows the shelf. A widget chosen is bound (the phone may ask leave), set
 up if it wants that, and set down in the first free block of its size.
-Widgets move like anything else on the screens. Adding shortcuts and
-folders is offered but not yet done. Home returns to the home screen.
+Widgets move like anything else on the screens.
+
+Anything carried from a screen can be dropped on Remove, which comes down
+from the top while it is carried: it is taken off (a widget lets go of its
+place, the clock is switched off in the settings). A widget or a folder
+held and let go without moving is offered to reshape: a frame with a
+handle on each side it may grow by, drawn across whole places, never over
+what stands beside it. A folder larger than one place opens up on the
+screen as a card with its apps in it, two small icons to a place; the
+last place shows how many more there are. Adding shortcuts and folders is
+offered but not yet done. Home returns to the home screen.
 
 Gestures: a pull upward anywhere on the screens draws the list of every
 application after the finger, and a pull downward on the list at its top
@@ -70,7 +79,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.14.0
+  sh build.sh ellipse-1.15.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
