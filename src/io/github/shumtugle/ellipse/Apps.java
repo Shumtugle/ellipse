@@ -38,12 +38,15 @@ final class Apps {
         private Drawable icon;
         /** A time to sort by, when the order asks for one. */
         long when;
+        /** When it came to the phone. */
+        final long installed;
 
         Door(LauncherActivityInfo info, int density) {
             this.info = info;
             this.density = density;
             name = info.getComponentName();
             user = info.getUser();
+            installed = info.getFirstInstallTime();
             CharSequence named = info.getLabel();
             label = named == null ? "" : named;
         }

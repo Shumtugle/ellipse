@@ -459,6 +459,63 @@ final class Drawer extends FrameLayout {
         }
     }
 
+    /** The height it travels when drawn by the finger: the whole floor. */
+    private float travel() {
+        View floor = (View) getParent();
+        return floor == null ? getHeight() : floor.getHeight();
+    }
+
+    /**
+     * Whether a pull downward should close it rather than scroll: pages
+     * always stand at the top; lines only when the first one is in full view.
+     */
+    boolean atTop() {
+        if (view == Keep.PAGES || list.getChildCount() == 0) {
+            return true;
+        }
+        return list.getFirstVisiblePosition() == 0
+            && list.getChildAt(0).getTop() >= list.getPaddingTop();
+    }
+
+    /** Readies to be drawn up by the finger, from below the screen, at the top of the alphabet. */
+    void begin() {
+        shown = true;
+        animate().cancel();
+        list.setSelection(0);
+        pager.show(0, false);
+        setAlpha(1f);
+        setTranslationY(travel());
+        setVisibility(VISIBLE);
+    }
+
+    /** How far it stands drawn, from nought, below the screen, to one, open. */
+    void drag(float drawn) {
+        drawn = drawn < 0f ? 0f : (drawn > 1f ? 1f : drawn);
+        setTranslationY((1f - drawn) * travel());
+    }
+
+    /** Let go: it goes on to open, or back down and away. */
+    void let(boolean open) {
+        animate().cancel();
+        if (open) {
+            shown = true;
+            animate().translationY(0f).alpha(1f).setDuration(Pace.ARRIVE)
+                .setInterpolator(Pace.EMPHASIS).withEndAction(null).start();
+            return;
+        }
+        shown = false;
+        forget();
+        animate().translationY(travel()).setDuration(Pace.ARRIVE / 2)
+            .setInterpolator(Pace.EMPHASIS).withEndAction(new Runnable() {
+                public void run() {
+                    if (!shown) {
+                        setVisibility(GONE);
+                        setTranslationY(0f);
+                    }
+                }
+            }).start();
+    }
+
     /** Rises from the foot of the screen, always from the top of the alphabet. */
     void rise() {
         if (shown) {

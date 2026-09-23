@@ -19,11 +19,18 @@ the list's menu: the list stands A to Z, newest first, or most recently
 updated first, and either runs down in lines or across in pages of four
 by five icons with their names.
 
-Screens stand side by side and turn sideways, with points under them and
-a ring round the home one. A long press on a screen opens its menu beside
+Three screens stand side by side from the start, the middle one home;
+they turn sideways, with points under them and a ring round the home one. A long press on a screen opens its menu beside
 the finger: add a screen, and on any screen but the home one, make it the
 home screen. Adding shortcuts, widgets and folders is offered but not yet
 done. Home returns to the home screen.
+
+Gestures: a pull upward anywhere on the screens draws the list of every
+application after the finger, and a pull downward on the list at its top
+puts it back. Back on bare screens lowers what is fresh — the applications
+last opened from here and those installed or updated in the last two weeks,
+each marked new or updated — and a push upward sends it away. An icon
+carried to a side edge and held there turns the screens.
 
 There are no settings and no folders yet, and what is set down cannot yet be moved or taken off. They return
 one at a time.
@@ -36,7 +43,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.6.0
+  sh build.sh ellipse-1.7.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

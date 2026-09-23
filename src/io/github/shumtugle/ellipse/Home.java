@@ -36,7 +36,16 @@ import java.util.Set;
  * Screens side by side: the wallpaper in a rounded window with a grid of
  * four by five inside it, turned sideways, and under it the bar, which is
  * the dock: four places and the round button that opens the list of every
- * application. A long press on a screen opens its menu beside the finger. What stands on the screen is what the
+ * application. A long press on a screen opens its menu beside the finger.
+ *
+ * The hand: a pull upward anywhere on the screens draws the list of every
+ * application after the finger, and a pull downward on the list, while it
+ * stands at its top, puts it back; let go, a throw decides by its
+ * direction and a slow pull by whether it went more than half way. Back
+ * on bare screens lowers what is fresh, which a push upward sends away.
+ * Home closes whatever lies open, and on bare screens returns to the home
+ * one. An icon carried to the edge of the screen and held there turns the
+ * screens under it. What stands on the screen is what the
  * phone itself keeps for each everyday role; nothing is moved, nothing is
  * saved, nothing is set. Everything else arrives later, one thing at a time.
  */
@@ -73,6 +82,17 @@ public final class Home extends Activity {
     private final List<Grid> pages = new ArrayList<>();
     private Grid grid;
     private Menu menu;
+    private Fresh fresh;
+    /** What a vertical pull is doing, while one is under way. */
+    private int pull;
+    private static final int PULL_OPEN = 1;
+    private static final int PULL_CLOSE = 2;
+    private static final int PULL_FRESH = 3;
+    /** How long a thing put on the phone or changed counts as fresh. */
+    private static final long FRESH_FOR = 14L * 24L * 60L * 60L * 1000L;
+    /** How long a carried icon waits at the edge before the screens turn. */
+    private static final long EDGE_WAIT = 550L;
+    private int edgeWay;
     private Grid dock;
     private LinearLayout bar;
     private Blob blob;
@@ -107,6 +127,7 @@ public final class Home extends Activity {
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         Tone.read(this);
+        Keep.settle(this);
         glass();
         build();
         fill();
@@ -144,6 +165,7 @@ public final class Home extends Activity {
            the application was picked from. */
         drawer.sink(false);
         menu.hide(false);
+        fresh.close(false);
     }
 
     @Override
@@ -166,6 +188,10 @@ public final class Home extends Activity {
             drawer.sink(true);
             return;
         }
+        if (fresh.shown()) {
+            fresh.close(true);
+            return;
+        }
         /* Home on the home screen, nothing standing over it: back to the
            screen Home belongs to. */
         screens.show(Keep.home(this), true);
@@ -185,7 +211,17 @@ public final class Home extends Activity {
             drawer.shutMenu(true);
             return;
         }
-        drawer.sink(true);
+        if (drawer.shown()) {
+            drawer.sink(true);
+            return;
+        }
+        if (fresh.shown()) {
+            fresh.close(true);
+            return;
+        }
+        if (lift == null) {
+            showFresh();
+        }
     }
 
     // ----------------------------------------------------------- window
@@ -238,6 +274,7 @@ public final class Home extends Activity {
                 frame.setPadding(left, top, right, bottom);
                 drawer.setPadding(left, 0, right, 0);
                 drawer.inset(top, keys);
+                fresh.inset(top);
                 return insets;
             }
         });
@@ -277,6 +314,7 @@ public final class Home extends Activity {
         boolean was = drawer != null && drawer.shown();
         root = new Floor(this);
         root.carrier(carrier);
+        root.hand(pulling);
         frame = new Frame(this, dp(24));
         root.addView(frame, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -343,6 +381,18 @@ public final class Home extends Activity {
         root.addView(drawer, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         drawer.order(Keep.order(this), Keep.view(this));
+
+        fresh = new Fresh(this, iconSize, new Fresh.Hand() {
+            public void open(View from, Apps.Door door, int[] icon) {
+                launch(from, door, icon);
+            }
+
+            public void lift(View from, Apps.Door door, int[] icon) {
+                pick(from, door, icon, root.fingerX() + rootLeft(), root.fingerY() + rootTop());
+            }
+        });
+        root.addView(fresh, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         menu = new Menu(this, root, new Menu.Listener() {
             public void picked(int section, int key) {
@@ -447,6 +497,7 @@ public final class Home extends Activity {
         }
         grid = pages.get(0);
 
+        int roles = Math.min(Keep.roles(this), pages.size() - 1);
         boolean[][] held = new boolean[COLUMNS][ROWS];
         for (Keep.Spot spot : spots) {
             if (spot.x < 0 || spot.y < 0 || spot.x >= COLUMNS || spot.y >= ROWS) {
@@ -457,7 +508,7 @@ public final class Home extends Activity {
                 continue;
             }
             place(pages.get(spot.screen), door, spot.x, spot.y, true);
-            if (spot.screen == 0) {
+            if (spot.screen == roles) {
                 held[spot.x][spot.y] = true;
             }
             taken.add(spot.name.getPackageName());
@@ -472,7 +523,7 @@ public final class Home extends Activity {
         for (int r = 0; r < rows.length; r++) {
             for (int c = 0; c < rows[r].length; c++) {
                 if (rows[r][c] != null && !held[c][first + r]) {
-                    place(pages.get(0), found.role(rows[r][c], taken), c, first + r, true);
+                    place(pages.get(roles), found.role(rows[r][c], taken), c, first + r, true);
                 }
             }
         }
@@ -582,6 +633,7 @@ public final class Home extends Activity {
         try {
             ((LauncherApps) getSystemService(LAUNCHER_APPS_SERVICE))
                 .startMainActivity(door.name, door.user, bounds, grow);
+            Keep.opened(this, door.name);
         } catch (RuntimeException gone) {
             refuse(from);
             later();
@@ -668,7 +720,12 @@ public final class Home extends Activity {
         growing.start();
 
         from.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-        drawer.swallow(x, y);
+        if (drawer.shown()) {
+            drawer.swallow(x, y);
+        }
+        if (fresh.shown()) {
+            fresh.close(true);
+        }
         grid.carrying(true);
         hold(x, y);
     }
@@ -680,6 +737,7 @@ public final class Home extends Activity {
         }
         fingerX = x;
         fingerY = y;
+        edge(x);
         float cx = x;
         float cy = y - above();
         if (growing == null || !growing.isRunning()) {
@@ -715,6 +773,7 @@ public final class Home extends Activity {
         lift = null;
         carried = null;
         landing = null;
+        edge(-1f);
         if (growing != null) {
             growing.cancel();
             growing = null;
@@ -753,6 +812,159 @@ public final class Home extends Activity {
             }).start();
         grid.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
     }
+
+    // ------------------------------------------------------------- edges
+
+    private float rootLeft() {
+        int[] at = new int[2];
+        root.getLocationOnScreen(at);
+        return at[0];
+    }
+
+    private float rootTop() {
+        int[] at = new int[2];
+        root.getLocationOnScreen(at);
+        return at[1];
+    }
+
+    /**
+     * A carried icon near a side edge waits there a moment, then the
+     * screens turn toward that side; still held there, they go on turning.
+     */
+    private void edge(float x) {
+        int way = 0;
+        float band = dp(28);
+        if (x >= 0f && lift != null) {
+            if (x < band) {
+                way = -1;
+            } else if (x > root.getWidth() - band) {
+                way = 1;
+            }
+        }
+        if (way == edgeWay) {
+            return;
+        }
+        edgeWay = way;
+        main.removeCallbacks(turnAtEdge);
+        if (way != 0) {
+            main.postDelayed(turnAtEdge, EDGE_WAIT);
+        }
+    }
+
+    private final Runnable turnAtEdge = new Runnable() {
+        public void run() {
+            if (lift == null || edgeWay == 0) {
+                return;
+            }
+            int to = screens.page() + edgeWay;
+            if (to < 0 || to >= pages.size()) {
+                return;
+            }
+            grid.carrying(false);
+            grid.target(null);
+            screens.show(to, true);
+            grid = pages.get(to);
+            grid.carrying(true);
+            landing = null;
+            grid.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+            hold(fingerX, fingerY);
+            main.postDelayed(this, EDGE_WAIT + Pace.ARRIVE);
+        }
+    };
+
+    // ------------------------------------------------------------ fresh
+
+    /**
+     * Lowers what is fresh: up to eight applications last opened from here,
+     * and up to twelve put on the phone or changed in the last two weeks,
+     * the newest first, each with a word about it.
+     */
+    private void showFresh() {
+        Apps found = new Apps(this);
+        List<Apps.Door> recent = new ArrayList<>();
+        for (android.content.ComponentName name : Keep.recent(this)) {
+            Apps.Door door = found.door(name);
+            if (door != null) {
+                recent.add(door);
+            }
+        }
+        long since = System.currentTimeMillis() - FRESH_FOR;
+        List<Apps.Door> lately = new ArrayList<>();
+        List<String> notes = new ArrayList<>();
+        android.content.pm.PackageManager manager = getPackageManager();
+        for (Apps.Door door : found.all(Keep.UPDATED)) {
+            if (door.when < since || lately.size() >= 12) {
+                continue;
+            }
+            String note = door.installed >= since ? "new" : "updated";
+            String owner = door.name.getPackageName();
+            try {
+                if (manager.checkSignatures(getPackageName(), owner)
+                    == android.content.pm.PackageManager.SIGNATURE_MATCH) {
+                    note = note + "  " + manager.getPackageInfo(owner, 0).versionName;
+                }
+            } catch (Exception unknown) {
+                // A version that cannot be read is simply not said.
+            }
+            lately.add(door);
+            notes.add(note);
+        }
+        fresh.show(recent, lately, notes);
+    }
+
+    // ------------------------------------------------------------- pull
+
+    /** Whom a vertical pull serves, decided once, when it begins. */
+    private final Floor.Hand pulling = new Floor.Hand() {
+        public boolean pullable(boolean up) {
+            pull = 0;
+            if (lift != null || menu.shown() || drawer.menuShown()) {
+                return false;
+            }
+            if (fresh.shown()) {
+                if (up) {
+                    pull = PULL_FRESH;
+                }
+            } else if (drawer.shown()) {
+                if (!up && drawer.atTop()) {
+                    pull = PULL_CLOSE;
+                }
+            } else if (up) {
+                pull = PULL_OPEN;
+                drawer.begin();
+            }
+            return pull != 0;
+        }
+
+        public void pulled(float by) {
+            float tall = Math.max(1f, root.getHeight());
+            if (pull == PULL_OPEN) {
+                drawer.drag(-by / tall);
+            } else if (pull == PULL_CLOSE) {
+                drawer.drag(1f - by / tall);
+            } else if (pull == PULL_FRESH) {
+                fresh.drag(1f + by / Math.max(1f, fresh.sheetHeight()));
+            }
+        }
+
+        public void released(float by, float speed) {
+            float tall = Math.max(1f, root.getHeight());
+            float throwing = android.view.ViewConfiguration.get(Home.this)
+                .getScaledMinimumFlingVelocity() * 6f;
+            if (pull == PULL_OPEN) {
+                boolean open = speed < -throwing || (speed <= throwing && -by / tall > 0.5f);
+                drawer.let(open);
+            } else if (pull == PULL_CLOSE) {
+                boolean close = speed > throwing || (speed >= -throwing && by / tall > 0.5f);
+                drawer.let(!close);
+            } else if (pull == PULL_FRESH) {
+                boolean away = speed < -throwing
+                    || -by > Math.max(1f, fresh.sheetHeight()) * 0.25f;
+                fresh.let(away);
+            }
+            pull = 0;
+        }
+    };
 
     // ----------------------------------------------------------- motion
 

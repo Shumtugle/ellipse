@@ -33,6 +33,11 @@ final class Keep {
     private static final String VIEW = "view";
     private static final String SCREENS = "screens";
     private static final String HOME = "home";
+    private static final String ROLES = "roles";
+    private static final String SHAPE = "shape";
+    private static final String RECENT = "recent";
+    /** How many applications opened from here are remembered. */
+    private static final int RECENT_KEPT = 8;
 
     /** How the list of every application is laid out: lines down, or pages across. */
     static final int LINES = 0;
@@ -67,9 +72,68 @@ final class Keep {
         store(context).edit().putInt(VIEW, view).apply();
     }
 
+    /**
+     * Brings what an earlier version kept into today's shape, once. A first
+     * start, or a phone that never added a screen, gets three screens with
+     * the middle one as home, and whatever stood on the single screen moves
+     * onto that middle one.
+     */
+    static void settle(Context context) {
+        SharedPreferences kept = store(context);
+        if (kept.getInt(SHAPE, 0) >= 1) {
+            return;
+        }
+        SharedPreferences.Editor edit = kept.edit();
+        if (!kept.contains(SCREENS)) {
+            StringBuilder out = new StringBuilder();
+            for (Spot spot : placed(context)) {
+                out.append(spot.screen + 1).append('\t').append(spot.x).append('\t')
+                    .append(spot.y).append('\t').append(spot.name.flattenToString()).append('\n');
+            }
+            edit.putString(PLACED, out.toString());
+            edit.putInt(SCREENS, 3).putInt(HOME, 1).putInt(ROLES, 1);
+        } else {
+            edit.putInt(ROLES, 0);
+        }
+        edit.putInt(SHAPE, 1).commit();
+    }
+
     /** How many screens stand side by side; never fewer than one. */
     static int screens(Context context) {
-        return Math.max(1, store(context).getInt(SCREENS, 1));
+        return Math.max(1, store(context).getInt(SCREENS, 3));
+    }
+
+    /** The screen the everyday roles stand on: where home was when they were first set out. */
+    static int roles(Context context) {
+        int roles = store(context).getInt(ROLES, 1);
+        return roles < 0 || roles >= screens(context) ? 0 : roles;
+    }
+
+    /** The applications last opened from here, the latest first. */
+    static List<ComponentName> recent(Context context) {
+        List<ComponentName> list = new ArrayList<>();
+        for (String line : store(context).getString(RECENT, "").split("\n")) {
+            ComponentName name = ComponentName.unflattenFromString(line);
+            if (name != null) {
+                list.add(name);
+            }
+        }
+        return list;
+    }
+
+    static void opened(Context context, ComponentName name) {
+        StringBuilder out = new StringBuilder(name.flattenToString());
+        int count = 1;
+        for (ComponentName was : recent(context)) {
+            if (count >= RECENT_KEPT) {
+                break;
+            }
+            if (!was.equals(name)) {
+                out.append('\n').append(was.flattenToString());
+                count++;
+            }
+        }
+        store(context).edit().putString(RECENT, out.toString()).apply();
     }
 
     static void saveScreens(Context context, int count) {
@@ -78,7 +142,7 @@ final class Keep {
 
     /** Which screen Home returns to, counted from the left. */
     static int home(Context context) {
-        int home = store(context).getInt(HOME, 0);
+        int home = store(context).getInt(HOME, 1);
         return home < 0 || home >= screens(context) ? 0 : home;
     }
 

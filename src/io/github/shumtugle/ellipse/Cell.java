@@ -23,6 +23,9 @@ final class Cell extends View {
     private final float iconSize;
     private final float gap;
     private CharSequence shown = "";
+    /** A quiet second line under the name, when there is one. */
+    private String note;
+    private final TextPaint small = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
     Cell(Context context, Apps.Door door, float iconSize, boolean named) {
         super(context);
@@ -38,8 +41,18 @@ final class Cell extends View {
         /* The names stand on the wallpaper, whatever it is; a soft dark
            halo keeps them legible on a white sky without a plate behind. */
         words.setShadowLayer(3f * density, 0f, 0.75f * density, 0x99000000);
+        small.setTextSize(11f * scaled);
+        small.setTextAlign(Paint.Align.CENTER);
+        small.setColor(Tone.primary());
         setClickable(true);
         setContentDescription(door.label);
+    }
+
+    /** Sets a quiet line under the name, in the accent: a word about the application. */
+    Cell note(String note) {
+        this.note = note;
+        invalidate();
+        return this;
     }
 
     /** How tall the name under an icon stands, with the air above it. */
@@ -55,6 +68,9 @@ final class Cell extends View {
         float tall = iconSize;
         if (named) {
             tall += gap - words.ascent() + words.descent();
+        }
+        if (note != null) {
+            tall += -small.ascent() + small.descent();
         }
         return (getHeight() - tall) / 2f;
     }
@@ -114,8 +130,14 @@ final class Cell extends View {
             icon.draw(canvas);
         }
         if (named) {
-            canvas.drawText(shown, 0, shown.length(), getWidth() / 2f,
-                y + iconSize + gap - words.ascent(), words);
+            float base = y + iconSize + gap - words.ascent();
+            canvas.drawText(shown, 0, shown.length(), getWidth() / 2f, base, words);
+            if (note != null) {
+                CharSequence cut = TextUtils.ellipsize(note, small, getWidth() - gap,
+                    TextUtils.TruncateAt.END);
+                canvas.drawText(cut, 0, cut.length(), getWidth() / 2f,
+                    base + words.descent() - small.ascent(), small);
+            }
         }
     }
 }
