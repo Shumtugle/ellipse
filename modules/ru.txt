@@ -393,5 +393,29 @@ look_default	По умолчанию
 # Dock
 dock	Док
 
+# Fields
+well	Поля
+
+# Round
+well_circle	Круглое
+
+# How solid
+density	Плотность
+
+# Soft box
+face_round	Мягкая коробка
+
+# Squircle
+face_squircle	Сквиркл
+
+# Like the tile
+face_tile	Как плитка
+
+# As everywhere
+ink_same	Как везде
+
+# Its own
+ink_own	Свой
+
 # Along the foot
 dock_on	Внизу

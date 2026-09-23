@@ -393,5 +393,29 @@ look_default
 # Dock
 dock	
 
+# Fields
+well	
+
+# Round
+well_circle	
+
+# How solid
+density	
+
+# Soft box
+face_round	
+
+# Squircle
+face_squircle	
+
+# Like the tile
+face_tile	
+
+# As everywhere
+ink_same	
+
+# Its own
+ink_own	
+
 # Along the foot
 dock_on	

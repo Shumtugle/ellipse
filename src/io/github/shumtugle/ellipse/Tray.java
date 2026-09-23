@@ -50,7 +50,9 @@ final class Tray extends FrameLayout {
         card.setOrientation(LinearLayout.VERTICAL);
         card.setClickable(true);
         card.setPadding(Round.dp(12f), Round.dp(20f), Round.dp(12f), Round.dp(16f));
-        card.setBackground(Round.box(Tone.of(Tone.SURFACE_CONTAINER), Round.XL));
+        // A folder lies on a field: the same ground everything of its kind
+        // lies on, so one setting dresses them all.
+        card.setBackground(Well.back(Well.of(context), Keep.tile(context), Round.XL));
         card.setElevation(Round.px(6f));
 
         TextView title = Letter.set(new TextView(context), Letter.TITLE_L);

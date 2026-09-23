@@ -150,6 +150,14 @@ public final class Words {
         "look_mine",
         "look_default",
         "dock",
+        "well",
+        "well_circle",
+        "density",
+        "face_round",
+        "face_squircle",
+        "face_tile",
+        "ink_same",
+        "ink_own",
         "dock_on",
     };
 
@@ -284,6 +292,14 @@ public final class Words {
         "My own",
         "Default",
         "Dock",
+        "Fields",
+        "Round",
+        "How solid",
+        "Soft box",
+        "Squircle",
+        "Like the tile",
+        "As everywhere",
+        "Its own",
         "Along the foot",
     };
 

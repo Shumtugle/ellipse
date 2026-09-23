@@ -197,6 +197,9 @@ public final class Keep {
         o.put("door", door(context));
         o.put("dock", dock(context));
         o.put("flat", flat(context));
+        o.put("well_shape", well(context).shape);
+        o.put("well_hue", well(context).hue);
+        o.put("well_dense", (double) well(context).dense);
         o.put("night", night(context));
         return o;
     }
@@ -204,7 +207,7 @@ public final class Keep {
     /** Settings brought back from a file; what the file does not name stays as it is. */
     static void restore(Context context, JSONObject o) {
         SharedPreferences.Editor edit = store(context).edit();
-        for (String key : new String[] {"hue", "rich", "power", "ratio", "zoom", "thick"}) {
+        for (String key : new String[] {"hue", "rich", "power", "ratio", "zoom", "thick", "well_dense"}) {
             if (o.has(key)) {
                 edit.putFloat(key, (float) o.optDouble(key));
             }
@@ -214,7 +217,7 @@ public final class Keep {
                 edit.putBoolean(key, o.optBoolean(key));
             }
         }
-        for (String key : new String[] {"rim", "order", "immersion", "window", "door", "night"}) {
+        for (String key : new String[] {"rim", "order", "immersion", "window", "door", "night", "well_shape", "well_hue"}) {
             if (o.has(key)) {
                 edit.putInt(key, o.optInt(key));
             }
@@ -320,6 +323,24 @@ public final class Keep {
 
     static void saveNight(Context context, int wish) {
         mark(store(context).edit().putInt("night", wish), context);
+    }
+
+    // ---------------------------------------------------------------- fields
+
+    /**
+     * The ground a piece of content lies on: its shape, a hue of the
+     * owner's own or none, and how solid it stands. One field is kept for
+     * everything that has one.
+     */
+    static Well.Look well(Context context) {
+        SharedPreferences kept = store(context);
+        return new Well.Look(kept.getInt("well_shape", Well.ROUNDED), kept.getInt("well_hue", -1),
+            kept.getFloat("well_dense", 1f));
+    }
+
+    static void saveWell(Context context, Well.Look look) {
+        mark(store(context).edit().putInt("well_shape", look.shape).putInt("well_hue", look.hue)
+            .putFloat("well_dense", look.dense), context);
     }
 
     // ---------------------------------------------------------------- flat
