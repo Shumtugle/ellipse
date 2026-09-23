@@ -14,7 +14,9 @@ The round button, marked with six dots, brings up every application, by name, on
 line, on plain black, with a field at the foot to narrow the list. Held
 long, a line gives its icon to the finger; the list closes into the
 fingertip, and the icon is set down in any free place of the grid.
-Back or Home puts the list away; its round button, with three dots, will be its menu.
+Back or Home puts the list away. Its round button, with three dots, opens
+the list's menu: the list stands A to Z, newest first, or most recently
+updated first.
 
 There are no settings and no folders yet, and what is set down cannot yet be moved or taken off. They return
 one at a time.
@@ -27,7 +29,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.3.1
+  sh build.sh ellipse-1.4.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

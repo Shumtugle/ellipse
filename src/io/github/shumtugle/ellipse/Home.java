@@ -155,9 +155,16 @@ public final class Home extends Activity {
         drawer.sink(true);
     }
 
-    /** Back closes the list; there is nowhere further back than the home screen. */
+    /**
+     * Back closes the menu of the list, then the list; there is nowhere
+     * further back than the home screen.
+     */
     @Override
     public void onBackPressed() {
+        if (drawer.menuShown()) {
+            drawer.shutMenu(true);
+            return;
+        }
         drawer.sink(true);
     }
 
@@ -306,14 +313,14 @@ public final class Home extends Activity {
                 pick(row, rawX, rawY);
             }
 
-            /* The menu of the list has nothing in it yet: it answers with
-               the phone's own short no until it does. */
-            public void menu(View from) {
-                refuse(from);
+            public void order(int order) {
+                Keep.saveOrder(Home.this, order);
+                drawer.reorder(new Apps(Home.this).all(order));
             }
         });
         root.addView(drawer, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        drawer.order(Keep.order(this));
         if (was) {
             drawer.rise();
         }
@@ -414,7 +421,7 @@ public final class Home extends Activity {
                 }
             }
         }
-        drawer.fill(found.all());
+        drawer.fill(found.all(Keep.order(this)));
     }
 
     private void place(Grid into, Apps.Door door, int column, int row, boolean named) {

@@ -27,12 +27,27 @@ final class Keep {
     }
 
     private static final String PLACED = "placed";
+    private static final String ORDER = "order";
+
+    /** The orders the list of every application can stand in. */
+    static final int BY_NAME = 0;
+    static final int NEWEST = 1;
+    static final int UPDATED = 2;
 
     private Keep() {
     }
 
     private static SharedPreferences store(Context context) {
         return context.getSharedPreferences("ellipse", Context.MODE_PRIVATE);
+    }
+
+    static int order(Context context) {
+        int kept = store(context).getInt(ORDER, BY_NAME);
+        return kept < BY_NAME || kept > UPDATED ? BY_NAME : kept;
+    }
+
+    static void saveOrder(Context context, int order) {
+        store(context).edit().putInt(ORDER, order).apply();
     }
 
     /** One line per spot: column, row and the door, apart by tabs. */

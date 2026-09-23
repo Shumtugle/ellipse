@@ -36,6 +36,8 @@ final class Apps {
         private final LauncherActivityInfo info;
         private final int density;
         private Drawable icon;
+        /** A time to sort by, when the order asks for one. */
+        long when;
 
         Door(LauncherActivityInfo info, int density) {
             this.info = info;
@@ -92,20 +94,36 @@ final class Apps {
     }
 
     /**
-     * Every application with a front door, by name, the way the reader's
-     * own language orders its alphabet.
+     * Every application with a front door, in the order asked for: by name,
+     * the way the reader's own language orders its alphabet; by when it came
+     * to the phone, newest first; or by when it last changed, freshest
+     * first. Equal times fall back on the name.
      */
-    List<Door> all() {
+    List<Door> all(final int order) {
         int density = context.getResources().getDisplayMetrics().densityDpi;
         List<Door> list = new ArrayList<>();
         for (LauncherActivityInfo info : every) {
-            list.add(new Door(info, density));
+            Door door = new Door(info, density);
+            if (order == Keep.NEWEST) {
+                door.when = info.getFirstInstallTime();
+            } else if (order == Keep.UPDATED) {
+                try {
+                    door.when = manager.getPackageInfo(
+                        info.getComponentName().getPackageName(), 0).lastUpdateTime;
+                } catch (PackageManager.NameNotFoundException gone) {
+                    door.when = 0L;
+                }
+            }
+            list.add(door);
         }
-        final Collator order = Collator.getInstance();
-        order.setStrength(Collator.SECONDARY);
+        final Collator names = Collator.getInstance();
+        names.setStrength(Collator.SECONDARY);
         Collections.sort(list, new Comparator<Door>() {
             public int compare(Door a, Door b) {
-                return order.compare(a.label.toString().trim(), b.label.toString().trim());
+                if (order != Keep.BY_NAME && a.when != b.when) {
+                    return a.when > b.when ? -1 : 1;
+                }
+                return names.compare(a.label.toString().trim(), b.label.toString().trim());
             }
         });
         return list;

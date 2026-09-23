@@ -48,12 +48,16 @@ final class Drawer extends FrameLayout {
         /** A line was held: its icon is to be carried from a point of the screen. */
         void lift(Row row, float rawX, float rawY);
 
-        /** The list's own menu was asked for. */
-        void menu(View from);
+        /** Another order was chosen in the list's menu. */
+        void order(int order);
     }
 
     private static final String SEARCH = "Search";
     private static final String MENU = "Menu";
+    private static final String SORT = "Sort";
+    /** The orders, in the order the menu offers them. */
+    private static final String[] ORDERS = {"A to Z", "Newest first", "Recently updated"};
+    private static final int[] ORDER_KEYS = {Keep.BY_NAME, Keep.NEWEST, Keep.UPDATED};
 
     private final Opener opener;
     private final ListView list;
@@ -67,6 +71,14 @@ final class Drawer extends FrameLayout {
     private List<Apps.Door> every = new ArrayList<>();
     private List<Apps.Door> doors = new ArrayList<>();
     private boolean shown;
+    /** The menu: a card that grows out of the round button, and the veil that closes it. */
+    private final View veil;
+    private final LinearLayout card;
+    private final TextView caption;
+    private final TextView[] choices = new TextView[ORDERS.length];
+    private boolean menu;
+    private int order;
+    private android.animation.ValueAnimator turning;
     private float downX;
     private float downY;
 
@@ -171,7 +183,11 @@ final class Drawer extends FrameLayout {
         blob.setContentDescription(MENU);
         blob.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                opener.menu(v);
+                if (menu) {
+                    shutMenu(true);
+                } else {
+                    openMenu();
+                }
             }
         });
         bar.addView(blob);
@@ -180,7 +196,175 @@ final class Drawer extends FrameLayout {
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         barParams.setMargins(dp(8), dp(6), dp(8), dp(10));
         column.addView(bar, barParams);
+
+        veil = new View(context);
+        veil.setVisibility(GONE);
+        veil.setClickable(true);
+        veil.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                shutMenu(true);
+            }
+        });
+        addView(veil, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+
+        card = new LinearLayout(context);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(8), dp(14), dp(8), dp(8));
+        card.setElevation(dp(6));
+        card.setVisibility(GONE);
+        card.setClickable(true);
+
+        caption = new TextView(context);
+        caption.setText(SORT.toUpperCase(java.util.Locale.ROOT));
+        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scaled);
+        caption.setLetterSpacing(0.12f);
+        caption.setPadding(dp(16), 0, dp(16), dp(8));
+        card.addView(caption);
+
+        for (int i = 0; i < ORDERS.length; i++) {
+            final int key = ORDER_KEYS[i];
+            TextView choice = new TextView(context);
+            choice.setText(ORDERS[i]);
+            choice.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
+            choice.setSingleLine(true);
+            choice.setGravity(Gravity.CENTER_VERTICAL);
+            choice.setPadding(dp(16), dp(13), dp(16), dp(13));
+            choice.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    choose(key);
+                }
+            });
+            LinearLayout.LayoutParams choiceParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            choiceParams.topMargin = dp(2);
+            card.addView(choice, choiceParams);
+            choices[i] = choice;
+        }
+        addView(card, new LayoutParams(dp(248), LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM | Gravity.END));
         tint();
+    }
+
+    /** The order the list stands in now, as the menu marks it. */
+    void order(int order) {
+        this.order = order;
+        mark();
+    }
+
+    /** The chosen order wears the accent; the others stay plain. */
+    private void mark() {
+        for (int i = 0; i < choices.length; i++) {
+            boolean on = ORDER_KEYS[i] == order;
+            int fill = on ? ((0x2E << 24) | (Tone.primary() & 0x00FFFFFF)) : 0x00000000;
+            choices[i].setBackground(Tone.touch(Tone.box(fill, dp(20), 0f), dp(20)));
+            choices[i].setTextColor(on ? Tone.primary() : Tone.onSurface());
+        }
+    }
+
+    boolean menuShown() {
+        return menu;
+    }
+
+    /**
+     * The card grows out of the round button, the three marks of which
+     * draw together into a cross as it does; its lines follow one after
+     * another, like icons arriving on the screen.
+     */
+    private void openMenu() {
+        if (menu) {
+            return;
+        }
+        menu = true;
+        hideKeys();
+        mark();
+        LayoutParams params = (LayoutParams) card.getLayoutParams();
+        params.bottomMargin = getHeight() - bar.getTop() + dp(8);
+        params.rightMargin = dp(8);
+        card.setLayoutParams(params);
+        card.measure(MeasureSpec.makeMeasureSpec(dp(248), MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+        /* The pivot is the centre of the button, below the card and near
+           its right edge, so the card seems to come out of the button. */
+        float blobFromRight = getWidth() - getPaddingRight() - dp(8)
+            - (column.getLeft() + bar.getLeft() + blob.getLeft() + blob.getWidth() / 2f);
+        card.setPivotX(dp(248) - blobFromRight);
+        card.setPivotY(card.getMeasuredHeight() + dp(8) + bar.getHeight() / 2f);
+        card.setVisibility(VISIBLE);
+        veil.setVisibility(VISIBLE);
+        card.animate().cancel();
+        card.setAlpha(0f);
+        card.setScaleX(0.2f);
+        card.setScaleY(0.2f);
+        card.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(Pace.ARRIVE)
+            .setInterpolator(Pace.EMPHASIS).withEndAction(null).start();
+        for (int i = 0; i < card.getChildCount(); i++) {
+            View line = card.getChildAt(i);
+            line.animate().cancel();
+            line.setAlpha(0f);
+            line.setTranslationY(dp(10));
+            line.animate().alpha(1f).translationY(0f).setStartDelay(Pace.STEP * (i + 1))
+                .setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
+        }
+        turn(1f);
+    }
+
+    /** Back into the button it came from; at once, when nobody is looking. */
+    void shutMenu(boolean slowly) {
+        if (!menu) {
+            return;
+        }
+        menu = false;
+        veil.setVisibility(GONE);
+        card.animate().cancel();
+        if (!slowly) {
+            card.setVisibility(GONE);
+            if (turning != null) {
+                turning.cancel();
+            }
+            blob.open(0f);
+            return;
+        }
+        card.animate().alpha(0f).scaleX(0.2f).scaleY(0.2f).setDuration(Pace.ARRIVE / 2)
+            .setInterpolator(Pace.EMPHASIS).withEndAction(new Runnable() {
+                public void run() {
+                    if (!menu) {
+                        card.setVisibility(GONE);
+                    }
+                }
+            }).start();
+        turn(0f);
+    }
+
+    private void turn(float to) {
+        if (turning != null) {
+            turning.cancel();
+        }
+        final float from = to > 0.5f ? 0f : 1f;
+        turning = android.animation.ValueAnimator.ofFloat(from, to);
+        turning.setDuration(to > 0.5f ? Pace.ARRIVE : Pace.ARRIVE / 2);
+        turning.setInterpolator(Pace.EMPHASIS);
+        turning.addUpdateListener(new android.animation.ValueAnimator.AnimatorUpdateListener() {
+            public void onAnimationUpdate(android.animation.ValueAnimator animation) {
+                blob.open((Float) animation.getAnimatedValue());
+            }
+        });
+        turning.start();
+    }
+
+    /** The mark moves to the chosen line first, so the choice is seen, then the card goes. */
+    private void choose(int key) {
+        if (key == order) {
+            shutMenu(true);
+            return;
+        }
+        order = key;
+        mark();
+        opener.order(key);
+        postDelayed(new Runnable() {
+            public void run() {
+                shutMenu(true);
+            }
+        }, Pace.STEP * 3);
     }
 
     private int dp(float value) {
@@ -214,6 +398,15 @@ final class Drawer extends FrameLayout {
     void fill(List<Apps.Door> doors) {
         this.every = doors;
         narrow(field.getText().toString());
+    }
+
+    /** The same list in another order: the lines are let in again from the top. */
+    void reorder(List<Apps.Door> doors) {
+        fill(doors);
+        list.setAlpha(0f);
+        list.setTranslationY(dp(16));
+        list.animate().alpha(1f).translationY(0f).setDuration(Pace.ARRIVE)
+            .setInterpolator(Pace.EMPHASIS).start();
     }
 
     /** The list, narrowed to what the field holds: names that start with it first. */
@@ -257,6 +450,9 @@ final class Drawer extends FrameLayout {
             field.setTextCursorDrawable(caret);
         }
         blob.tint();
+        card.setBackground(Tone.box(Tone.containerHigh(), dp(28), dp(0.5f)));
+        caption.setTextColor(Tone.faint());
+        mark();
         for (int i = 0; i < list.getChildCount(); i++) {
             ((Row) list.getChildAt(i)).tint();
         }
@@ -277,6 +473,7 @@ final class Drawer extends FrameLayout {
 
     /** Emptied and put away, ready to be found at the top of the alphabet next time. */
     private void forget() {
+        shutMenu(false);
         hideKeys();
         if (field.getText().length() > 0) {
             field.setText("");
