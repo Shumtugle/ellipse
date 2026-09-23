@@ -288,8 +288,8 @@ no_entry	Этот экран не открывается снаружи
 # Remove
 remove	Убрать
 
-# Door
-put_door	Дверь
+# All applications
+put_door	Все приложения
 
 # Add screen
 add_screen	Новый экран

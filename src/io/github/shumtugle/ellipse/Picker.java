@@ -80,13 +80,6 @@ final class Picker extends FrameLayout {
         gripPlace.gravity = Gravity.CENTER_HORIZONTAL;
         sheet.addView(grip, gripPlace);
 
-        TextView title = Letter.set(new TextView(context), Letter.HEADLINE_M);
-        Letter.serif(title);
-        title.setText(Words.s("widgets"));
-        title.setTextColor(Tone.of(Tone.ON_SURFACE));
-        title.setPadding(Round.dp(8f), Round.dp(16f), Round.dp(8f), Round.dp(12f));
-        sheet.addView(title);
-
         final android.widget.EditText field = new android.widget.EditText(context);
         field.setSingleLine(true);
         field.setHint(Words.s("search"));
@@ -95,12 +88,14 @@ final class Picker extends FrameLayout {
         field.setBackground(Round.box(Tone.of(Tone.SURFACE_HIGH), Round.FULL));
         field.setPadding(Round.dp(20f), Round.dp(12f), Round.dp(20f), Round.dp(12f));
         field.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
-        sheet.addView(field, spaced(4));
 
         spread = new Spread(context);
         // The sheet is drawn up the whole way, and the leaves take whatever
         // is left under its head: the names then stand whole.
         sheet.addView(spread, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        // The line to look in stands at the foot, where the drawer keeps
+        // its own and where the hand already is.
+        sheet.addView(field, spaced(8));
 
         final PackageManager pm = context.getPackageManager();
         all = new ArrayList<AppWidgetProviderInfo>(offered);

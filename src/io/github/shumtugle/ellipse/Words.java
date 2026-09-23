@@ -249,7 +249,7 @@ public final class Words {
         "A press opens one; a long press sets it on a screen. Not every screen opens alone.",
         "This screen does not open from outside.",
         "Remove",
-        "Door",
+        "All applications",
         "Add screen",
         "Remove screen",
         "Main screen",
