@@ -1393,6 +1393,15 @@ public final class Tune extends Activity {
             }
         });
         card.addView(doors.view(), spaced(12));
+
+        // The button itself is set on a screen from here, since the card of
+        // the bare ground no longer offers it.
+        card.addView(button(Words.s("put_door"), false, new View.OnClickListener() {
+            public void onClick(View v) {
+                Keep.wantDoor(Tune.this);
+                finish();
+            }
+        }), spaced(20));
         return card;
     }
 

@@ -109,6 +109,16 @@ public final class Tone {
         return new float[] {(float) angle, Math.max(0f, Math.min(1f, richness))};
     }
 
+    /**
+     * What the scheme is made of, in a few characters: the seed, its
+     * richness and whether it is night. Anything kept between one drawing
+     * and the next — a tile already drawn, say — is kept under this as
+     * well, so a change of colour does not leave old pictures standing.
+     */
+    public static String stamp() {
+        return Math.round(hue) + ":" + Math.round(rich * 100f) + (night ? "n" : "d");
+    }
+
     /** Whether the scheme of the night stands: dark grounds, light ink. */
     public static boolean night() {
         return night;

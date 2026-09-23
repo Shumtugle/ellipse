@@ -386,6 +386,20 @@ public final class Keep {
 
     // ---------------------------------------------------------------- door
 
+    /** Asked for from the settings: the home screen sets the button down when it is next seen. */
+    static void wantDoor(Context context) {
+        mark(store(context).edit().putBoolean("want_door", true), context);
+    }
+
+    static boolean takeDoor(Context context) {
+        SharedPreferences kept = store(context);
+        boolean asked = kept.getBoolean("want_door", false);
+        if (asked) {
+            kept.edit().remove("want_door").apply();
+        }
+        return asked;
+    }
+
     /** Which face the door to the drawer wears: a whole icon of its own, or a mark behind glass. */
     static int door(Context context) {
         int face = store(context).getInt("door", Door.DEFAULT);

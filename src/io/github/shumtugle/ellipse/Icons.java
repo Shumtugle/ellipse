@@ -69,7 +69,7 @@ final class Icons {
 
     /** Any icon's tile into a view, under a name of the caller's choosing. */
     void put(final ImageView view, String name, final int width, final Source source) {
-        final String key = name + "@" + width + "@" + look.key();
+        final String key = name + "@" + width + "@" + look.key() + "@" + Tone.stamp();
         view.setTag(key);
         Bitmap ready = kept.get(key);
         if (ready != null) {

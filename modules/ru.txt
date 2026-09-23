@@ -306,6 +306,9 @@ remove	Убрать
 # All applications
 put_door	Все приложения
 
+# A folder
+put_folder	Папка
+
 # Add screen
 add_screen	Новый экран
 

@@ -264,6 +264,9 @@ public final class Home extends Activity {
                 }
             }
         });
+        if (Keep.takeDoor(this)) {
+            placeDoor();
+        }
         setContentView(stage);
         // Built anew, after the settings or a turn of the phone, the home
         // screen opens where it was left; started for the first time, on
@@ -1634,17 +1637,19 @@ public final class Home extends Activity {
 
     private void offerGround(final int screen, final int cx, final int cy) {
         final boolean empty = layout.screens.get(screen).items.isEmpty();
-        Offer offer = new Offer(this, stage)
-            .title(Words.s("screen_n").replace("{n}", String.valueOf(screen + 1)));
+        // The screen has a number, but nobody came here to read it.
+        Offer offer = new Offer(this, stage).title("");
         offer.tool(Sketch.GEAR, Words.s("settings"), new Runnable() {
             public void run() {
                 startActivity(new Intent(Home.this, Tune.class));
             }
         });
         if (layout.free(screen, cx, cy, 1, 1, null)) {
-            offer.row(Sketch.DRAWER, Words.s("put_door"), new Runnable() {
+            offer.row(Sketch.FOLDER_OPEN, Words.s("put_folder"), new Runnable() {
                 public void run() {
-                    layout.screens.get(screen).items.add(new Layout.Item(Layout.DOOR, cx, cy));
+                    Layout.Item made = new Layout.Item(Layout.FOLDER, cx, cy);
+                    made.label = Words.s("put_folder");
+                    layout.screens.get(screen).items.add(made);
                     layout.save(Home.this);
                     build();
                 }
@@ -1768,9 +1773,23 @@ public final class Home extends Activity {
     }
 
 
+    /** The button for the applications, asked for in the settings, set down where there is room. */
+    private void placeDoor() {
+        int page = board.page();
+        int[] spot = layout.nearest(page, layout.columns / 2, layout.rows - 1, 1, 1, null);
+        if (spot == null) {
+            return;
+        }
+        layout.screen(page).items.add(new Layout.Item(Layout.DOOR, spot[0], spot[1]));
+        layout.save(this);
+    }
+
     /** What a setting can change without the screen being made anew, read again and put on. */
     private void refresh() {
         built = Keep.stamp(this);
+        if (Keep.takeDoor(this)) {
+            placeDoor();
+        }
         Words.load(this);
         glass();
         edge = Keep.edge(this);

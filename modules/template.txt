@@ -306,6 +306,9 @@ remove
 # All applications
 put_door	
 
+# A folder
+put_folder	
+
 # Add screen
 add_screen	
 
