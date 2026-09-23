@@ -52,22 +52,22 @@ final class Drawer extends FrameLayout {
         /** Another order was chosen in the list's menu. */
         void order(int order);
 
-        /** Lines or pages were chosen in the list's menu. */
-        void view(int view);
+        /** The launcher's settings were asked for from the list's menu. */
+        void settings(View from);
     }
 
     private static final String SEARCH = "Search";
     private static final String MENU = "Menu";
-    /** The menu's sections, and in each the choices it offers, in the order they stand. */
-    private static final String[] SECTIONS = {"Sort", "View"};
-    private static final String[][] CHOICES = {
-        {"A to Z", "Newest first", "Recently updated"},
-        {"Lines", "Pages"}
-    };
-    private static final int[][] KEYS = {
-        {Keep.BY_NAME, Keep.NEWEST, Keep.UPDATED},
-        {Keep.LINES, Keep.PAGES}
-    };
+    /**
+     * The menu: the order, which is changed often and so stays at hand,
+     * and the way to the settings, where lines or pages and the rest are
+     * chosen once and left.
+     */
+    private static final String SORT = "Sort";
+    private static final String[] ORDERS = {"A to Z", "Newest first", "Recently updated"};
+    private static final int[] ORDER_KEYS = {Keep.BY_NAME, Keep.NEWEST, Keep.UPDATED};
+    private static final String[] AWAY = {"Settings"};
+    private static final int[] AWAY_KEYS = {0};
     /** The grid of a page, when the list is laid out across. */
     private int columns = 4;
     private int rows = 5;
@@ -261,13 +261,12 @@ final class Drawer extends FrameLayout {
      */
     private void openMenu() {
         hideKeys();
-        Menu.Section sort = new Menu.Section(SECTIONS[0], CHOICES[0], KEYS[0]);
+        Menu.Section sort = new Menu.Section(SORT, ORDERS, ORDER_KEYS);
         sort.chosen = order;
-        Menu.Section shape = new Menu.Section(SECTIONS[1], CHOICES[1], KEYS[1]);
-        shape.chosen = view;
+        Menu.Section away = new Menu.Section(null, AWAY, AWAY_KEYS);
         float x = column.getLeft() + bar.getLeft() + blob.getLeft() + blob.getWidth() / 2f;
         float y = column.getTop() + bar.getTop() + blob.getTop() + blob.getHeight() / 2f;
-        menu.show(new Menu.Section[] {sort, shape}, x, y, blob.getHeight() / 2f + dp(22));
+        menu.show(new Menu.Section[] {sort, away}, x, y, blob.getHeight() / 2f + dp(22));
         turn(1f);
     }
 
@@ -299,19 +298,18 @@ final class Drawer extends FrameLayout {
 
     /** The mark moves to the chosen line first, so the choice is seen, then the card goes. */
     private void choose(int section, int key) {
-        if (key == (section == 0 ? order : view)) {
+        if (section == 1) {
+            shutMenu(true);
+            opener.settings(blob);
+            return;
+        }
+        if (key == order) {
             shutMenu(true);
             return;
         }
         menu.choose(section, key);
-        if (section == 0) {
-            order = key;
-            opener.order(key);
-        } else {
-            order(order, key);
-            opener.view(key);
-            enter(view == Keep.PAGES ? pager : list);
-        }
+        order = key;
+        opener.order(key);
         postDelayed(new Runnable() {
             public void run() {
                 shutMenu(true);

@@ -16,8 +16,8 @@ long, a line gives its icon to the finger; the list closes into the
 fingertip, and the icon is set down in any free place of the grid.
 Back or Home puts the list away. Its round button, with three dots, opens
 the list's menu: the list stands A to Z, newest first, or most recently
-updated first, and either runs down in lines or across in pages of four
-by five icons with their names.
+updated first, and the settings are a touch away. Lines or pages (of four
+by five icons with their names) are chosen in the settings.
 
 Three screens stand side by side from the start, the middle one home.
 The home screen carries the home screen's own clock across its top row, drawn
@@ -82,7 +82,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.16.0
+  sh build.sh ellipse-1.16.1
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

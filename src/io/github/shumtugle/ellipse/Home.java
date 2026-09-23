@@ -482,8 +482,8 @@ public final class Home extends Activity {
                 pick(from, door, icon, rawX, rawY);
             }
 
-            public void view(int view) {
-                Keep.saveView(Home.this, view);
+            public void settings(View from) {
+                tune(from);
             }
 
             public void order(int order) {
