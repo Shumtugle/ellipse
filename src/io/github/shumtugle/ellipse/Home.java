@@ -564,6 +564,7 @@ public final class Home extends Activity {
             Math.round(iconSize + dp(16)), 1f));
 
         blob = new Blob(this, iconSize, Blob.GRID);
+        blob.shaped(true);
         blob.setContentDescription(ALL);
         blob.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -1040,7 +1041,7 @@ public final class Home extends Activity {
     /** The door to this home screen's own settings. */
     /** The door to this home screen's settings: not its own icon, but a face of their own. */
     private Cell ownCell(boolean named) {
-        Cell own = new Cell(this, getDrawable(R.mipmap.door), OWN, iconSize, named);
+        Cell own = new Cell(this, Shape.face(getDrawable(R.mipmap.door)), OWN, iconSize, named);
         own.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 tune(v);
@@ -2425,7 +2426,7 @@ public final class Home extends Activity {
         }
         android.graphics.drawable.Drawable icon = null;
         try {
-            icon = launcher.getShortcutBadgedIconDrawable(info, getResources().getDisplayMetrics().densityDpi);
+            icon = Shape.face(launcher.getShortcutIconDrawable(info, getResources().getDisplayMetrics().densityDpi));
         } catch (RuntimeException none) {
             icon = null;
         }
@@ -2535,7 +2536,7 @@ public final class Home extends Activity {
         /* One list: the door to these settings first, then every app's makers. */
         List<List<Chooser.Item>> groups = new ArrayList<>();
         List<Chooser.Item> all = new ArrayList<>();
-        all.add(new Chooser.Item(getDrawable(R.mipmap.door), OWN_SETTINGS, OWN_MAKER));
+        all.add(new Chooser.Item(Shape.face(getDrawable(R.mipmap.door)), OWN_SETTINGS, OWN_MAKER));
         int dpi = getResources().getDisplayMetrics().densityDpi;
         for (int i = 0; i < makers.size(); i++) {
             all.add(new Chooser.Item(makers.get(i).getIcon(dpi), makers.get(i).getLabel(), i));

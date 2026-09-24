@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.26.1
+  sh build.sh ellipse-1.27.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -131,7 +131,11 @@ addresses asked live in the package, not in the source.
 Look → Icons cuts every icon to one outline: the phone's own, a circle, a
 squircle (a superellipse of the fifth power), a rounded square, a drop
 square on one corner (any of the four), or the paper tile — a wide tile of
-grained paper in a thin grey rim, on which every icon lies, flat ones too. Icons
+grained paper in a thin grey rim, on which every icon lies, flat ones too.
+Flat icons are set into any outline: spread to fill it when they are solid
+to their edges, otherwise standing on a ground of the colour their edges
+carry. Folder faces, the door to every app in the dock, the settings' own
+door and pinned shortcuts wear the same outline. Icons
 that come in layers are laid out as the platform lays them and cut by the
 outline; each outline is drawn a little smaller the more of its square it
 fills, so a grid weighs the same whatever the outline. A window at the

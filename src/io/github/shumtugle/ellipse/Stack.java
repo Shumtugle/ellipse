@@ -29,7 +29,17 @@ final class Stack extends Drawable {
         float cx = b.exactCenterX();
         float cy = b.exactCenterY();
         ground.setColor(Tone.containerHigh());
-        canvas.drawCircle(cx, cy, size / 2f, ground);
+        /* The folder's face takes the outline every icon is cut to. */
+        if (Shape.current == Shape.SYSTEM) {
+            canvas.drawCircle(cx, cy, size / 2f, ground);
+        } else {
+            float side = Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
+                : size * Shape.weight(Shape.current);
+            canvas.save();
+            canvas.translate(cx - side / 2f, cy - side / 2f);
+            canvas.drawPath(Shape.outline(Shape.current, side), ground);
+            canvas.restore();
+        }
         float small = size * 0.3f;
         float step = size * 0.17f;
         int count = Math.min(4, doors.size());

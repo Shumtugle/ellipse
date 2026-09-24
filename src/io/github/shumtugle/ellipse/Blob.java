@@ -25,6 +25,14 @@ final class Blob extends View {
     private final float size;
     private final int kind;
     private float open;
+    /** Whether the button wears the icons' outline rather than its own circle. */
+    private boolean shaped;
+
+    void shaped(boolean on) {
+        shaped = on;
+        invalidate();
+    }
+
     /** While something is carried from the screens, the button becomes the way off them. */
     private boolean bin;
     private boolean binOver;
@@ -115,7 +123,18 @@ final class Blob extends View {
             mark.setColor(Tone.onAccent());
             return;
         }
-        canvas.drawCircle(centre, centre, centre, fill);
+        if (shaped && Shape.current != Shape.SYSTEM) {
+            /* In the dock, the door to every app wears the outline of the icons beside it. */
+            float side = Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
+                : size * Shape.weight(Shape.current);
+            side = Math.min(side, size);
+            canvas.save();
+            canvas.translate(centre - side / 2f, centre - side / 2f);
+            canvas.drawPath(Shape.outline(Shape.current, side), fill);
+            canvas.restore();
+        } else {
+            canvas.drawCircle(centre, centre, centre, fill);
+        }
         if (kind == MENU) {
             float step = size * 0.17f;
             float dot = size * 0.055f;

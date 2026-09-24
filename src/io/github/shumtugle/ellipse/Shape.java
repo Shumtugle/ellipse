@@ -18,7 +18,9 @@ import android.graphics.drawable.Drawable;
  * shows, and a picture in its middle. The layers are laid out here as the
  * platform lays them out, and cut by the chosen outline. The phone's own
  * outline is kept as the phone draws it. An icon that comes as one flat
- * picture is left as it came, for now.
+ * picture is set into the outline: on a ground of the colour at its own
+ * edges, a little smaller than the outline; or, if it is solid to its
+ * edges already, spread to fill the outline and cut.
  *
  * Outlines differ in how much of their square they fill, and a circle
  * beside a square of the same size looks smaller. Each outline is drawn a
@@ -136,9 +138,6 @@ final class Shape {
                the old masks laid them, at seven tenths of its height. */
             return new Cut(icon, current);
         }
-        if (!(icon instanceof AdaptiveIconDrawable)) {
-            return icon;
-        }
         return new Cut(icon, current);
     }
 
@@ -190,6 +189,13 @@ final class Shape {
             if (drawn == null || drawn.getWidth() != side) {
                 drawn = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
                 Canvas into = new Canvas(drawn);
+                if (!(icon instanceof AdaptiveIconDrawable)) {
+                    flat(into, side);
+                    float left = getBounds().left + (getBounds().width() - side) / 2f;
+                    float top = getBounds().top + (getBounds().height() - side) / 2f;
+                    canvas.drawBitmap(drawn, left, top, paint);
+                    return;
+                }
                 AdaptiveIconDrawable layers = (AdaptiveIconDrawable) icon;
                 float inner = side * weight(shape);
                 float edge = (side - inner) / 2f;
@@ -215,6 +221,73 @@ final class Shape {
             float left = getBounds().left + (getBounds().width() - side) / 2f;
             float top = getBounds().top + (getBounds().height() - side) / 2f;
             canvas.drawBitmap(drawn, left, top, paint);
+        }
+
+        /**
+         * A flat icon set into the outline. It is looked at first, small: if
+         * its edges are solid all round, it is a picture meant to fill, and
+         * it is spread to the outline and cut; otherwise it stands on a
+         * ground of the colour its edges carry, or on pale paper when its
+         * edges carry nothing, at seven tenths of the outline.
+         */
+        private void flat(Canvas into, int side) {
+            int look = 48;
+            Bitmap small = Bitmap.createBitmap(look, look, Bitmap.Config.ARGB_8888);
+            icon.setBounds(0, 0, look, look);
+            icon.draw(new Canvas(small));
+            long r = 0;
+            long g = 0;
+            long b = 0;
+            int solid = 0;
+            int ring = 0;
+            for (int i = 0; i < look; i++) {
+                int[][] at = {{i, 0}, {i, look - 1}, {0, i}, {look - 1, i}};
+                for (int[] p : at) {
+                    int c = small.getPixel(p[0], p[1]);
+                    ring++;
+                    if ((c >>> 24) > 200) {
+                        solid++;
+                        r += (c >> 16) & 0xFF;
+                        g += (c >> 8) & 0xFF;
+                        b += c & 0xFF;
+                    }
+                }
+            }
+            /* A little inside the edge too: many flat icons are a disc or a
+               rounded square with a thin margin round it. */
+            int inner = 0;
+            int innerSolid = 0;
+            int d = look / 8;
+            for (int i = d; i < look - d; i++) {
+                int[][] at = {{i, d}, {i, look - 1 - d}, {d, i}, {look - 1 - d, i}};
+                for (int[] p : at) {
+                    int c = small.getPixel(p[0], p[1]);
+                    inner++;
+                    if ((c >>> 24) > 200) {
+                        innerSolid++;
+                        r += (c >> 16) & 0xFF;
+                        g += (c >> 8) & 0xFF;
+                        b += c & 0xFF;
+                    }
+                }
+            }
+            small.recycle();
+            float inside = side * weight(shape);
+            float edge = (side - inside) / 2f;
+            into.save();
+            into.translate(edge, edge);
+            into.clipPath(outline(shape, inside));
+            boolean full = solid > ring * 0.9f;
+            int seen = solid + innerSolid;
+            int ground = seen > (ring + inner) * 0.25f
+                ? 0xFF000000 | (int) (r / seen) << 16 | (int) (g / seen) << 8 | (int) (b / seen)
+                : PAPER_INK;
+            into.drawColor(ground);
+            float wide = full ? inside * 1.02f : inside * 0.72f;
+            float at = (inside - wide) / 2f;
+            icon.setBounds(Math.round(at), Math.round(at), Math.round(at + wide), Math.round(at + wide));
+            icon.draw(into);
+            into.restore();
         }
 
         /**
