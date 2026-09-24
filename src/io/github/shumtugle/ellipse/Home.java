@@ -1037,12 +1037,19 @@ public final class Home extends Activity {
         if (!Keep.flag(this, Keep.CLOCK, true) || !page.free(0, row, columns, 1)) {
             return false;
         }
+        /* As many rows as the settings ask, as long as they are free and on
+           the screen; never fewer than one. */
+        int tall = Math.max(1, Keep.number(this, Keep.CLOCK_ROWS, 1));
+        while (tall > 1 && (row + tall > rows || !page.free(0, row, columns, tall))) {
+            tall--;
+        }
         View clock = timepiece(this, new Almanac.Hand() {
             public void pressed(String window, View from, android.graphics.RectF box) {
                 look(window, from, box);
             }
         });
-        page.put(clock, 0, row, columns, 1);
+        page.put(clock, 0, row, columns, tall);
+        page.edge(clock, Keep.flag(this, Keep.CLOCK_EDGE, false));
         cells.add(clock);
         Timepiece piece = (Timepiece) clock;
         piece.weather(Keep.flag(this, Keep.WEATHER, true));
@@ -1055,9 +1062,13 @@ public final class Home extends Activity {
     /** The first clock, left as it was, or another the settings chose. */
     static final int FACE_FIRST = 0;
     static final int FACE_PLATE = 1;
-    static final String[] FACE_NAMES = {"First", "Plate"};
+    static final int FACE_CONTOUR = 2;
+    static final String[] FACE_NAMES = {"First", "Plate", "Outline"};
 
     static View timepiece(Context context, Almanac.Hand hand) {
+        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_CONTOUR) {
+            return new Contour(context, hand);
+        }
         if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_PLATE) {
             return new Watch(context, Keep.number(context, Keep.CLOCK_PLATE, Rim.STEEL),
                 Keep.number(context, Keep.CLOCK_DIAL, Watch.DARK), Keep.number(context, Keep.CLOCK_FIELDS, Watch.DARK),

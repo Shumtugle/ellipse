@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.41.0
+  sh build.sh ellipse-1.42.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -193,3 +193,13 @@ dial behind a metal bezel, dark or stamped, the hour and date in a long
 window, and small windows for the weather, the headphones while they are
 near, and the phone's charge. The dial and the windows may be dark, or of
 any of the materials; on a light one the words and hands turn dark.
+
+The outline clock draws nothing filled, only fine lines over the wallpaper,
+and keeps its form at any size: low, the hour and date in a long window
+with the weather and the charge under it; tall, the dial fills the height,
+the weather stands with the place it is for, and under it rings for the
+next alarm, the headphones while they are near, and the charge, each ring
+filled as far as its measure goes.
+
+Any clock may stand in one to four rows, and may run past the grid's
+margins to the screen's edges.

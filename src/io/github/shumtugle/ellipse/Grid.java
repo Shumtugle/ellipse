@@ -260,6 +260,31 @@ final class Grid extends ViewGroup {
         }
     }
 
+    /**
+     * Things that reach past the grid's margins to its own edges, where
+     * they run the grid's whole width: the clock, a widget, when asked.
+     */
+    private final java.util.Set<View> edged = new java.util.HashSet<>();
+
+    void edge(View thing, boolean on) {
+        if (on) {
+            edged.add(thing);
+        } else {
+            edged.remove(thing);
+        }
+        requestLayout();
+    }
+
+    @Override
+    public void onViewRemoved(View child) {
+        super.onViewRemoved(child);
+        edged.remove(child);
+    }
+
+    private boolean reaches(View child, int[] at) {
+        return edged.contains(child) && at[0] == 0 && across(at) >= columns;
+    }
+
     @Override
     protected void onMeasure(int widthSpec, int heightSpec) {
         int width = MeasureSpec.getSize(widthSpec);
@@ -270,7 +295,8 @@ final class Grid extends ViewGroup {
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             int[] at = (int[]) child.getTag();
-            child.measure(MeasureSpec.makeMeasureSpec(Math.round(w * across(at)), MeasureSpec.EXACTLY),
+            int wide = reaches(child, at) ? width : Math.round(w * across(at));
+            child.measure(MeasureSpec.makeMeasureSpec(wide, MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(Math.round(h * down(at)), MeasureSpec.EXACTLY));
         }
     }
@@ -282,7 +308,7 @@ final class Grid extends ViewGroup {
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             int[] at = (int[]) child.getTag();
-            int left = Math.round(getPaddingLeft() + at[0] * w);
+            int left = reaches(child, at) ? 0 : Math.round(getPaddingLeft() + at[0] * w);
             int top = Math.round(getPaddingTop() + at[1] * h);
             child.layout(left, top, left + child.getMeasuredWidth(), top + child.getMeasuredHeight());
         }

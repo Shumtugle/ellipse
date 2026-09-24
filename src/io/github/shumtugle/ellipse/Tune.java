@@ -995,9 +995,14 @@ public final class Tune extends Activity {
      */
     private void fillClock() {
         showClock();
+        caption("SIZE");
+        rowsSlider();
+        rows.addView(row(toggle("To the edges", "The clock runs past the grid's margins to the screen's edges",
+            Keep.CLOCK_EDGE, false)));
         caption("FACE");
         int face = Keep.number(this, Keep.CLOCK_FACE, Home.FACE_FIRST);
-        rows.addView(swatches(Keep.CLOCK_FACE, face, new int[] {Home.FACE_FIRST, Home.FACE_PLATE}, Home.FACE_NAMES,
+        rows.addView(swatches(Keep.CLOCK_FACE, face,
+            new int[] {Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_CONTOUR}, Home.FACE_NAMES,
             new Painter() {
                 public void paint(android.graphics.Canvas c, float w, float h, int value) {
                     paintFace(c, w, h, value);
@@ -1069,6 +1074,35 @@ public final class Tune extends Activity {
         }
     }
 
+    /** How many rows the clock stands in: its form is kept at any of them. */
+    private void rowsSlider() {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setPadding(dp(24), dp(6), dp(24), dp(6));
+        LinearLayout top = new LinearLayout(this);
+        TextView name = new TextView(this);
+        name.setText("Rows");
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        name.setTextColor(Tone.onSurface());
+        top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView value = new TextView(this);
+        value.setText(String.valueOf(Keep.number(this, Keep.CLOCK_ROWS, 1)));
+        value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        value.setTextColor(Tone.primary());
+        top.addView(value);
+        made.addView(top);
+        made.addView(new Slide(this, 1, 4, Keep.number(this, Keep.CLOCK_ROWS, 1), new Slide.Moved() {
+            public void moved(int at, boolean done) {
+                value.setText(String.valueOf(at));
+                if (done) {
+                    Keep.saveNumber(Tune.this, Keep.CLOCK_ROWS, at);
+                    showClock();
+                }
+            }
+        }));
+        rows.addView(made);
+    }
+
     /** The clock the settings describe, standing in the window at the head of the room. */
     private void showClock() {
         window.removeAllViews();
@@ -1077,13 +1111,30 @@ public final class Tune extends Activity {
             }
         });
         ((Timepiece) clock).weather(Keep.flag(this, Keep.WEATHER, true));
-        window.addView(clock, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(132)));
+        /* As tall as it will stand on the screen, up to three rows, so its
+           form at that height can be seen. */
+        int tall = Math.min(3, Math.max(1, Keep.number(this, Keep.CLOCK_ROWS, 1)));
+        window.addView(clock, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+            dp(tall == 1 ? 132 : 110 * tall)));
     }
 
     /** A clock face in small: the first as its round dial and its windows; the plate as a slab with dark windows. */
     private void paintFace(android.graphics.Canvas c, float w, float h, int value) {
         android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         float r = h * 0.28f;
+        if (value == Home.FACE_CONTOUR) {
+            p.setStyle(android.graphics.Paint.Style.STROKE);
+            p.setStrokeWidth(Math.max(1f, h * 0.02f));
+            p.setColor(Tone.onSurface());
+            c.drawRoundRect(new android.graphics.RectF(1, h * 0.15f, w - 1, h * 0.85f), h * 0.1f, h * 0.1f, p);
+            c.drawCircle(w * 0.3f, h * 0.5f, h * 0.26f, p);
+            c.drawRoundRect(new android.graphics.RectF(w * 0.6f, h * 0.24f, w * 0.92f, h * 0.44f), h * 0.1f, h * 0.1f, p);
+            p.setColor(0xFFC3A2D6);
+            c.drawCircle(w * 0.68f, h * 0.64f, h * 0.09f, p);
+            p.setColor(0xFF7AA7F0);
+            c.drawCircle(w * 0.85f, h * 0.64f, h * 0.09f, p);
+            return;
+        }
         if (value == Home.FACE_PLATE) {
             android.graphics.Path slab = Shape.outline(Shape.ROUNDED, w, h * 0.7f);
             c.save();
