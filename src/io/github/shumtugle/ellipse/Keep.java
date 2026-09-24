@@ -223,6 +223,9 @@ final class Keep {
     static final String RIM_KIND = "rim_kind";
     static final String RIM_WIDTH = "rim_width";
     static final String GLAZE = "glaze";
+    /** The window cut in the icons' plate, and the tile's width to its height in percent. */
+    static final String WINDOW = "icon_window";
+    static final String TILE_ASPECT = "tile_aspect";
 
     private static final String FACE = "face.";
 

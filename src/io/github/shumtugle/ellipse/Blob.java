@@ -108,7 +108,9 @@ final class Blob extends View {
     @Override
     protected void onMeasure(int widthSpec, int heightSpec) {
         /* Wearing the paper tile, the door is as wide as the tiles beside it. */
-        float wide = shaped && Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE : size;
+        float wide = !shaped || Shape.current == Shape.SYSTEM ? size
+            : Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
+            : size * Shape.weight(Shape.current) * (float) Math.sqrt(Shape.aspect);
         setMeasuredDimension(Math.round(Math.max(size, wide)), Math.round(size));
     }
 
@@ -133,9 +135,12 @@ final class Blob extends View {
                as large as the icons beside it. */
             float side = Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
                 : size * Shape.weight(Shape.current);
+            float root = Shape.current == Shape.PAPER ? 1f : (float) Math.sqrt(Shape.aspect);
+            float w = side * root;
+            float h = side / root;
             canvas.save();
-            canvas.translate(centre - side / 2f, centre - side / 2f);
-            canvas.drawPath(Shape.outline(Shape.current, side), fill);
+            canvas.translate(centre - w / 2f, centre - h / 2f);
+            canvas.drawPath(Shape.outline(Shape.current, w, h), fill);
             canvas.restore();
         } else {
             canvas.drawCircle(centre, centre, centre, fill);

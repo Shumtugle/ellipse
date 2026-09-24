@@ -60,56 +60,103 @@ final class Shape {
 
     /** The outline in a square of the given side, from its top left corner. */
     static Path outline(int shape, float side) {
+        return outline(shape, side, side);
+    }
+
+    /**
+     * The outline in a box of the given width and height, from its top left
+     * corner: the shapes stretch to a tile wider or taller than it is square
+     * without their corners being drawn out of true — a circle becomes a
+     * stadium, a squircle keeps its power, a rounded box its radius.
+     */
+    static Path outline(int shape, float w, float h) {
         Path path = new Path();
-        float r = side / 2f;
+        float least = Math.min(w, h);
         switch (shape) {
             case CIRCLE:
-                path.addCircle(r, r, r, Path.Direction.CW);
+                path.addRoundRect(new RectF(0, 0, w, h), least / 2f, least / 2f, Path.Direction.CW);
                 break;
             case SQUIRCLE:
                 /* A superellipse of the fifth power: the sides run straight
                    longer than a circle's and turn the corner more softly
                    than a rounded square's. */
-                for (int i = 0; i <= 180; i++) {
-                    double t = 2 * Math.PI * i / 180;
-                    double c = Math.cos(t);
-                    double s = Math.sin(t);
-                    float x = (float) (r + r * Math.signum(c) * Math.pow(Math.abs(c), 2.0 / 5.0));
-                    float y = (float) (r + r * Math.signum(s) * Math.pow(Math.abs(s), 2.0 / 5.0));
-                    if (i == 0) {
-                        path.moveTo(x, y);
-                    } else {
-                        path.lineTo(x, y);
-                    }
-                }
-                path.close();
+                superellipse(path, 0f, 0f, w, h, 5.0);
                 break;
             case ROUNDED:
-                path.addRoundRect(new RectF(0, 0, side, side), side * 0.22f, side * 0.22f, Path.Direction.CW);
+                path.addRoundRect(new RectF(0, 0, w, h), least * 0.22f, least * 0.22f, Path.Direction.CW);
                 break;
             case TEAR_LOWER_RIGHT:
             case TEAR_LOWER_LEFT:
             case TEAR_UPPER_LEFT:
             case TEAR_UPPER_RIGHT:
                 float[] corners = new float[8];
-                java.util.Arrays.fill(corners, r);
+                java.util.Arrays.fill(corners, least / 2f);
                 /* Radii run from the upper left clockwise, two numbers a corner. */
                 int square = shape == TEAR_UPPER_LEFT ? 0 : shape == TEAR_UPPER_RIGHT ? 1
                     : shape == TEAR_LOWER_RIGHT ? 2 : 3;
-                corners[square * 2] = side * 0.12f;
-                corners[square * 2 + 1] = side * 0.12f;
-                path.addRoundRect(new RectF(0, 0, side, side), corners, Path.Direction.CW);
+                corners[square * 2] = least * 0.12f;
+                corners[square * 2 + 1] = least * 0.12f;
+                path.addRoundRect(new RectF(0, 0, w, h), corners, Path.Direction.CW);
                 break;
             case PAPER:
-                float tall = side / PAPER_WIDE;
-                float top = (side - tall) / 2f;
-                path.addRoundRect(new RectF(0, top, side, top + tall), tall * 0.14f, tall * 0.14f,
+                float tall = w / PAPER_WIDE;
+                float top = (h - tall) / 2f;
+                path.addRoundRect(new RectF(0, top, w, top + tall), tall * 0.14f, tall * 0.14f,
                     Path.Direction.CW);
                 break;
             default:
-                path.addRoundRect(new RectF(0, 0, side, side), side * 0.5f, side * 0.5f, Path.Direction.CW);
+                path.addRoundRect(new RectF(0, 0, w, h), least * 0.5f, least * 0.5f, Path.Direction.CW);
                 break;
         }
+        return path;
+    }
+
+    /** A superellipse of a given power filling a box. */
+    static void superellipse(Path path, float left, float top, float w, float h, double power) {
+        float a = w / 2f;
+        float b = h / 2f;
+        for (int i = 0; i <= 240; i++) {
+            double t = 2 * Math.PI * i / 240;
+            double c = Math.cos(t);
+            double s = Math.sin(t);
+            float x = (float) (left + a + a * Math.signum(c) * Math.pow(Math.abs(c), 2.0 / power));
+            float y = (float) (top + b + b * Math.signum(s) * Math.pow(Math.abs(s), 2.0 / power));
+            if (i == 0) {
+                path.moveTo(x, y);
+            } else {
+                path.lineTo(x, y);
+            }
+        }
+        path.close();
+    }
+
+    /** The window a plate may have cut in it: the tile's own outline, round, a squircle, or a scallop. */
+    static final int WINDOW_TILE = 0;
+    static final int WINDOW_ROUND = 1;
+    static final int WINDOW_SQUIRCLE = 2;
+    static final int WINDOW_SCALLOP = 3;
+    static final String[] WINDOW_NAMES = {"As the tile", "Round", "Squircle", "Scallop"};
+
+    /** The window chosen, and the tile's width to its height, for every icon. */
+    static int window = WINDOW_TILE;
+    static float aspect = 1f;
+
+    /** A round window with a scalloped edge, a dozen soft waves round it. */
+    private static Path scallop(float cx, float cy, float d) {
+        Path path = new Path();
+        float r = d / 2f / 1.05f;
+        for (int i = 0; i <= 360; i++) {
+            double t = 2 * Math.PI * i / 360;
+            float rr = (float) (r * (1 + 0.05 * Math.cos(12 * t)));
+            float x = (float) (cx + rr * Math.cos(t));
+            float y = (float) (cy + rr * Math.sin(t));
+            if (i == 0) {
+                path.moveTo(x, y);
+            } else {
+                path.lineTo(x, y);
+            }
+        }
+        path.close();
         return path;
     }
 
@@ -529,44 +576,59 @@ final class Shape {
                 paper(canvas, side);
                 return;
             }
-            if (drawn == null || drawn.getWidth() != side) {
-                drawn = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+            /* The tile keeps the area of its square whatever its proportion:
+               wider is lower, taller is narrower. */
+            float inside = side * weight(shape);
+            float root = (float) Math.sqrt(aspect);
+            int tileW = Math.max(1, Math.round(inside * root));
+            int tileH = Math.max(1, Math.round(inside / root));
+            if (drawn == null || drawn.getWidth() != tileW || drawn.getHeight() != tileH) {
+                drawn = Bitmap.createBitmap(tileW, tileH, Bitmap.Config.ARGB_8888);
                 Canvas into = new Canvas(drawn);
-                float inside = side * weight(shape);
-                float edge = (side - inside) / 2f;
-                /* With a rim, the outline is a plate of the rim's material and
-                   the icon is seen through a window cut in it. */
-                float rim = Rim.kind != Rim.NONE ? Rim.width * inside : 0f;
-                into.save();
-                into.translate(edge, edge);
-                Path outer = outline(shape, inside);
-                if (rim > 0f) {
-                    Rim.plate(into, outer, Rim.kind, inside, inside);
+                float least = Math.min(tileW, tileH);
+                /* With a rim, or a window of its own, the outline is a plate
+                   and the icon is seen through a window cut in it. */
+                boolean plate = Rim.kind != Rim.NONE || window != WINDOW_TILE;
+                float rim = plate ? Math.max(1f, Rim.width * least) : 0f;
+                Path outer = outline(shape, tileW, tileH);
+                if (plate) {
+                    Rim.plate(into, outer, Rim.kind == Rim.NONE ? Rim.GROUND : Rim.kind, tileW, tileH);
                 }
-                float window = inside - 2f * rim;
+                Path cut;
+                RectF hole;
+                if (window == WINDOW_TILE) {
+                    hole = new RectF(rim, rim, tileW - rim, tileH - rim);
+                    cut = outline(shape, hole.width(), hole.height());
+                    cut.offset(rim, rim);
+                } else {
+                    float d = least - 2f * Math.max(rim, least * 0.13f);
+                    hole = new RectF((tileW - d) / 2f, (tileH - d) / 2f, (tileW + d) / 2f, (tileH + d) / 2f);
+                    cut = new Path();
+                    if (window == WINDOW_ROUND) {
+                        cut.addOval(hole, Path.Direction.CW);
+                    } else if (window == WINDOW_SQUIRCLE) {
+                        superellipse(cut, hole.left, hole.top, d, d, 5.0);
+                    } else {
+                        cut = scallop(hole.centerX(), hole.centerY(), d);
+                    }
+                }
                 into.save();
-                into.translate(rim, rim);
-                Path cut = outline(shape, window);
                 into.clipPath(cut);
                 if (!(icon instanceof AdaptiveIconDrawable)) {
-                    flat(into, window);
+                    flat(into, hole);
                 } else {
-                    layered(into, (AdaptiveIconDrawable) icon, window);
+                    layered(into, (AdaptiveIconDrawable) icon, hole);
                 }
                 into.restore();
-                if (rim > 0f) {
-                    into.save();
-                    into.translate(rim, rim);
-                    Rim.cut(into, cut, inside);
-                    into.restore();
+                if (plate) {
+                    Rim.cut(into, cut, least);
                 }
                 if (Rim.glaze) {
-                    Rim.glaze(into, outer, 0f, 0f, inside, inside);
+                    Rim.glaze(into, outer, 0f, 0f, tileW, tileH);
                 }
-                into.restore();
             }
-            float left = getBounds().left + (getBounds().width() - side) / 2f;
-            float top = getBounds().top + (getBounds().height() - side) / 2f;
+            float left = getBounds().exactCenterX() - tileW / 2f;
+            float top = getBounds().exactCenterY() - tileH / 2f;
             canvas.drawBitmap(drawn, left, top, paint);
         }
 
@@ -575,18 +637,23 @@ final class Shape {
          * platform lays them: a quarter of the visible side more on every
          * edge; the owner's fill draws them larger or smaller about the middle.
          */
-        private void layered(Canvas into, AdaptiveIconDrawable layers, float inner) {
-            float grown = inner * Style.fill;
-            int spill = Math.round(grown / 4f + (grown - inner) / 2f);
-            int all = Math.round(grown) + 2 * Math.round(grown / 4f);
+        private void layered(Canvas into, AdaptiveIconDrawable layers, RectF hole) {
+            /* The promised middle fills the window's shorter side; the spare
+               margin every such icon carries covers the longer. */
+            float shorter = Math.min(hole.width(), hole.height());
+            float longer = Math.max(hole.width(), hole.height());
+            float all = Math.max(shorter * 1.5f * Style.fill, longer);
+            int left = Math.round(hole.centerX() - all / 2f);
+            int top = Math.round(hole.centerY() - all / 2f);
+            int side = Math.round(all);
             Drawable ground = layers.getBackground();
             if (ground != null) {
-                ground.setBounds(-spill, -spill, all - spill, all - spill);
+                ground.setBounds(left, top, left + side, top + side);
                 ground.draw(into);
             }
             Drawable picture = layers.getForeground();
             if (picture != null) {
-                picture.setBounds(-spill, -spill, all - spill, all - spill);
+                picture.setBounds(left, top, left + side, top + side);
                 picture.draw(into);
             }
         }
@@ -598,7 +665,7 @@ final class Shape {
          * ground of the colour its edges carry, or on pale paper when its
          * edges carry nothing, at seven tenths of the outline.
          */
-        private void flat(Canvas into, float inside) {
+        private void flat(Canvas into, RectF hole) {
             int look = 48;
             Bitmap small = Bitmap.createBitmap(look, look, Bitmap.Config.ARGB_8888);
             icon.setBounds(0, 0, look, look);
@@ -646,9 +713,11 @@ final class Shape {
                 ? 0xFF000000 | (int) (r / seen) << 16 | (int) (g / seen) << 8 | (int) (b / seen)
                 : PAPER_INK;
             into.drawColor(ground);
-            float wide = full ? inside * 1.02f : inside * 0.72f * Style.fill;
-            float at = (inside - wide) / 2f;
-            icon.setBounds(Math.round(at), Math.round(at), Math.round(at + wide), Math.round(at + wide));
+            float wide = full ? Math.max(hole.width(), hole.height()) * 1.02f
+                : Math.min(hole.width(), hole.height()) * 0.72f * Style.fill;
+            float x = hole.centerX() - wide / 2f;
+            float y = hole.centerY() - wide / 2f;
+            icon.setBounds(Math.round(x), Math.round(y), Math.round(x + wide), Math.round(y + wide));
             icon.draw(into);
         }
 

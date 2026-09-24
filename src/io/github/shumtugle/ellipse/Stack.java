@@ -51,9 +51,12 @@ final class Stack extends Drawable {
             } else {
                 float side = Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
                     : size * Shape.weight(Shape.current);
+                float root = Shape.current == Shape.PAPER ? 1f : (float) Math.sqrt(Shape.aspect);
+                float w = side * root;
+                float h = side / root;
                 canvas.save();
-                canvas.translate(cx - side / 2f, cy - side / 2f);
-                canvas.drawPath(Shape.outline(Shape.current, side), paint);
+                canvas.translate(cx - w / 2f, cy - h / 2f);
+                canvas.drawPath(Shape.outline(Shape.current, w, h), paint);
                 canvas.restore();
             }
         }

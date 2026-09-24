@@ -38,6 +38,8 @@ final class Rim {
     static final int BLACK = 5;
     static final int STEEL = 6;
     static final int STAMPED = 7;
+    /** A plate of the surface's own raised tone, for a window with no material chosen. */
+    static final int GROUND = 8;
     static final String[] NAMES = {"Metal", "Gold", "Accent", "Wood", "Sequins", "Black", "Steel", "Stamped"};
 
     /** What the icons' rim is made of, how wide it is as a share of the icon, and whether glass lies over it. */
@@ -106,6 +108,9 @@ final class Rim {
         switch (which) {
             case ACCENT:
                 paint.setColor(Tone.primary());
+                return;
+            case GROUND:
+                paint.setColor(Tone.containerHigh() | 0xFF000000);
                 return;
             case GOLD:
                 paint.setShader(gold());

@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.36.0
+  sh build.sh ellipse-1.37.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -164,7 +164,11 @@ plate of a material in the icon's outline — metal, gold, the accent, wood,
 sequins, black, steel, or a stamped dial — lit from above and shaded
 below, the icon seen through a window cut in it, and, if asked for, the
 curved glaze of glass across the top. The rim runs from a thread to a
-frame.
+frame. The window may follow the tile's outline or be cut round — a
+medallion — as a squircle, or with a scalloped edge; a window of its own
+needs no material, and then the plate is of the surface's raised tone. The
+tile may be square, wider than tall, or taller than wide, keeping its
+area.
 
 Folder faces are laid out one of six ways — four, nine, a ring of five, a
 stack, a fan, a tower — with or without a container behind the small icons.

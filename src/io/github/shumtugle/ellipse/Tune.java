@@ -767,6 +767,18 @@ public final class Tune extends Activity {
         }
         tints.addView(tintChips);
         rows.addView(tints);
+        caption("WINDOW");
+        android.widget.HorizontalScrollView windows = new android.widget.HorizontalScrollView(this);
+        windows.setHorizontalScrollBarEnabled(false);
+        windows.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout windowChips = new LinearLayout(this);
+        windowChips.setPadding(dp(18), 0, dp(18), dp(8));
+        for (int i = 0; i < Shape.WINDOW_NAMES.length; i++) {
+            windowChips.addView(chip(Shape.WINDOW_NAMES[i], Shape.window == i, Keep.WINDOW, i));
+        }
+        windows.addView(windowChips);
+        rows.addView(windows);
+        slider("Proportion", "Wider than tall, square, or taller than wide", Keep.TILE_ASPECT, 70, 135);
         caption("RIM");
         android.widget.HorizontalScrollView rims = new android.widget.HorizontalScrollView(this);
         rims.setHorizontalScrollBarEnabled(false);
@@ -862,6 +874,8 @@ public final class Tune extends Activity {
                     Style.fill = at / 100f;
                 } else if (Keep.RIM_WIDTH.equals(key)) {
                     Rim.width = at / 100f;
+                } else if (Keep.TILE_ASPECT.equals(key)) {
+                    Shape.aspect = at / 100f;
                 } else {
                     Style.nameScale = at / 100f;
                 }
