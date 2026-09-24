@@ -706,7 +706,8 @@ public final class Tune extends Activity {
 
     // ------------------------------------------------------------- icons
 
-    private static final String[] SHAPES = {"The phone's own", "Circle", "Squircle", "Rounded square"};
+    private static final String[] SHAPES = {"The phone's own", "Circle", "Squircle", "Rounded square",
+        "Drop, lower right", "Drop, lower left", "Drop, upper left", "Drop, upper right", "Paper tile"};
 
     /**
      * The icons' room: the owner's own icons in the window at its head, and

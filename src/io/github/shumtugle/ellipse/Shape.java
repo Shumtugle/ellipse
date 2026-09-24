@@ -31,7 +31,22 @@ final class Shape {
     static final int CIRCLE = 1;
     static final int SQUIRCLE = 2;
     static final int ROUNDED = 3;
-    static final int COUNT = 4;
+    /** A drop: round on three corners, square on one, in four turns. */
+    static final int TEAR_LOWER_RIGHT = 4;
+    static final int TEAR_LOWER_LEFT = 5;
+    static final int TEAR_UPPER_LEFT = 6;
+    static final int TEAR_UPPER_RIGHT = 7;
+    /**
+     * A wide tile of paper in a thin grey rim, wider than it is tall by the
+     * owner's own old masks, its corners turned by a seventh of its height.
+     */
+    static final int PAPER = 8;
+    static final int COUNT = 9;
+
+    /** How much wider than tall the paper tile stands. */
+    static final float PAPER_WIDE = 1.29f;
+    private static final int PAPER_INK = 0xFFF7F7F7;
+    private static final int RIM_INK = 0xFFBDBDBD;
 
     /** The outline chosen now; the settings set it, every icon drawn after reads it. */
     static int current = SYSTEM;
@@ -68,6 +83,25 @@ final class Shape {
             case ROUNDED:
                 path.addRoundRect(new RectF(0, 0, side, side), side * 0.22f, side * 0.22f, Path.Direction.CW);
                 break;
+            case TEAR_LOWER_RIGHT:
+            case TEAR_LOWER_LEFT:
+            case TEAR_UPPER_LEFT:
+            case TEAR_UPPER_RIGHT:
+                float[] corners = new float[8];
+                java.util.Arrays.fill(corners, r);
+                /* Radii run from the upper left clockwise, two numbers a corner. */
+                int square = shape == TEAR_UPPER_LEFT ? 0 : shape == TEAR_UPPER_RIGHT ? 1
+                    : shape == TEAR_LOWER_RIGHT ? 2 : 3;
+                corners[square * 2] = side * 0.12f;
+                corners[square * 2 + 1] = side * 0.12f;
+                path.addRoundRect(new RectF(0, 0, side, side), corners, Path.Direction.CW);
+                break;
+            case PAPER:
+                float tall = side / PAPER_WIDE;
+                float top = (side - tall) / 2f;
+                path.addRoundRect(new RectF(0, top, side, top + tall), tall * 0.14f, tall * 0.14f,
+                    Path.Direction.CW);
+                break;
             default:
                 path.addRoundRect(new RectF(0, 0, side, side), side * 0.5f, side * 0.5f, Path.Direction.CW);
                 break;
@@ -82,6 +116,11 @@ final class Shape {
                 return 0.93f;
             case ROUNDED:
                 return 0.92f;
+            case TEAR_LOWER_RIGHT:
+            case TEAR_LOWER_LEFT:
+            case TEAR_UPPER_LEFT:
+            case TEAR_UPPER_RIGHT:
+                return 0.97f;
             default:
                 return 1f;
         }
@@ -89,10 +128,37 @@ final class Shape {
 
     /** An icon as it is to be drawn: cut to the outline when it comes in layers. */
     static Drawable face(Drawable icon) {
-        if (current == SYSTEM || !(icon instanceof AdaptiveIconDrawable)) {
+        if (icon == null || current == SYSTEM) {
             return icon;
         }
-        return new Cut((AdaptiveIconDrawable) icon, current);
+        if (current == PAPER) {
+            /* The paper takes every icon, flat ones too: they lie on it as
+               the old masks laid them, at seven tenths of its height. */
+            return new Cut(icon, current);
+        }
+        if (!(icon instanceof AdaptiveIconDrawable)) {
+            return icon;
+        }
+        return new Cut(icon, current);
+    }
+
+    /** A fine grain for the paper and its rim, made once. */
+    private static android.graphics.BitmapShader grain;
+
+    private static android.graphics.BitmapShader grain() {
+        if (grain == null) {
+            java.util.Random dice = new java.util.Random(7);
+            int n = 96;
+            int[] dots = new int[n * n];
+            for (int i = 0; i < dots.length; i++) {
+                int v = dice.nextInt(256);
+                dots[i] = ((dice.nextInt(22)) << 24) | (v << 16) | (v << 8) | v;
+            }
+            Bitmap tile = Bitmap.createBitmap(dots, n, n, Bitmap.Config.ARGB_8888);
+            grain = new android.graphics.BitmapShader(tile, android.graphics.Shader.TileMode.REPEAT,
+                android.graphics.Shader.TileMode.REPEAT);
+        }
+        return grain;
     }
 
     /**
@@ -101,13 +167,13 @@ final class Shape {
      * lightly as a list of pictures.
      */
     static final class Cut extends Drawable {
-        private final AdaptiveIconDrawable layers;
+        private final Drawable icon;
         private final int shape;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         private Bitmap drawn;
 
-        Cut(AdaptiveIconDrawable layers, int shape) {
-            this.layers = layers;
+        Cut(Drawable icon, int shape) {
+            this.icon = icon;
             this.shape = shape;
         }
 
@@ -117,9 +183,14 @@ final class Shape {
             if (side <= 0) {
                 return;
             }
+            if (shape == PAPER) {
+                paper(canvas, side);
+                return;
+            }
             if (drawn == null || drawn.getWidth() != side) {
                 drawn = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
                 Canvas into = new Canvas(drawn);
+                AdaptiveIconDrawable layers = (AdaptiveIconDrawable) icon;
                 float inner = side * weight(shape);
                 float edge = (side - inner) / 2f;
                 into.save();
@@ -146,14 +217,80 @@ final class Shape {
             canvas.drawBitmap(drawn, left, top, paint);
         }
 
+        /**
+         * The paper tile, a little wider than the square it is given and a
+         * little lower: a rim of grey, the paper inside it, and on the paper
+         * the icon. An icon in layers spreads its ground across the whole
+         * paper and keeps its picture whole within the paper's height; a
+         * flat icon lies on the paper at seven tenths of its height.
+         */
+        private void paper(Canvas canvas, int side) {
+            float tall = side * 0.86f;
+            float wide = tall * PAPER_WIDE;
+            int w = Math.round(wide);
+            int h = Math.round(tall);
+            if (drawn == null || drawn.getHeight() != h) {
+                drawn = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                Canvas into = new Canvas(drawn);
+                Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+                Paint grit = new Paint(Paint.ANTI_ALIAS_FLAG);
+                grit.setShader(grain());
+                RectF outer = new RectF(0, 0, w, h);
+                float round = h * 0.14f;
+                fill.setColor(RIM_INK);
+                into.drawRoundRect(outer, round, round, fill);
+                into.drawRoundRect(outer, round, round, grit);
+                float rim = Math.max(1f, h * 0.033f);
+                RectF inner = new RectF(rim, rim, w - rim, h - rim);
+                float innerRound = Math.max(0f, round - rim);
+                fill.setColor(PAPER_INK);
+                into.drawRoundRect(inner, innerRound, innerRound, fill);
+                into.save();
+                Path clip = new Path();
+                clip.addRoundRect(inner, innerRound, innerRound, Path.Direction.CW);
+                into.clipPath(clip);
+                float cx = inner.centerX();
+                float cy = inner.centerY();
+                if (icon instanceof AdaptiveIconDrawable) {
+                    AdaptiveIconDrawable layers = (AdaptiveIconDrawable) icon;
+                    /* The ground covers the paper's width; the picture keeps
+                       to its height, so no part of it is cut. */
+                    float groundSide = inner.width() * 1.5f;
+                    Drawable ground = layers.getBackground();
+                    if (ground != null) {
+                        ground.setBounds(Math.round(cx - groundSide / 2f), Math.round(cy - groundSide / 2f),
+                            Math.round(cx + groundSide / 2f), Math.round(cy + groundSide / 2f));
+                        ground.draw(into);
+                    }
+                    float pictureSide = inner.height() * 1.5f;
+                    Drawable picture = layers.getForeground();
+                    if (picture != null) {
+                        picture.setBounds(Math.round(cx - pictureSide / 2f), Math.round(cy - pictureSide / 2f),
+                            Math.round(cx + pictureSide / 2f), Math.round(cy + pictureSide / 2f));
+                        picture.draw(into);
+                    }
+                } else {
+                    float flat = h * 0.7f;
+                    icon.setBounds(Math.round(cx - flat / 2f), Math.round(cy - flat / 2f),
+                        Math.round(cx + flat / 2f), Math.round(cy + flat / 2f));
+                    icon.draw(into);
+                }
+                into.drawRoundRect(inner, innerRound, innerRound, grit);
+                into.restore();
+            }
+            float left = getBounds().centerX() - w / 2f;
+            float top = getBounds().centerY() - h / 2f;
+            canvas.drawBitmap(drawn, left, top, paint);
+        }
+
         @Override
         public int getIntrinsicWidth() {
-            return layers.getIntrinsicWidth();
+            return icon.getIntrinsicWidth();
         }
 
         @Override
         public int getIntrinsicHeight() {
-            return layers.getIntrinsicHeight();
+            return icon.getIntrinsicHeight();
         }
 
         @Override
