@@ -29,7 +29,8 @@ import java.util.Locale;
  *
  * The hands move once a second while the clock is in sight, and not at
  * all when it is not. A press on a window opens what it shows about: the
- * alarms, the calendar, the phone's battery. A long press takes the clock
+ * alarms, the calendar, the phone's battery. Headphones near take a window
+ * from the hour's, beside it and as tall. A long press takes the clock
  * up, to be set down in another row or on another screen.
  */
 final class Almanac extends View {
@@ -218,17 +219,21 @@ final class Almanac extends View {
             from = dialBox.right + gap * 1.4f;
         }
         float split = top + (column - gap) * (line ? 0.58f : 0.6f);
-        timeBox.set(from, top, right, split);
+        /* Headphones near take their window from the hour's, beside it and
+           as tall, so the row under it keeps its two roomy windows. */
+        float timeRight = right;
+        if (ears >= 0) {
+            float earsWide = (split - top) * 0.92f;
+            earsBox.set(right - earsWide, top, right, split);
+            timeRight = earsBox.left - gap;
+        } else {
+            earsBox.setEmpty();
+        }
+        timeBox.set(from, top, timeRight, split);
         float rowTop = split + gap;
         float rowTall = bottom - rowTop;
         float small = rowTall * 1.9f;
         float x = right;
-        if (ears >= 0) {
-            earsBox.set(x - small, rowTop, x, bottom);
-            x -= small + gap;
-        } else {
-            earsBox.setEmpty();
-        }
         chargeBox.set(x - small, rowTop, x, bottom);
         x -= small + gap;
         if (showWeather) {
@@ -272,7 +277,14 @@ final class Almanac extends View {
         }
         if (!earsBox.isEmpty()) {
             window(canvas, earsBox);
-            mark(canvas, earsBox, ears + "%", quiet, false);
+            float s = Math.min(earsBox.width() * 0.5f, earsBox.height() * 0.42f);
+            headphones(canvas, earsBox.centerX(), earsBox.top + earsBox.height() * 0.36f, s, quiet);
+            words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            words.setColor(quiet);
+            words.setTextAlign(Paint.Align.CENTER);
+            String said = ears + "%";
+            words.setTextSize(fit(said, earsBox.width() * 0.74f, earsBox.height() * 0.24f));
+            canvas.drawText(said, earsBox.centerX(), earsBox.top + earsBox.height() * 0.82f, words);
         }
     }
 
