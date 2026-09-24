@@ -27,6 +27,14 @@ final class Blob extends View {
     private float open;
     /** Whether the button wears the icons' outline rather than its own circle. */
     private boolean shaped;
+    /** A face of the owner's choosing for the door to every app, drawn as an icon; none keeps the button. */
+    private android.graphics.drawable.Drawable face;
+
+    void face(android.graphics.drawable.Drawable made) {
+        face = made;
+        requestLayout();
+        invalidate();
+    }
 
     void shaped(boolean on) {
         shaped = on;
@@ -117,6 +125,22 @@ final class Blob extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         float centre = size / 2f;
+        if (face != null && shaped && !bin) {
+            /* Dressed as an icon: drawn as the icons beside it are. */
+            float room = getWidth();
+            float drawn = size;
+            if (face instanceof Shape.Cut) {
+                float need = size * ((Shape.Cut) face).wideness();
+                if (need > room) {
+                    drawn = size * room / need;
+                }
+            }
+            float x = (getWidth() - drawn) / 2f;
+            float y = (getHeight() - drawn) / 2f;
+            face.setBounds(Math.round(x), Math.round(y), Math.round(x + drawn), Math.round(y + drawn));
+            face.draw(canvas);
+            return;
+        }
         canvas.translate((getWidth() - size) / 2f, 0f);
         if (bin) {
             fill.setColor(binOver ? 0xFFD9472F : 0xFFE8674A);

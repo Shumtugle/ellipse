@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.42.0
+  sh build.sh ellipse-1.43.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -157,7 +157,9 @@ by itself, by its outline, by its light parts, by its dark parts, or by
 what stands apart from its main colour — each shown on that very icon. An
 icon's picture can also be replaced: by a picture of the owner's own from
 the phone, or by one of more than two hundred symbols, found by name. The
-outline stays one for all icons.
+outline stays one for all icons. The door to every app in the dock is
+given a face the same way, held: the plain button, or an icon among the
+icons, in any colour, inking, picture or symbol.
 
 Icons may wear a rim, as icon masks were once built in three layers: a
 plate of a material in the icon's outline — metal, gold, the accent, wood,

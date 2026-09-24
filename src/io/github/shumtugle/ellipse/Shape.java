@@ -566,6 +566,14 @@ final class Shape {
             this.shape = shape;
         }
 
+        /** How wide the tile is drawn against the square it is given. */
+        float wideness() {
+            if (shape == PAPER) {
+                return 0.86f * PAPER_WIDE;
+            }
+            return weight(shape) * (float) Math.sqrt(aspect);
+        }
+
         @Override
         public void draw(Canvas canvas) {
             int side = Math.min(getBounds().width(), getBounds().height());

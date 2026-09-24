@@ -580,6 +580,19 @@ public final class Home extends Activity {
                 drawer.rise();
             }
         });
+        /* The door to every app can be given a face like any icon: held,
+           it opens the same screen of faces. */
+        blob.face(allFace());
+        blob.setOnLongClickListener(new View.OnLongClickListener() {
+            public boolean onLongClick(View v) {
+                if (lift != null) {
+                    return false;
+                }
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                chooseFace(ALL_THING, null);
+                return true;
+            }
+        });
         LinearLayout.LayoutParams blobParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         blobParams.leftMargin = dp(4);
@@ -2617,7 +2630,29 @@ public final class Home extends Activity {
     // ---------------------------------------------------------- one icon's face
 
     /** An icon as its app or its maker gives it, before any outline or colour. */
+    /** The word the door to every app is kept by, for a face of its own. */
+    static final String ALL_THING = "#all";
+
+    /** The door to every app as an icon: its dots on the accent. */
+    private android.graphics.drawable.Drawable allRaw() {
+        android.graphics.drawable.Drawable dots = getDrawable(R.drawable.sym_apps).mutate();
+        dots.setTint(Tone.onAccent());
+        return new android.graphics.drawable.AdaptiveIconDrawable(
+            new android.graphics.drawable.ColorDrawable(Tone.primary()),
+            new android.graphics.drawable.InsetDrawable(dots, 0.3f));
+    }
+
+    /** The door's own face, if the owner gave it one; none keeps the round button. */
+    private android.graphics.drawable.Drawable allFace() {
+        int[] mine = Style.faceOf(ALL_THING);
+        boolean given = mine[1] >= 0 || mine[3] > 0 || mine[4] == 1 || Style.symbolOf(ALL_THING).length() > 0;
+        return given ? Style.dress(this, ALL_THING, allRaw(), null) : null;
+    }
+
     private android.graphics.drawable.Drawable rawIcon(String token, Apps.Door door) {
+        if (ALL_THING.equals(token)) {
+            return allRaw();
+        }
         if (door != null) {
             return door.plain();
         }
@@ -2654,6 +2689,16 @@ public final class Home extends Activity {
         int[] mine = Style.faceOf(token);
         List<List<Chooser.Item>> groups = new ArrayList<>();
         List<String> captions = new ArrayList<>();
+        if (ALL_THING.equals(token)) {
+            /* The door to every app: the plain button, or an icon among icons. */
+            List<Chooser.Item> doors = new ArrayList<>();
+            android.graphics.drawable.Drawable plain = getDrawable(R.drawable.sym_apps).mutate();
+            plain.setTint(Tone.primary());
+            doors.add(new Chooser.Item(plain, PLAIN_BUTTON, 8000));
+            doors.add(new Chooser.Item(Shape.face(allRaw(), -1, Style.OWN), AS_AN_ICON, 8001));
+            groups.add(doors);
+            captions.add("Door");
+        }
         List<Chooser.Item> colours = new ArrayList<>();
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, -1), AS_OTHERS, 1999));
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.OWN), THEIR_OWN, 2000));
@@ -2713,6 +2758,8 @@ public final class Home extends Activity {
     private static final int ASK_PICTURE = 14;
 
     private static final String AS_OTHERS = "As all the others";
+    private static final String PLAIN_BUTTON = "The plain button";
+    private static final String AS_AN_ICON = "As an icon";
     private static final String APPS_OWN = "The app's own";
     private static final String HOME_OWN = "The home screen's";
     private static final String THEIR_OWN = "Its own colours";
@@ -2729,7 +2776,15 @@ public final class Home extends Activity {
         int method = mine[3];
         int image = mine[4];
         String symbol = Style.symbolOf(faceToken);
-        if (key >= 1999 && key < 3000) {
+        if (key == 8000) {
+            Keep.saveFace(this, faceToken, -1, 0, 0, 0, "");
+            Style.read(this);
+            stamp = Keep.stamp(this);
+            fill();
+            return;
+        } else if (key == 8001) {
+            tint = Style.OWN;
+        } else if (key >= 1999 && key < 3000) {
             tint = key - 2000;
             if (tint == Style.OWN) {
                 method = Shape.AUTO;

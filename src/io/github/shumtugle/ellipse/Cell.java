@@ -165,8 +165,20 @@ final class Cell extends View {
             icon = door.icon();
         }
         if (icon != null) {
-            icon.setBounds(Math.round(x), Math.round(y),
-                Math.round(x + iconSize), Math.round(y + iconSize));
+            /* A tile wider than its square keeps inside its cell: where the
+               cell is narrow, as in the dock, the whole icon is drawn smaller
+               rather than over its neighbours. */
+            float size = iconSize;
+            if (icon instanceof Shape.Cut) {
+                float need = iconSize * ((Shape.Cut) icon).wideness();
+                float room = getWidth() * 0.96f;
+                if (need > room && need > 0f) {
+                    size = iconSize * room / need;
+                }
+            }
+            float ix = (getWidth() - size) / 2f;
+            float iy = y + (iconSize - size) / 2f;
+            icon.setBounds(Math.round(ix), Math.round(iy), Math.round(ix + size), Math.round(iy + size));
             icon.draw(canvas);
         }
         if (dot) {
