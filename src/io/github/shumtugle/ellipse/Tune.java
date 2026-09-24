@@ -112,7 +112,6 @@ public final class Tune extends Activity {
     private static final int DEFAULT = 3;
 
     private static final String SEARCH = "Search settings";
-    private static final String BE_HOME = "Make default home screen";
     private static final String RESTART_LINE = "Restart launcher";
     private static final String AGAIN = "Tap again to reset everything";
     private static final String LATER = "Coming in a later version";
@@ -288,13 +287,11 @@ public final class Tune extends Activity {
         foot = new Foot(this, host, SEARCH, new Foot.Owner() {
             public Menu.Section[] sections() {
                 return new Menu.Section[] {new Menu.Section(null,
-                    new String[] {BE_HOME, RESTART_LINE}, new int[] {DEFAULT, RESTART})};
+                    new String[] {RESTART_LINE}, new int[] {RESTART})};
             }
 
             public void picked(int section, int key) {
-                if (key == DEFAULT) {
-                    askToBeHome();
-                } else if (key == RESTART) {
+                if (key == RESTART) {
                     restart();
                 }
             }
