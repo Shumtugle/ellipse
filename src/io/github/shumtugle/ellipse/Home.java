@@ -758,6 +758,17 @@ public final class Home extends Activity {
                 }
                 continue;
             }
+            if (slot != null && isFolder(slot)) {
+                dockThing(dockFolder(slot, found, taken), slot, i);
+                continue;
+            }
+            if (slot != null && slot.startsWith(WIDGET)) {
+                View piece = dockWidget(slot);
+                if (piece != null) {
+                    dockThing(piece, slot, i);
+                }
+                continue;
+            }
             Apps.Door door;
             if (slot == null) {
                 door = found.role(docked[i], taken);
@@ -1090,7 +1101,7 @@ public final class Home extends Activity {
                 break;
             case ADD_WIDGET:
                 pendingPage = screens.page();
-                shelf.show();
+                shelf.show(Keep.number(this, Keep.SHELF_VIEW, Keep.LINES) == Keep.PAGES);
                 break;
             case ADD_SHORTCUT:
                 pendingPage = screens.page();
@@ -1123,7 +1134,7 @@ public final class Home extends Activity {
     }
 
     /** A thing of the home screen's own, or a pinned shortcut, standing in a dock place. */
-    private void dockThing(final Cell cell, final String token, final int slot) {
+    private void dockThing(final View cell, final String token, final int slot) {
         dock.put(cell, slot, 0);
         cells.add(cell);
         dockHeld[slot] = token;
@@ -1133,6 +1144,87 @@ public final class Home extends Activity {
                 return true;
             }
         });
+    }
+
+    /** Whether a kept word names a folder, the phone's or one's own. */
+    private static boolean isFolder(String token) {
+        String word = base(token);
+        return Keep.VENDOR_THING.equals(word) || Keep.SYSTEM_THING.equals(word)
+            || token.startsWith(Keep.FOLDER_THING);
+    }
+
+    /** What a folder holds, found afresh. */
+    private List<Apps.Door> folderDoors(String token, Apps found, Set<String> taken) {
+        String word = base(token);
+        if (Keep.VENDOR_THING.equals(word)) {
+            return found.vendor(taken);
+        }
+        if (Keep.SYSTEM_THING.equals(word)) {
+            return found.system(taken);
+        }
+        List<Apps.Door> inside = new ArrayList<>();
+        for (String item : Keep.folderItems(this, folderId(token))) {
+            Apps.Door door = found.door(item);
+            if (door != null) {
+                inside.add(door);
+            }
+        }
+        return inside;
+    }
+
+    private String folderName(String token, List<Apps.Door> doors) {
+        String word = base(token);
+        if (Keep.VENDOR_THING.equals(word)) {
+            return Apps.vendorName(doors);
+        }
+        if (Keep.SYSTEM_THING.equals(word)) {
+            return SYSTEM;
+        }
+        return Keep.folderName(this, folderId(token));
+    }
+
+    /** A folder standing in a dock place: its face, without a name, and the card it opens into. */
+    private Cell dockFolder(final String token, Apps found, Set<String> taken) {
+        final List<Apps.Door> doors = folderDoors(token, found, taken);
+        final String name = folderName(token, doors);
+        final Cell cell = new Cell(this, new Stack(doors), name, iconSize, false);
+        cell.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                int[] at = new int[2];
+                int[] floorAt = new int[2];
+                cell.getLocationOnScreen(at);
+                root.getLocationOnScreen(floorAt);
+                int[] icon = cell.localIcon();
+                trayFolder = folderId(token);
+                tray.show(name, doors, at[0] - floorAt[0] + icon[0] + icon[2] / 2f,
+                    at[1] - floorAt[1] + icon[1] + icon[3] / 2f);
+            }
+        });
+        return cell;
+    }
+
+    /** A widget of one place standing in the dock. */
+    private View dockWidget(String token) {
+        int id;
+        try {
+            id = Integer.parseInt(token.substring(WIDGET.length()).split(":")[0]);
+        } catch (RuntimeException broken) {
+            return null;
+        }
+        android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
+        if (info == null) {
+            return null;
+        }
+        android.appwidget.AppWidgetHostView view = widgetViews.get(id);
+        if (view == null) {
+            view = host.createView(this, id, info);
+            widgetViews.put(id, view);
+        } else if (view.getParent() instanceof ViewGroup) {
+            ((ViewGroup) view.getParent()).removeView(view);
+        }
+        view.setVisibility(View.VISIBLE);
+        view.setAlpha(1f);
+        return view;
     }
 
     private void place(Grid into, Apps.Door door, int column, int row, boolean named) {
@@ -1375,7 +1467,9 @@ public final class Home extends Activity {
             lift.at(cx, cy);
         }
         boolean app = Apps.nameOf(carried) != null;
-        boolean dockable = app || Keep.OWN_THING.equals(carried) || carried.startsWith(Keep.SHORTCUT_THING);
+        boolean small = carriedAcross == 1 && carriedDown == 1;
+        boolean dockable = app || Keep.OWN_THING.equals(carried) || carried.startsWith(Keep.SHORTCUT_THING)
+            || (small && isFolder(carried)) || (small && carried.startsWith(WIDGET));
         /* Over the bin, nothing else is offered: the thing is about to go. */
         boolean binned = blob.binning() && over(blob, x, y, dp(14));
         blob.binOver(binned);
@@ -1677,6 +1771,13 @@ public final class Home extends Activity {
     private void removeThing(String token, int[] whence) {
         if (whence[0] == -1) {
             Keep.saveDockSlot(this, whence[1], "");
+            if (token.startsWith(WIDGET)) {
+                try {
+                    drop(Integer.parseInt(token.substring(WIDGET.length()).split(":")[0]));
+                } catch (NumberFormatException broken) {
+                    // Nothing to let go.
+                }
+            }
             fill();
             return;
         }
@@ -1982,7 +2083,7 @@ public final class Home extends Activity {
                 public void run() {
                     menu.hide(false);
                     if (whence[0] == -1) {
-                        moveDock((Cell) thing, whence[1]);
+                        moveDock(thing, whence[1]);
                     } else {
                         move(thing);
                     }
@@ -2119,14 +2220,27 @@ public final class Home extends Activity {
     }
 
     /** An app is taken out of the dock to be carried. */
-    private void moveDock(Cell cell, int slot) {
+    private void moveDock(View thing, int slot) {
         String token = dockToken(slot);
         if (lift != null || token.length() == 0) {
             return;
         }
-        carry(cell, token, cell.drawable(), cell.localIcon(), 1, 1, new int[] {-1, slot},
+        android.graphics.drawable.Drawable face;
+        int[] icon;
+        if (thing instanceof Cell) {
+            face = ((Cell) thing).drawable();
+            icon = ((Cell) thing).localIcon();
+        } else {
+            android.graphics.Bitmap picture = android.graphics.Bitmap.createBitmap(
+                Math.max(1, thing.getWidth()), Math.max(1, thing.getHeight()),
+                android.graphics.Bitmap.Config.ARGB_8888);
+            thing.draw(new android.graphics.Canvas(picture));
+            face = new android.graphics.drawable.BitmapDrawable(getResources(), picture);
+            icon = new int[] {0, 0, thing.getWidth(), thing.getHeight()};
+        }
+        carry(thing, token, face, icon, 1, 1, new int[] {-1, slot},
             root.fingerX() + rootLeft(), root.fingerY() + rootTop());
-        cell.setVisibility(View.INVISIBLE);
+        thing.setVisibility(View.INVISIBLE);
     }
 
     // ------------------------------------------------------ pinned shortcuts
@@ -2269,8 +2383,6 @@ public final class Home extends Activity {
         refuse(screens);
     }
 
-    private static final String[] MAKER_GROUPS = {"Ellipse", "Apps"};
-
     /** The makers of shortcuts on a whole screen: the home screen's own first, then every app's. */
     private void showMakers() {
         makers = new ArrayList<>();
@@ -2287,17 +2399,16 @@ public final class Home extends Activity {
                 return order.compare(String.valueOf(a.getLabel()), String.valueOf(b.getLabel()));
             }
         });
+        /* One list: the door to these settings first, then every app's makers. */
         List<List<Chooser.Item>> groups = new ArrayList<>();
-        List<Chooser.Item> own = new ArrayList<>();
-        own.add(new Chooser.Item(getDrawable(R.mipmap.door), OWN_SETTINGS, OWN_MAKER));
-        groups.add(own);
-        List<Chooser.Item> apps = new ArrayList<>();
+        List<Chooser.Item> all = new ArrayList<>();
+        all.add(new Chooser.Item(getDrawable(R.mipmap.door), OWN_SETTINGS, OWN_MAKER));
         int dpi = getResources().getDisplayMetrics().densityDpi;
         for (int i = 0; i < makers.size(); i++) {
-            apps.add(new Chooser.Item(makers.get(i).getIcon(dpi), makers.get(i).getLabel(), i));
+            all.add(new Chooser.Item(makers.get(i).getIcon(dpi), makers.get(i).getLabel(), i));
         }
-        groups.add(apps);
-        chooser.show(MAKER_GROUPS, groups);
+        groups.add(all);
+        chooser.show(new String[] {null}, groups, Keep.number(this, Keep.MAKERS_VIEW, Keep.LINES) == Keep.PAGES);
     }
 
     /** A maker was chosen: its own window makes the shortcut, and the answer comes back as a pin request. */

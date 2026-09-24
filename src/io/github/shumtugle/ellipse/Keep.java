@@ -87,6 +87,9 @@ final class Keep {
     static final String LIST_GRID = "list_grid";
     static final String LIST_ENDLESS = "list_endless";
     static final String LIST_DOTS = "list_dots";
+    /** Lines or a grid for the shelf of widgets and for the makers of shortcuts. */
+    static final String SHELF_VIEW = "shelf_view";
+    static final String MAKERS_VIEW = "makers_view";
     static final String CLOCK = "clock";
     static final String ON_BACK = "on_back";
     static final String ON_UP = "on_up";

@@ -139,8 +139,12 @@ final class Shelf extends FrameLayout {
         return shown;
     }
 
+    /** Lines of cards that open in place, or every widget at once, two to a row. */
+    private boolean grid;
+
     /** Reads what every application offers, and rises. */
-    void show() {
+    void show(boolean grid) {
+        this.grid = grid;
         Context context = getContext();
         PackageManager manager = context.getPackageManager();
         Map<String, Maker> byOwner = new LinkedHashMap<>();
@@ -230,6 +234,10 @@ final class Shelf extends FrameLayout {
                 }
                 offers = matching;
             }
+            if (grid) {
+                shownCount = tiles(maker, offers, shownCount);
+                continue;
+            }
             boolean open = maker.owner.equals(opened) || (typed.length() > 0 && offers != maker.offers);
             View card = card(maker, offers, open);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -244,6 +252,79 @@ final class Shelf extends FrameLayout {
             }
             shownCount++;
         }
+    }
+
+    /** An app's widgets as tiles, two to a row, under the app's name; returns how many groups stand now. */
+    private int tiles(Maker maker, List<AppWidgetProviderInfo> offers, int count) {
+        Context context = getContext();
+        TextView caption = new TextView(context);
+        caption.setText(maker.name.toString().toUpperCase(java.util.Locale.getDefault()));
+        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+        caption.setLetterSpacing(0.12f);
+        caption.setTextColor(Tone.faint());
+        caption.setPadding(dp(12), dp(count == 0 ? 8 : 22), dp(12), dp(6));
+        cards.addView(caption);
+        LinearLayout row = null;
+        for (int i = 0; i < offers.size(); i++) {
+            if (i % 2 == 0) {
+                row = new LinearLayout(context);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                cards.addView(row, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            }
+            View tile = tile(offers.get(i));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            params.setMargins(dp(4), dp(4), dp(4), dp(4));
+            row.addView(tile, params);
+        }
+        if (offers.size() % 2 == 1 && row != null) {
+            row.addView(new View(context), new LinearLayout.LayoutParams(0, 1, 1f));
+        }
+        return count + 1;
+    }
+
+    /** One widget as a tile: its picture of itself, its name and the places it takes. */
+    private View tile(final AppWidgetProviderInfo info) {
+        Context context = getContext();
+        int dpi = context.getResources().getDisplayMetrics().densityDpi;
+        LinearLayout one = new LinearLayout(context);
+        one.setOrientation(LinearLayout.VERTICAL);
+        one.setGravity(Gravity.CENTER_HORIZONTAL);
+        one.setPadding(dp(10), dp(14), dp(10), dp(14));
+        one.setBackground(Tone.touch(Tone.box(Tone.container(), dp(22), 0f), dp(22)));
+        Drawable picture = info.loadPreviewImage(context, dpi);
+        if (picture == null) {
+            picture = info.loadIcon(context, dpi);
+        }
+        ImageView image = new ImageView(context);
+        image.setImageDrawable(picture);
+        image.setAdjustViewBounds(true);
+        image.setMaxHeight(dp(130));
+        image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        one.addView(image, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView label = new TextView(context);
+        label.setText(info.loadLabel(context.getPackageManager()));
+        label.setTextColor(Tone.onSurface());
+        label.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
+        label.setGravity(Gravity.CENTER);
+        label.setMaxLines(2);
+        label.setPadding(0, dp(10), 0, 0);
+        one.addView(label);
+        int[] span = hand.span(info);
+        TextView size = new TextView(context);
+        size.setText(span[0] + " \u00D7 " + span[1]);
+        size.setTextColor(Tone.faint());
+        size.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+        size.setGravity(Gravity.CENTER);
+        one.addView(size);
+        one.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hand.chosen(info);
+            }
+        });
+        return one;
     }
 
     private View card(final Maker maker, final List<AppWidgetProviderInfo> offers, boolean open) {

@@ -95,6 +95,9 @@ final class Menu {
     private float anchorY;
     private float anchorGap;
     private boolean shown;
+    /** A view under the veil that is the way out, and where it leads. */
+    private View exitView;
+    private Runnable exit;
 
     Menu(Context context, FrameLayout host, Listener listener) {
         this.context = context;
@@ -106,9 +109,20 @@ final class Menu {
         veil = new View(context);
         veil.setVisibility(View.GONE);
         veil.setClickable(true);
-        veil.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
+        /* A touch outside the card closes it; a touch on the way out, when
+           one is given, closes it and takes that way. The veil lies over
+           everything, so it is the veil that has to tell the two apart. */
+        veil.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, android.view.MotionEvent event) {
+                if (event.getActionMasked() != android.view.MotionEvent.ACTION_UP) {
+                    return true;
+                }
+                boolean out = exitView != null && inside(exitView, event.getRawX(), event.getRawY());
                 hide(true);
+                if (out && exit != null) {
+                    exit.run();
+                }
+                return true;
             }
         });
         host.addView(veil, new FrameLayout.LayoutParams(
@@ -162,6 +176,18 @@ final class Menu {
 
     boolean shown() {
         return shown;
+    }
+
+    /** While the menu stands open, a touch on this view leaves by this way. */
+    void exitThrough(View view, Runnable way) {
+        exitView = view;
+        exit = way;
+    }
+
+    private static boolean inside(View view, float x, float y) {
+        int[] at = new int[2];
+        view.getLocationOnScreen(at);
+        return x >= at[0] && x <= at[0] + view.getWidth() && y >= at[1] && y <= at[1] + view.getHeight();
     }
 
     /** Marks a line as chosen, whether the menu stands open or not. */

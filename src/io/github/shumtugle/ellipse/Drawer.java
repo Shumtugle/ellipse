@@ -237,6 +237,12 @@ final class Drawer extends FrameLayout {
                 turn(0f);
             }
         });
+        /* The cross over the round button leads home. */
+        menu.exitThrough(blob, new Runnable() {
+            public void run() {
+                opener.home();
+            }
+        });
         tint();
     }
 

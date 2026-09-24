@@ -64,6 +64,8 @@ final class Chooser extends FrameLayout {
     private String[] captions = new String[0];
     private List<List<Item>> items = new ArrayList<>();
     private boolean shown;
+    /** Lines, one thing to a line, or a grid of four to a row. */
+    private boolean grid;
 
     Chooser(Context context, float iconSize, Hand hand) {
         super(context);
@@ -123,8 +125,9 @@ final class Chooser extends FrameLayout {
         return shown;
     }
 
-    /** Rises with things in groups, each group under its caption. */
-    void show(String[] captions, List<List<Item>> items) {
+    /** Rises with things in groups, each group under its caption; none for a group with no name. */
+    void show(String[] captions, List<List<Item>> items, boolean grid) {
+        this.grid = grid;
         this.captions = captions;
         this.items = items;
         setBackgroundColor(Tone.surface());
@@ -163,6 +166,33 @@ final class Chooser extends FrameLayout {
             }).start();
     }
 
+    /** One thing to a line: its picture and its name, as the list of every app has them. */
+    private View line(final Item item) {
+        LinearLayout made = new LinearLayout(getContext());
+        made.setOrientation(LinearLayout.HORIZONTAL);
+        made.setGravity(Gravity.CENTER_VERTICAL);
+        made.setPadding(dp(24), dp(12), dp(24), dp(12));
+        made.setBackground(Tone.touch(null, 0f));
+        android.widget.ImageView picture = new android.widget.ImageView(getContext());
+        picture.setImageDrawable(item.icon);
+        int size = Math.round(iconSize * 0.78f);
+        made.addView(picture, new LinearLayout.LayoutParams(size, size));
+        TextView name = new TextView(getContext());
+        name.setText(item.name);
+        name.setTextColor(Tone.onSurface());
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        name.setSingleLine(true);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        name.setPadding(dp(18), 0, 0, 0);
+        made.addView(name, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        made.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                hand.chosen(item.key);
+            }
+        });
+        return made;
+    }
+
     private void build() {
         groups.removeAllViews();
         String typed = Match.norm(field.getText().toString());
@@ -177,13 +207,29 @@ final class Chooser extends FrameLayout {
             if (found.isEmpty()) {
                 continue;
             }
-            TextView caption = new TextView(getContext());
-            caption.setText(captions[g].toUpperCase(Locale.getDefault()));
-            caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
-            caption.setLetterSpacing(0.12f);
-            caption.setTextColor(Tone.faint());
-            caption.setPadding(dp(16), dp(g == 0 ? 8 : 24), dp(16), dp(4));
-            groups.addView(caption);
+            if (captions[g] != null) {
+                TextView caption = new TextView(getContext());
+                caption.setText(captions[g].toUpperCase(Locale.getDefault()));
+                caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+                caption.setLetterSpacing(0.12f);
+                caption.setTextColor(Tone.faint());
+                caption.setPadding(dp(16), dp(g == 0 ? 8 : 24), dp(16), dp(4));
+                groups.addView(caption);
+            }
+            if (!grid) {
+                for (int i = 0; i < found.size(); i++) {
+                    View line = line(found.get(i));
+                    groups.addView(line);
+                    if (i < 12) {
+                        line.setAlpha(0f);
+                        line.setTranslationY(dp(10));
+                        line.animate().alpha(1f).translationY(0f).setStartDelay(Pace.STEP / 2 * i)
+                            .setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
+                    }
+                }
+                count++;
+                continue;
+            }
             int rows = (found.size() + COLUMNS - 1) / COLUMNS;
             Grid grid = new Grid(getContext(), COLUMNS, rows);
             for (int i = 0; i < found.size(); i++) {

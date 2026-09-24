@@ -144,7 +144,11 @@ public final class Tune extends Activity {
                     toggle("Page indicator", "Points under the screens, the home one ringed",
                         Keep.DOTS, true),
                     toggle("Add new apps", "An app put on the phone is set down on a free place",
-                        Keep.AUTO_ADD, false)
+                        Keep.AUTO_ADD, false),
+                    choice("Widget shelf", "How the widgets to add are laid out", Keep.SHELF_VIEW,
+                        Keep.LINES, new String[] {"Lines", "Grid"}, new int[] {Keep.LINES, Keep.PAGES}),
+                    choice("Shortcut makers", "How the shortcuts to add are laid out", Keep.MAKERS_VIEW,
+                        Keep.LINES, new String[] {"Lines", "Grid"}, new int[] {Keep.LINES, Keep.PAGES})
                 };
             case LIST:
                 return new Line[] {
