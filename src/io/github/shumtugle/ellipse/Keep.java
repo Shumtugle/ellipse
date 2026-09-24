@@ -233,6 +233,8 @@ final class Keep {
     /** How many rows the clock stands in, and whether it reaches the screen's edges. */
     static final String CLOCK_ROWS = "clock_rows";
     static final String CLOCK_EDGE = "clock_edge";
+    /** How dark the outline clock's ground is, in percent: nought is clear. */
+    static final String CLOCK_GROUND = "clock_ground";
     /** The window cut in the icons' plate, and the tile's width to its height in percent. */
     static final String WINDOW = "icon_window";
     static final String TILE_ASPECT = "tile_aspect";

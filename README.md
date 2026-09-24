@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.43.1
+  sh build.sh ellipse-1.44.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -201,7 +201,9 @@ and keeps its form at any size: low, the hour and date in a long window
 with the weather and the charge under it; tall, the dial fills the height,
 the weather stands with the place it is for, and under it rings for the
 next alarm, the headphones while they are near, and the charge, each ring
-filled as far as its measure goes.
+filled as far as its measure goes. Its parts — lines, hour marks, hands,
+second hand, rings, words — each take a colour of the owner's choosing,
+and its ground may be darkened evenly from clear to nearly black.
 
-Any clock may stand in one to four rows, and may run past the grid's
+Any clock may stand in one or two rows, and may run past the grid's
 margins to the screen's edges.

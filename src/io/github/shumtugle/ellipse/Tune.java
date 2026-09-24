@@ -1008,6 +1008,14 @@ public final class Tune extends Activity {
                     paintFace(c, w, h, value);
                 }
             }));
+        if (face == Home.FACE_CONTOUR) {
+            caption("GROUND");
+            groundSlider();
+            for (int part = 0; part < Contour.PARTS.length; part++) {
+                caption(Contour.PART_NAMES[part].toUpperCase(java.util.Locale.ROOT));
+                rows.addView(colours(part));
+            }
+        }
         if (face == Home.FACE_PLATE) {
             caption("PLATE");
             int[] kinds = new int[Rim.NAMES.length];
@@ -1074,6 +1082,105 @@ public final class Tune extends Activity {
         }
     }
 
+    /** How dark the outline clock's ground is: clear to nearly black, evenly. */
+    private void groundSlider() {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setPadding(dp(24), dp(6), dp(24), dp(6));
+        LinearLayout top = new LinearLayout(this);
+        TextView name = new TextView(this);
+        name.setText("Darkening");
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        name.setTextColor(Tone.onSurface());
+        top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView value = new TextView(this);
+        value.setText(Keep.number(this, Keep.CLOCK_GROUND, 0) + "%");
+        value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        value.setTextColor(Tone.primary());
+        top.addView(value);
+        made.addView(top);
+        made.addView(new Slide(this, 0, 95, Keep.number(this, Keep.CLOCK_GROUND, 0), new Slide.Moved() {
+            public void moved(int at, boolean done) {
+                value.setText(at + "%");
+                Keep.saveNumber(Tune.this, Keep.CLOCK_GROUND, at);
+                showClock();
+            }
+        }));
+        rows.addView(made);
+    }
+
+    /** The colours one part of the outline clock may take, as small round samples. */
+    private static final int[] PALETTE = {0xFFEFE7D6, 0xFFFFFFFF, 0xFFD9CCB4, 0xFFA0937E, 0xFF9AA3B5, 0xFF7AA7F0,
+        0xFF8FC7A0, 0xFFE3C16F, 0xFFF2A96B, 0xFFB0404A, 0xFFC3A2D6, 0xFF6E6A63};
+
+    private View colours(final int part) {
+        android.widget.HorizontalScrollView across = new android.widget.HorizontalScrollView(this);
+        across.setHorizontalScrollBarEnabled(false);
+        across.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout line = new LinearLayout(this);
+        line.setPadding(dp(18), 0, dp(18), dp(6));
+        final String key = "contour_" + Contour.PARTS[part];
+        final int[] chosen = {Keep.number(this, key, Contour.PART_DEFAULTS[part])};
+        java.util.List<Integer> values = new java.util.ArrayList<>();
+        values.add(Contour.ACCENT);
+        if (part == 4) {
+            values.add(Contour.OWN_RINGS);
+        }
+        for (int c : PALETTE) {
+            values.add(c);
+        }
+        final List<View> dots = new ArrayList<>();
+        for (final int value : values) {
+            View dot = new View(this) {
+                @Override
+                protected void onDraw(android.graphics.Canvas canvas) {
+                    android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                    float r = getWidth() / 2f - dp(5);
+                    if (value == Contour.OWN_RINGS) {
+                        int[] own = {0xFFC3A2D6, 0xFF8FC7A0, 0xFF7AA7F0};
+                        for (int i = 0; i < 3; i++) {
+                            p.setColor(own[i]);
+                            canvas.drawArc(new android.graphics.RectF(getWidth() / 2f - r, getHeight() / 2f - r,
+                                getWidth() / 2f + r, getHeight() / 2f + r), -90f + 120f * i, 120f, true, p);
+                        }
+                    } else {
+                        p.setColor(value == Contour.ACCENT ? Tone.primary() : value);
+                        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, r, p);
+                    }
+                    if (value == Contour.ACCENT) {
+                        p.setColor(Tone.onAccent());
+                        p.setTextAlign(android.graphics.Paint.Align.CENTER);
+                        p.setTextSize(r * 0.9f);
+                        canvas.drawText("A", getWidth() / 2f, getHeight() / 2f + r * 0.32f, p);
+                    }
+                    if (chosen[0] == value) {
+                        p.setStyle(android.graphics.Paint.Style.STROKE);
+                        p.setStrokeWidth(dp(2.5f));
+                        p.setColor(Tone.onSurface());
+                        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, getWidth() / 2f - dp(1.5f), p);
+                    }
+                }
+            };
+            dots.add(dot);
+            dot.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    chosen[0] = value;
+                    Keep.saveNumber(Tune.this, key, value);
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    for (View d : dots) {
+                        d.invalidate();
+                    }
+                    showClock();
+                }
+            });
+            LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(dp(48), dp(48));
+            at.rightMargin = dp(4);
+            line.addView(dot, at);
+        }
+        across.addView(line);
+        return across;
+    }
+
     /** How many rows the clock stands in: its form is kept at any of them. */
     private void rowsSlider() {
         LinearLayout made = new LinearLayout(this);
@@ -1091,7 +1198,7 @@ public final class Tune extends Activity {
         value.setTextColor(Tone.primary());
         top.addView(value);
         made.addView(top);
-        made.addView(new Slide(this, 1, 4, Keep.number(this, Keep.CLOCK_ROWS, 1), new Slide.Moved() {
+        made.addView(new Slide(this, 1, 2, Math.min(2, Keep.number(this, Keep.CLOCK_ROWS, 1)), new Slide.Moved() {
             public void moved(int at, boolean done) {
                 value.setText(String.valueOf(at));
                 if (done) {
@@ -1113,7 +1220,7 @@ public final class Tune extends Activity {
         ((Timepiece) clock).weather(Keep.flag(this, Keep.WEATHER, true));
         /* As tall as it will stand on the screen, up to three rows, so its
            form at that height can be seen. */
-        int tall = Math.min(3, Math.max(1, Keep.number(this, Keep.CLOCK_ROWS, 1)));
+        int tall = Math.min(2, Math.max(1, Keep.number(this, Keep.CLOCK_ROWS, 1)));
         window.addView(clock, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
             dp(tall == 1 ? 132 : 110 * tall)));
     }

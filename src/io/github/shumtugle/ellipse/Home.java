@@ -1057,7 +1057,7 @@ public final class Home extends Activity {
         }
         /* As many rows as the settings ask, as long as they are free and on
            the screen; never fewer than one. */
-        int tall = Math.max(1, Keep.number(this, Keep.CLOCK_ROWS, 1));
+        int tall = Math.max(1, Math.min(2, Keep.number(this, Keep.CLOCK_ROWS, 1)));
         while (tall > 1 && (row + tall > rows || !page.free(0, row, columns, tall))) {
             tall--;
         }

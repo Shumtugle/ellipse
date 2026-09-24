@@ -31,14 +31,25 @@ import java.util.Locale;
  */
 final class Contour extends View implements Timepiece {
 
-    private static final int LINE = 0x66E8E0D0;
-    private static final int INK = 0xFFEFE7D6;
-    private static final int QUIET = 0xFFB9B1A2;
-    private static final int MARK = 0xFF9AA3B5;
-    private static final int ALARM = 0xFFC3A2D6;
-    private static final int POWER = 0xFF7AA7F0;
-    private static final int EARS_RING = 0xFF8FC7A0;
-    private static final int SECOND = 0xFFB0404A;
+    /** The parts of the clock the owner may colour, each kept by its own word. */
+    static final String[] PARTS = {"lines", "marks", "hands", "second", "rings", "words"};
+    static final String[] PART_NAMES = {"Lines", "Hour marks", "Hands", "Second hand", "Rings", "Words"};
+    /** Colours that stand for others: the accent, and — for the rings — each its own. */
+    static final int ACCENT = 1;
+    static final int OWN_RINGS = 2;
+    static final int[] PART_DEFAULTS = {0xFFE8E0D0, 0xFF9AA3B5, 0xFFD9CCB4, 0xFFB0404A, OWN_RINGS, 0xFFEFE7D6};
+
+    private final int LINE;
+    private final int INK;
+    private final int QUIET;
+    private final int MARK;
+    private final int HAND;
+    private final int ALARM;
+    private final int POWER;
+    private final int EARS_RING;
+    private final int SECOND;
+    /** How dark the ground inside the card is: none to nearly black. */
+    private final int ground;
 
     private final Almanac.Hand hand;
     private final float density;
@@ -75,9 +86,27 @@ final class Contour extends View implements Timepiece {
         }
     };
 
+    /** A part's colour as kept, the accent put in where it stands for it. */
+    static int colour(Context context, int part) {
+        int kept = Keep.number(context, "contour_" + PARTS[part], PART_DEFAULTS[part]);
+        return kept == ACCENT ? Tone.primary() : kept;
+    }
+
     Contour(Context context, Almanac.Hand hand) {
         super(context);
         this.hand = hand;
+        int lines = colour(context, 0);
+        LINE = (0x66 << 24) | (lines & 0xFFFFFF);
+        MARK = colour(context, 1);
+        HAND = colour(context, 2);
+        SECOND = colour(context, 3);
+        int rings = colour(context, 4);
+        ALARM = rings == OWN_RINGS ? 0xFFC3A2D6 : rings;
+        POWER = rings == OWN_RINGS ? 0xFF7AA7F0 : rings;
+        EARS_RING = rings == OWN_RINGS ? 0xFF8FC7A0 : rings;
+        INK = colour(context, 5);
+        QUIET = (0xC0 << 24) | (INK & 0xFFFFFF);
+        ground = Math.round(255f * Keep.number(context, Keep.CLOCK_GROUND, 0) / 100f);
         density = context.getResources().getDisplayMetrics().density;
         line.setStyle(Paint.Style.STROKE);
         line.setStrokeCap(Paint.Cap.ROUND);
@@ -179,11 +208,16 @@ final class Contour extends View implements Timepiece {
         line.setStrokeWidth(thin);
         line.setColor(LINE);
         float round = Math.min(card.height() * 0.14f, px(34));
+        if (ground > 0) {
+            fill.setColor(ground << 24);
+            canvas.drawRoundRect(card, round, round, fill);
+        }
         canvas.drawRoundRect(card, round, round, line);
 
         float pad = Math.max(px(8), card.height() * 0.07f);
-        float d = card.height() - 2 * pad;
-        dialBox.set(card.left + pad, card.top + pad, card.left + pad + d, card.top + pad + d);
+        float d = Math.min(card.height() - 2 * pad, card.width() * 0.46f);
+        float dialTop = card.centerY() - d / 2f;
+        dialBox.set(card.left + pad, dialTop, card.left + pad + d, dialTop + d);
         dial(canvas, dialBox);
 
         float left = dialBox.right + pad * 1.4f;
@@ -196,7 +230,7 @@ final class Contour extends View implements Timepiece {
         weatherBox.setEmpty();
         if (tall) {
             /* Tall: the weather and its place above, rings of measure under it. */
-            float split = card.top + pad + (d - gap) * 0.42f;
+            float split = card.top + pad + (card.height() - 2 * pad - gap) * 0.42f;
             if (showWeather) {
                 weatherBox.set(left, card.top + pad, right, split);
                 pill(canvas, weatherBox);
@@ -226,7 +260,7 @@ final class Contour extends View implements Timepiece {
                 charge >= 0 ? charge + "%" : "\u2013");
         } else {
             /* Low: the hour and date above, the weather and the charge under. */
-            float split = card.top + pad + (d - gap) * 0.56f;
+            float split = card.top + pad + (card.height() - 2 * pad - gap) * 0.56f;
             timeBox.set(left, card.top + pad, right, split);
             pill(canvas, timeBox);
             time(canvas, timeBox);
@@ -287,8 +321,8 @@ final class Contour extends View implements Timepiece {
         float sec = now.get(Calendar.SECOND);
         float min = now.get(Calendar.MINUTE) + sec / 60f;
         float hour = now.get(Calendar.HOUR) + min / 60f;
-        stroke(canvas, cx, cy, hour / 12f, r * 0.45f, r * 0.11f, 0xFFA0937E);
-        stroke(canvas, cx, cy, min / 60f, r * 0.72f, r * 0.07f, 0xFFD9CCB4);
+        stroke(canvas, cx, cy, hour / 12f, r * 0.45f, r * 0.11f, (0xB8 << 24) | (HAND & 0xFFFFFF));
+        stroke(canvas, cx, cy, min / 60f, r * 0.72f, r * 0.07f, HAND);
         stroke(canvas, cx, cy, sec / 60f, r * 0.82f, r * 0.02f, SECOND);
         fill.setColor(SECOND);
         canvas.drawCircle(cx, cy, r * 0.055f, fill);
