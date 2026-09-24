@@ -95,6 +95,11 @@ final class Glyph extends View {
         Path face = new Path();
         face.addCircle(cx, cy, 12f * u, Path.Direction.CW);
         canvas.clipPath(face);
+        /* Seen close, as the settings' icon is framed: brought nearer about
+           a point below and to the right of the ball. */
+        float near = 1.5f;
+        canvas.translate(-near * 5.8f * k, -near * 15.5f * k);
+        canvas.scale(near, near, cx, cy);
 
         /* The arc of the ellipse through the ball. */
         double tilt = Math.toRadians(-14);
@@ -116,7 +121,7 @@ final class Glyph extends View {
                 path.lineTo(px, py);
             }
         }
-        line.setStrokeWidth(1.7f * u);
+        line.setStrokeWidth(1.7f * u / near);
         canvas.drawPath(path, line);
 
         /* The head, upright, and a stub of its handle; the jaws cut out. */

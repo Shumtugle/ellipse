@@ -195,6 +195,17 @@ LAUNCHER_POINTS = reds + [(gx, gy)]
 # only this piece of it crosses the face. The rest of it, like the rest of
 # the handle, the eye supplies.
 
+# Seen close: the mark is drawn from its own measures, then brought
+# nearer, so the head fills most of the face and the ball sits high and to
+# the left, as the owner framed it.
+NEAR, OX, OY = 1.5, 5.8, 15.5
+U = U * NEAR
+
+
+def px(x, y):
+    return (C + (x - OX) * U, C + (y - OY) * U)
+
+
 HX, HY = -4, 14
 HEAD = 27
 MOUTH = 12.5
