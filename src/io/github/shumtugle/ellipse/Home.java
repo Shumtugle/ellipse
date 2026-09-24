@@ -556,6 +556,26 @@ public final class Home extends Activity {
         });
         stage.addView(screens, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        /* Once the screens have a size, it is kept for the clock's proofs;
+           and if things were set out by a guess at it, they are set out again. */
+        screens.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                if (r - l <= 0 || b - t <= 0 || (r - l == or - ol && b - t == ob - ot)) {
+                    return;
+                }
+                float d = getResources().getDisplayMetrics().density;
+                Keep.saveNumber(Home.this, Keep.PAGE_WIDE, Math.round((r - l - dp(16)) / d));
+                Keep.saveNumber(Home.this, Keep.PAGE_TALL, Math.round((b - t - dp(16)) / d));
+                if (guessed) {
+                    guessed = false;
+                    screens.post(new Runnable() {
+                        public void run() {
+                            fill();
+                        }
+                    });
+                }
+            }
+        });
 
         /* The bar is the dock: four places in the pill at the foot, no
            names, and the round button at its end is the way into every
@@ -885,8 +905,8 @@ public final class Home extends Activity {
             List<Keep.Spot> folders = new ArrayList<>();
             for (Keep.Spot spot : own) {
                 Grid page = pages.get(spot.screen);
-                if (Keep.CLOCK_THING.equals(spot.token)) {
-                    clocked = clock(page, spot.y) || clocked;
+                if (Keep.CLOCK_THING.equals(base(spot.token))) {
+                    clocked = clock(page, spot.x, spot.y, spot.token) || clocked;
                 } else if (Keep.OWN_THING.equals(spot.token)) {
                     if (page.free(spot.x, spot.y)) {
                         ownDoor(page, spot.x, spot.y);
@@ -912,7 +932,7 @@ public final class Home extends Activity {
                 }
             }
             if (!clocked) {
-                clock(pages.get(home), 0);
+                clock(pages.get(home), 0, 0, Keep.CLOCK_THING);
             }
             List<Apps.Door> vendor = found.vendor(taken);
             for (Keep.Spot spot : folders) {
@@ -934,7 +954,7 @@ public final class Home extends Activity {
             }
         } else {
             Grid middle = pages.get(home);
-            clock(middle, 0);
+            clock(middle, 0, 0, Keep.CLOCK_THING);
             Intent[] everyday = {
                 new Intent(Intent.ACTION_VIEW, Uri.parse("https:")),
                 category(Intent.CATEGORY_APP_MARKET),
@@ -1050,30 +1070,81 @@ public final class Home extends Activity {
         });
     }
 
-    /** The clock across a whole row, if the settings want it and the row is free. */
-    private boolean clock(Grid page, int row) {
-        if (!Keep.flag(this, Keep.CLOCK, true) || !page.free(0, row, columns, 1)) {
+    /** Whether the places were measured by a guess, before the screens had a size. */
+    private boolean guessed;
+
+    /**
+     * A place's width and height in pixels: as the screens are laid out,
+     * or, before they are, a guess at it, to be set right once they are.
+     */
+    private float[] place() {
+        if (screens != null && screens.getWidth() > 0 && screens.getHeight() > 0) {
+            return new float[] {(screens.getWidth() - dp(16)) / (float) columns,
+                (screens.getHeight() - dp(16)) / (float) rows};
+        }
+        guessed = true;
+        android.util.DisplayMetrics m = getResources().getDisplayMetrics();
+        return new float[] {(m.widthPixels - dp(16)) / (float) columns, m.heightPixels * 0.72f / rows};
+    }
+
+    /**
+     * The least block the clock takes: its face's least box in dp, counted
+     * in places of this grid. A grid of many small places gives it more of
+     * them, so the clock is never drawn smaller than its face allows.
+     */
+    private int[] clockLeast(float[] cell) {
+        float d = getResources().getDisplayMetrics().density;
+        float[] box = leastBox(this);
+        return new int[] {Math.max(1, Math.min(columns, (int) Math.ceil(box[0] * d / cell[0] - 0.05f))),
+            Math.max(1, Math.min(rows, (int) Math.ceil(box[1] * d / cell[1] - 0.05f)))};
+    }
+
+    /** The least box of the chosen face, in dp. */
+    static float[] leastBox(Context context) {
+        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_MENO) {
+            return Meno.least();
+        }
+        return new float[] {240f, 96f};
+    }
+
+    /**
+     * The clock, a thing of the grid like a widget: in the block it was
+     * given, or, if never given one, across the whole width and as many
+     * rows down as its face needs. A block too small for the face on this
+     * grid grows to fit where the places are free; what is kept is the
+     * block as given, so another grid measures it afresh.
+     */
+    private boolean clock(Grid page, int column, int row, String token) {
+        if (!Keep.flag(this, Keep.CLOCK, true)) {
             return false;
         }
-        /* As many rows as the settings ask, as long as they are free and on
-           the screen; never fewer than one. */
-        int tall = Math.max(1, Math.min(2, Keep.number(this, Keep.CLOCK_ROWS, 1)));
-        while (tall > 1 && (row + tall > rows || !page.free(0, row, columns, tall))) {
-            tall--;
+        int[] least = clockLeast(place());
+        boolean given = token.indexOf(':') > 0;
+        int[] span = given ? folderSpan(token) : new int[] {columns, least[1]};
+        int across = Math.min(columns - column, Math.max(span[0], least[0]));
+        int down = -1;
+        for (int d = Math.max(span[1], least[1]); d >= 1; d--) {
+            if (row + d <= rows && page.free(column, row, across, d)) {
+                down = d;
+                break;
+            }
+        }
+        if (down < 0 || across < 1) {
+            return false;
         }
         View clock = timepiece(this, new Almanac.Hand() {
             public void pressed(String window, View from, android.graphics.RectF box) {
                 look(window, from, box);
             }
         });
-        page.put(clock, 0, row, columns, tall);
+        page.put(clock, column, row, across, down);
         page.edge(clock, Keep.flag(this, Keep.CLOCK_EDGE, false));
         cells.add(clock);
         Timepiece piece = (Timepiece) clock;
         piece.weather(Keep.flag(this, Keep.WEATHER, true));
         piece.ears(Keep.flag(this, Keep.EARS, true) ? earsLevel : -1);
         clockView = piece;
-        stand(page, clock, Keep.CLOCK_THING);
+        stand(page, clock, token);
         return true;
     }
 
@@ -1984,7 +2055,7 @@ public final class Home extends Activity {
             } catch (NumberFormatException broken) {
                 // Nothing to let go.
             }
-        } else if (Keep.CLOCK_THING.equals(token)) {
+        } else if (Keep.CLOCK_THING.equals(base(token))) {
             Keep.saveFlag(this, Keep.CLOCK, false);
             stamp = Keep.stamp(this);
         }
@@ -2025,7 +2096,7 @@ public final class Home extends Activity {
         }
         String word = base(token);
         if (Keep.VENDOR_THING.equals(word) || Keep.SYSTEM_THING.equals(word)
-            || word.startsWith(Keep.FOLDER_THING)) {
+            || word.startsWith(Keep.FOLDER_THING) || Keep.CLOCK_THING.equals(word)) {
             return true;
         }
         if (WIDGET.equals(word)) {
@@ -2070,6 +2141,11 @@ public final class Home extends Activity {
         int maxD = rows;
         boolean wide = true;
         boolean tall = true;
+        if (Keep.CLOCK_THING.equals(base(token))) {
+            int[] least = clockLeast(new float[] {page.cellWidth(), page.cellHeight()});
+            minA = Math.min(least[0], block[2]);
+            minD = Math.min(least[1], block[3]);
+        }
         if (token.startsWith(WIDGET)) {
             android.appwidget.AppWidgetProviderInfo info = widgetOf(token);
             if (info == null) {
@@ -2311,7 +2387,7 @@ public final class Home extends Activity {
             android.appwidget.AppWidgetProviderInfo info = widgetOf(token);
             return info == null ? "" : info.loadLabel(getPackageManager());
         }
-        if (Keep.CLOCK_THING.equals(token)) {
+        if (Keep.CLOCK_THING.equals(base(token))) {
             return CLOCK_NAME;
         }
         if (Keep.OWN_THING.equals(token)) {
@@ -3079,14 +3155,18 @@ public final class Home extends Activity {
         float wide = page == null || page.cellWidth() <= 0
             ? (getResources().getDisplayMetrics().widthPixels - dp(16)) / (float) columns : page.cellWidth();
         float tall = page == null || page.cellHeight() <= 0 ? wide * 1.2f : page.cellHeight();
-        int across;
-        int down;
+        /* Its least size is in pixels of this phone; counted in places of
+           this grid, not of any other. */
+        int across = (int) Math.ceil(info.minWidth / wide - 0.05f);
+        int down = (int) Math.ceil(info.minHeight / tall - 0.05f);
         if (Build.VERSION.SDK_INT >= 31 && info.targetCellWidth > 0 && info.targetCellHeight > 0) {
-            across = info.targetCellWidth;
-            down = info.targetCellHeight;
-        } else {
-            across = (int) Math.ceil(info.minWidth / wide);
-            down = (int) Math.ceil(info.minHeight / tall);
+            /* The places it asks for are places of a common grid of four or
+               five across: taken as they are across, but down they are read
+               as the height that many common places give, seventy dp each
+               less thirty, and counted in this grid's rows, which on a grid
+               of many rows are far lower. */
+            across = Math.max(across, info.targetCellWidth);
+            down = Math.max(down, (int) Math.ceil(dp(70f * info.targetCellHeight - 30f) / tall - 0.05f));
         }
         return new int[] {Math.max(1, Math.min(columns, across)), Math.max(1, Math.min(rows, down))};
     }
@@ -3240,6 +3320,20 @@ public final class Home extends Activity {
         android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
         if (info == null || !page.free(spot.x, spot.y, across, down)) {
             return;
+        }
+        /* A block kept on another grid may be lower than the widget can
+           live in on this one: it grows to its least size here, where the
+           places are free. What is kept stays as it was. */
+        float[] cell = place();
+        int leastWide = info.minResizeWidth > 0 ? info.minResizeWidth : info.minWidth;
+        int leastTall = info.minResizeHeight > 0 ? info.minResizeHeight : info.minHeight;
+        int needA = Math.min(columns - spot.x, (int) Math.ceil(leastWide / cell[0] - 0.05f));
+        int needD = Math.min(rows - spot.y, (int) Math.ceil(leastTall / cell[1] - 0.05f));
+        if (needA > across && page.free(spot.x, spot.y, needA, down)) {
+            across = needA;
+        }
+        if (needD > down && page.free(spot.x, spot.y, across, needD)) {
+            down = needD;
         }
         android.appwidget.AppWidgetHostView view = widgetViews.get(id);
         if (view == null) {

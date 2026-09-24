@@ -134,12 +134,15 @@ final class Keep {
     }
 
     /** A grid kept as one number: columns times ten, plus rows. */
+    /* A grid is kept as its columns and rows side by side: 45 is four by
+       five; from ten rows on, the rows take two figures, so 511 is five by
+       eleven. */
     static int columns(int grid) {
-        return Math.max(3, Math.min(7, grid / 10));
+        return Math.max(3, Math.min(7, grid >= 100 ? grid / 100 : grid / 10));
     }
 
     static int rows(int grid) {
-        return Math.max(3, Math.min(9, grid % 10));
+        return Math.max(3, Math.min(12, grid >= 100 ? grid % 100 : grid % 10));
     }
 
     /** What is left out of the list of every application, by component. */
@@ -230,13 +233,17 @@ final class Keep {
     static final String CLOCK_PLATE = "clock_plate";
     static final String CLOCK_DIAL = "clock_dial_of";
     static final String CLOCK_FIELDS = "clock_fields";
-    /** How many rows the clock stands in, and whether it reaches the screen's edges. */
-    static final String CLOCK_ROWS = "clock_rows";
+    /** Whether the clock reaches the screen's edges; its size is kept with its place. */
     static final String CLOCK_EDGE = "clock_edge";
+    /** The size of a screen's grid as last laid out, in dp: what the clock's proofs are drawn to. */
+    static final String PAGE_WIDE = "page_wide";
+    static final String PAGE_TALL = "page_tall";
     /** How dark the outline clock's ground is, in percent: nought is clear. */
     static final String CLOCK_GROUND = "clock_ground";
     /** Which of the widget clock's own seconds hands is drawn. */
     static final String MENO_SECOND = "meno_second";
+    /** How strong the widget clock's fine lines are, in percent of their own. */
+    static final String MENO_LINES = "meno_lines";
     /** The window cut in the icons' plate, and the tile's width to its height in percent. */
     static final String WINDOW = "icon_window";
     static final String TILE_ASPECT = "tile_aspect";

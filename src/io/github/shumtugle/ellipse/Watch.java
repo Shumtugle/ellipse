@@ -193,33 +193,62 @@ final class Watch extends View implements Timepiece {
         }
         canvas.restore();
 
-        float pad = slab.height() * 0.08f;
-        float d = slab.height() - 2 * pad;
-        dialBox.set(slab.left + pad, slab.top + pad, slab.left + pad + d, slab.top + pad + d);
+        /* Wide, the dial on the left and the windows beside it, all in a
+           band as high as the dial; narrow, the dial above and the windows
+           under it. The dial is never more than its share of the width, so
+           nothing on the right is ever pushed over it. */
+        boolean wide = slab.width() >= slab.height() * 1.7f;
+        float pad = Math.min(slab.height(), slab.width() / (wide ? 2.6f : 1f)) * 0.08f;
+        float gap = pad * 0.7f;
+        float left;
+        float right = slab.right - pad;
+        float top;
+        float band;
+        if (wide) {
+            float d = Math.min(slab.height() - 2 * pad, (slab.width() - 2 * pad) * 0.42f);
+            dialBox.set(slab.left + pad, slab.centerY() - d / 2f, slab.left + pad + d, slab.centerY() + d / 2f);
+            left = dialBox.right + pad * 1.2f;
+            top = dialBox.top;
+            band = d;
+        } else {
+            float across = slab.width() - 2 * pad;
+            band = Math.min(across * 0.62f, (slab.height() - 2 * pad) * 0.4f);
+            float d = Math.min(across, slab.height() - 2 * pad - band - pad);
+            float all = d + pad + band;
+            float at = slab.centerY() - all / 2f;
+            dialBox.set(slab.centerX() - d / 2f, at, slab.centerX() + d / 2f, at + d);
+            left = slab.left + pad;
+            top = dialBox.bottom + pad;
+        }
         face(canvas, dialBox);
 
-        float left = dialBox.right + pad * 1.2f;
-        float right = slab.right - pad;
-        float gap = pad * 0.7f;
-        float split = slab.top + pad + (d - gap) * 0.58f;
-        timeBox.set(left, slab.top + pad, right, split);
+        float split = top + (band - gap) * 0.58f;
+        timeBox.set(left, top, right, split);
         float rowTop = split + gap;
-        float rowBottom = slab.bottom - pad;
+        float rowBottom = top + band;
         float rowTall = rowBottom - rowTop;
-        float small = rowTall * 1.9f;
+        float room = right - left;
+        float small = Math.min(rowTall * 1.9f, room * 0.34f);
         chargeBox.set(right - small, rowTop, right, rowBottom);
         float x = chargeBox.left - gap;
         if (ears >= 0) {
-            earsBox.set(x - rowTall * 1.6f, rowTop, x, rowBottom);
+            float earsWide = Math.min(rowTall * 1.6f, room * 0.28f);
+            earsBox.set(x - earsWide, rowTop, x, rowBottom);
             x = earsBox.left - gap;
         } else {
             earsBox.setEmpty();
         }
-        if (showWeather) {
+        if (showWeather && x - left >= rowTall * 1.2f) {
             weatherBox.set(left, rowTop, x, rowBottom);
         } else {
             weatherBox.setEmpty();
-            chargeBox.left = left;
+            if (ears < 0) {
+                chargeBox.left = left;
+            } else {
+                earsBox.left = left;
+                earsBox.right = left + (right - left - gap) / 2f;
+                chargeBox.left = earsBox.right + gap;
+            }
         }
 
         sunk(canvas, timeBox);
