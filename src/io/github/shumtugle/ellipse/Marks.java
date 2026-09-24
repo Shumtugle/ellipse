@@ -112,8 +112,26 @@ final class Marks {
         return Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, category);
     }
 
-    /** The drawing as a one-colour picture, in the layers' square of one hundred and eight. */
+    /** The symbol each drawing is, among the platform's own symbols. */
+    private static final String[] SYMBOLS = {"call", "chat", "photo_camera", "image", "location_on",
+        "calendar_month", "alarm", "person", "settings", "public", "mail", "storefront", "folder", "music_note",
+        "calculate", "partly_cloudy_day"};
+
+    /**
+     * The drawing as a one-colour picture, in the layers' square of one
+     * hundred and eight: the platform's own symbol for the work, at the size
+     * one-colour pictures take; drawn by hand only when the symbol is not
+     * to be had.
+     */
     static Drawable picture(int kind) {
+        Context context = Apps.context();
+        if (context != null && kind >= 0 && kind < SYMBOLS.length) {
+            int id = context.getResources().getIdentifier("sym_" + SYMBOLS[kind], "drawable",
+                context.getPackageName());
+            if (id != 0) {
+                return new android.graphics.drawable.InsetDrawable(context.getDrawable(id).mutate(), 0.28f);
+            }
+        }
         return new Picture(kind);
     }
 

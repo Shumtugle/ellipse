@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.34.0
+  sh build.sh ellipse-1.35.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -162,8 +162,11 @@ outline stays one for all icons.
 Folder faces are laid out one of six ways — four, nine, a ring of five, a
 stack, a fan, a tower — with or without a container behind the small icons.
 
-The symbols are Material Symbols (rounded, filled), under the Apache
-License 2.0; the licence travels in the package with them. Icons
+The symbols — those an icon may be given (rounded, filled), the drawings
+for the apps every phone has, and the small drawings of the interface
+itself (rounded, outlined) — are Material Symbols, under the Apache License
+2.0; the licence travels in the package with them. Only the home screen's
+own marks are drawn by hand. Icons
 that come in layers are laid out as the platform lays them and cut by the
 outline; each outline is drawn a little smaller the more of its square it
 fills, so a grid weighs the same whatever the outline. A window at the

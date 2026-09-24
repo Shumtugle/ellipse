@@ -8,15 +8,15 @@ import android.graphics.RectF;
 import android.view.View;
 
 /**
- * The small line drawings of the settings, drawn by hand on a grid of
- * twenty four, in one stroke weight: a magnifier, a gear, a brush, three
- * dots in a ring, a turning arrow, an arrow turning back, a phone, a grid
- * of dots, a palette, a stroke of a finger, a box with an arrow out of
- * it, a globe, a chevron pointing down, a cross, a small i in a ring, a
- * bin, two corners pulled apart, a pen, an arrow back, four icons of a
- * grid, and the mark of the home screen's
- * own settings: an upright spanner's head with the gold ball in its jaws,
- * and an arc of a great ellipse running through the ball.
+ * The small drawings of the interface, one weight and one grid for all.
+ * Where the platform's own symbol set has a drawing for the thing — a
+ * magnifier, a gear, a brush, three dots, a turning arrow, a clock turned
+ * back, a house, a grid, a palette, a finger's stroke, a cloud with an
+ * arrow, a globe, a chevron, a cross, an i in a ring, a bin, corners pulled
+ * apart, a pen, an arrow back, shapes — that symbol is drawn, tinted. Only
+ * the home screen's own mark is drawn here by hand: an upright spanner's
+ * head with the gold ball in its jaws, and an arc of a great ellipse
+ * running through the ball.
  */
 final class Glyph extends View {
 
@@ -65,7 +65,14 @@ final class Glyph extends View {
         invalidate();
     }
 
-    void tint(int colour) {
+    /** The symbol each drawing is, by its name among the interface's symbols; none for the home screen's own. */
+    private static final String[] SYMBOLS = {"search", "settings", "brush", "more_horiz", "restart_alt", "history",
+        "home", "apps", "palette", "swipe", "backup", "language", "expand_more", "close", "info", "delete",
+        "open_in_full", "edit", null, "arrow_back", "category"};
+    private android.graphics.drawable.Drawable drawn;
+    private int drawnKind = -1;
+
+        void tint(int colour) {
         line.setColor(colour);
         fill.setColor(colour);
         invalidate();
@@ -156,6 +163,22 @@ final class Glyph extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        /* The interface's drawings are the platform's own symbols, where
+           there is one; only the home screen's own marks are drawn here. */
+        String symbol = kind >= 0 && kind < SYMBOLS.length ? SYMBOLS[kind] : null;
+        if (symbol != null) {
+            if (drawn == null || drawnKind != kind) {
+                int id = getResources().getIdentifier("line_" + symbol, "drawable", getContext().getPackageName());
+                drawn = id == 0 ? null : getContext().getDrawable(id).mutate();
+                drawnKind = kind;
+            }
+            if (drawn != null) {
+                drawn.setTint(line.getColor());
+                drawn.setBounds(0, 0, Math.round(size), Math.round(size));
+                drawn.draw(canvas);
+                return;
+            }
+        }
         float u = size / 24f;
         line.setStrokeWidth(2f * u);
         path.reset();
