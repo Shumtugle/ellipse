@@ -932,7 +932,21 @@ public final class Home extends Activity {
                 }
             }
             if (!clocked) {
-                clock(pages.get(home), 0, 0, Keep.CLOCK_THING);
+                /* No kept clock stood: it was never kept, or its place is
+                   taken now. It stands at the head of the home screen, in
+                   the size it was last given, and is kept there at once —
+                   a clock that stands where nothing keeps it could be
+                   neither moved nor reshaped, every change to it looking
+                   for a place that was never written down. */
+                String last = Keep.CLOCK_THING;
+                for (Keep.Spot spot : own) {
+                    if (Keep.CLOCK_THING.equals(base(spot.token))) {
+                        last = spot.token;
+                    }
+                }
+                if (clock(pages.get(home), 0, 0, last)) {
+                    Keep.keepOnly(this, Keep.CLOCK_THING, last, home, 0, 0);
+                }
             }
             List<Apps.Door> vendor = found.vendor(taken);
             for (Keep.Spot spot : folders) {

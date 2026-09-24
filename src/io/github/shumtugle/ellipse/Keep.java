@@ -668,6 +668,24 @@ final class Keep {
         write(context, kept);
     }
 
+    /**
+     * Keeps one thing of a kind in one place: whatever of that kind was
+     * kept anywhere else is let go, and the thing is kept here under the
+     * word given.
+     */
+    static void keepOnly(Context context, String kind, String token, int screen, int x, int y) {
+        List<Spot> kept = new ArrayList<>();
+        for (Spot spot : placed(context)) {
+            boolean same = spot.token.equals(kind) || spot.token.startsWith(kind + ":");
+            if (same || (spot.screen == screen && spot.x == x && spot.y == y)) {
+                continue;
+            }
+            kept.add(spot);
+        }
+        kept.add(new Spot(token, screen, x, y));
+        write(context, kept);
+    }
+
     /** Moves the thing standing in one place to another. */
     static void shift(Context context, int screen, int x, int y, int toScreen, int toX, int toY) {
         List<Spot> kept = new ArrayList<>();
