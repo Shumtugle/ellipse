@@ -207,6 +207,16 @@ final class Keep {
         touch(context);
     }
 
+    /** The outline every icon is cut to; the phone's own at first. */
+    static int shape(Context context) {
+        return store(context).getInt("icon_shape", Shape.SYSTEM);
+    }
+
+    static void saveShape(Context context, int shape) {
+        store(context).edit().putInt("icon_shape", shape).apply();
+        touch(context);
+    }
+
     /** How much of the accent's colour the ground takes, in percent; none is near black. */
     static int ground(Context context) {
         return store(context).getInt("ground", 0);

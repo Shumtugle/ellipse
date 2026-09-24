@@ -106,6 +106,7 @@ public final class Tune extends Activity {
     private static final int LANGUAGE = 6;
     private static final int OTHER = 7;
     private static final int HIDDEN = 8;
+    private static final int ICONS = 9;
 
     private static final int RESTART = 1;
     private static final int RESET = 2;
@@ -170,6 +171,7 @@ public final class Tune extends Activity {
                     soon("Icon style", "Masks, shapes and sizes of icons"),
                     deed(Glyph.LOOK, "Colour and text",
                         "The accent, the ground, how solid the cards are, the size of words", COLOUR),
+                    door(-1, "Icons", "The outline every icon is cut to", ICONS),
                     deed(Glyph.DESK, "The weather's place", "Where the clock's weather is for", PLACE),
                     toggle("Clock", "The home screen's own clock across the top of the home screen",
                         Keep.CLOCK, true),
@@ -226,7 +228,7 @@ public final class Tune extends Activity {
                 return line.title;
             }
         }
-        return room == HIDDEN ? "Hidden apps" : "";
+        return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : "";
     }
 
     private float density;
@@ -239,6 +241,8 @@ public final class Tune extends Activity {
     private TextView heading;
     private ScrollView scroll;
     private LinearLayout rows;
+    private FrameLayout window;
+    private Sample sample;
     private Menu menu;
     private final List<Integer> path = new ArrayList<>();
     private long armed;
@@ -288,6 +292,13 @@ public final class Tune extends Activity {
         heading.setVisibility(View.GONE);
         head.addView(heading);
         root.addView(head);
+
+        /* A room that changes how things look keeps a window onto them at
+           its head, which stays while the room's lines scroll under it. */
+        window = new FrameLayout(this);
+        window.setPadding(dp(16), dp(4), dp(16), dp(10));
+        window.setVisibility(View.GONE);
+        root.addView(window);
 
         scroll = new ScrollView(this);
         scroll.setVerticalScrollBarEnabled(false);
@@ -391,8 +402,13 @@ public final class Tune extends Activity {
 
     private void fill() {
         rows.removeAllViews();
+        window.setVisibility(room() == ICONS ? View.VISIBLE : View.GONE);
         if (room() == HIDDEN) {
             fillHidden();
+            return;
+        }
+        if (room() == ICONS) {
+            fillIcons();
             return;
         }
         List<Line> lines = new ArrayList<>();
@@ -686,6 +702,105 @@ public final class Tune extends Activity {
         if (rows != null && path.size() > 0 && room() == OTHER) {
             fill();
         }
+    }
+
+    // ------------------------------------------------------------- icons
+
+    private static final String[] SHAPES = {"The phone's own", "Circle", "Squircle", "Rounded square"};
+
+    /**
+     * The icons' room: the owner's own icons in the window at its head, and
+     * under it every outline as a small tile of its own shape; the chosen
+     * one wears the accent. A touch cuts the icons in the window at once.
+     */
+    private void fillIcons() {
+        window.removeAllViews();
+        sample = new Sample(this);
+        window.addView(sample);
+        TextView caption = new TextView(this);
+        caption.setText("SHAPE");
+        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+        caption.setLetterSpacing(0.12f);
+        caption.setTextColor(Tone.faint());
+        caption.setPadding(dp(24), dp(12), dp(24), dp(8));
+        rows.addView(caption);
+        android.widget.HorizontalScrollView across = new android.widget.HorizontalScrollView(this);
+        across.setHorizontalScrollBarEnabled(false);
+        across.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout tiles = new LinearLayout(this);
+        tiles.setOrientation(LinearLayout.HORIZONTAL);
+        tiles.setPadding(dp(18), 0, dp(18), 0);
+        for (int i = 0; i < Shape.COUNT; i++) {
+            tiles.addView(tile(i));
+        }
+        across.addView(tiles);
+        rows.addView(across);
+        arrive(across, 1);
+    }
+
+    private View tile(final int shape) {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setGravity(Gravity.CENTER_HORIZONTAL);
+        made.setPadding(dp(6), 0, dp(6), 0);
+        final boolean on = Shape.current == shape;
+        View face = new View(this) {
+            private final android.graphics.Paint ink = new android.graphics.Paint(
+                android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+            @Override
+            protected void onDraw(android.graphics.Canvas canvas) {
+                float side = Math.min(getWidth(), getHeight()) * 0.62f;
+                float left = (getWidth() - side) / 2f;
+                float top = (getHeight() - side) / 2f;
+                canvas.save();
+                canvas.translate(left, top);
+                ink.setColor(on ? Tone.primary() : Tone.faint());
+                if (shape == Shape.SYSTEM) {
+                    /* The phone's own outline, as the phone gives it. */
+                    android.graphics.Path mine = new android.graphics.Path();
+                    try {
+                        android.graphics.Path given = new android.graphics.drawable.AdaptiveIconDrawable(
+                            null, null).getIconMask();
+                        android.graphics.Matrix fit = new android.graphics.Matrix();
+                        fit.setScale(side / 100f, side / 100f);
+                        given.transform(fit, mine);
+                    } catch (RuntimeException none) {
+                        mine = Shape.outline(Shape.CIRCLE, side);
+                    }
+                    canvas.drawPath(mine, ink);
+                } else {
+                    canvas.drawPath(Shape.outline(shape, side), ink);
+                }
+                canvas.restore();
+            }
+        };
+        face.setBackground(Tone.box(on ? Tone.containerHigh() : Tone.container(), dp(22), 0f));
+        if (on) {
+            face.setBackground(Tone.box(Tone.containerHigh(), dp(22), dp(2), Tone.primary()));
+        }
+        made.addView(face, new LinearLayout.LayoutParams(dp(76), dp(76)));
+        TextView name = new TextView(this);
+        name.setText(SHAPES[shape]);
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scaled);
+        name.setTextColor(on ? Tone.onSurface() : Tone.faint());
+        name.setGravity(Gravity.CENTER);
+        name.setMaxLines(2);
+        name.setPadding(0, dp(6), 0, 0);
+        made.addView(name, new LinearLayout.LayoutParams(dp(84), LinearLayout.LayoutParams.WRAP_CONTENT));
+        made.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Keep.saveShape(Tune.this, shape);
+                Shape.current = shape;
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                int x = rows.getChildCount() > 1 ? rows.getChildAt(1).getScrollX() : 0;
+                fill();
+                if (rows.getChildCount() > 1) {
+                    rows.getChildAt(1).scrollTo(x, 0);
+                }
+            }
+        });
+        return made;
     }
 
     /** The home screen is closed and opened again, from nothing. */

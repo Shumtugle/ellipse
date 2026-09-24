@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.24.1
+  sh build.sh ellipse-1.25.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -125,3 +125,12 @@ pressure, the sun, the air, pollen, light, geomagnetic activity), the next
 hours and the days. Its place is found by name, or taken once from where
 the phone stands, with leave; nothing follows the phone about. The
 addresses asked live in the package, not in the source.
+
+## Icons
+
+Look → Icons cuts every icon to one outline: the phone's own, a circle, a
+squircle (a superellipse of the fifth power) or a rounded square. Icons
+that come in layers are laid out as the platform lays them and cut by the
+outline; each outline is drawn a little smaller the more of its square it
+fills, so a grid weighs the same whatever the outline. A window at the
+head of the room shows the owner's own icons in the outline chosen.

@@ -39,6 +39,7 @@ final class Tone {
         int was = accent;
         float wasEarth = earth;
         int wasVeil = veil;
+        Shape.current = Keep.shape(context);
         float[] look = Keep.look(context);
         hue = look[0];
         rich = look[1];
@@ -247,6 +248,13 @@ final class Tone {
             shape.setStroke(Math.max(1, Math.round(stroke)), outline());
         }
         return shape;
+    }
+
+    /** The same box, outlined in a colour of its own. */
+    static GradientDrawable box(int fill, float radius, float stroke, int edge) {
+        GradientDrawable made = box(fill, radius, 0f);
+        made.setStroke(Math.max(1, Math.round(stroke)), edge);
+        return made;
     }
 
     /** Press feedback in the accent, clipped to a rounded shape. */

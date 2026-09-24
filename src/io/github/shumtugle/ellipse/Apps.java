@@ -57,9 +57,14 @@ final class Apps {
         /** Drawn once, when first asked for: a long list is not painted all at once. A work app wears its badge. */
         Drawable icon() {
             if (icon == null) {
-                icon = serial == 0 ? info.getIcon(density) : info.getBadgedIcon(density);
+                icon = serial == 0 ? Shape.face(info.getIcon(density)) : info.getBadgedIcon(density);
             }
             return icon;
+        }
+
+        /** The icon as the app gives it, before any cutting: for a preview of other outlines. */
+        Drawable plain() {
+            return info.getIcon(density);
         }
 
         /** How it is kept: its component, and after an at sign its profile when that is not the owner's own. */
