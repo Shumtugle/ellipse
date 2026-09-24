@@ -36,7 +36,7 @@ final class Frame extends LinearLayout {
     }
 
     void tint() {
-        ground.setColor(Tone.surface());
+        ground.setColor(Tone.frame());
         invalidate();
     }
 

@@ -101,6 +101,15 @@ final class Tone {
         return shade(sat, mix(0.035f, 0.19f));
     }
 
+    /**
+     * The frame around the wallpaper's window, under the status bar and the
+     * dock: always the near black of a ground with no colour, whatever colour
+     * the ground takes, so the phone's own edges stay dark.
+     */
+    static int frame() {
+        return shade(Math.min(0.30f, rich * 0.4f), 0.035f);
+    }
+
     static int container() {
         float sat = mix(Math.min(0.26f, rich * 0.34f), Math.min(0.70f, 0.26f + rich * 0.5f));
         return veiled(shade(sat, mix(0.095f, 0.26f)));
