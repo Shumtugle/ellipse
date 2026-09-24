@@ -792,6 +792,10 @@ public final class Tune extends Activity {
         rims.addView(rimChips);
         rows.addView(rims);
         slider("Rim width", "From a thread to a frame", Keep.RIM_WIDTH, 1, 14);
+        if (Rim.kind == Rim.GLASS) {
+            slider("Glass tone", "From smoked dark to milk white", Keep.GLASS_TONE, 0, 100);
+            slider("Clear", "How much of what is behind the glass shows", Keep.GLASS_CLEAR, 10, 90);
+        }
         rows.addView(row(toggle("Glaze", "The curved light of glass across the top of every icon",
             Keep.GLAZE, false)));
         caption("FOLDERS");
@@ -854,7 +858,8 @@ public final class Tune extends Activity {
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         final TextView value = new TextView(this);
-        final int fallback = Keep.RIM_WIDTH.equals(key) ? 3 : 100;
+        final int fallback = Keep.RIM_WIDTH.equals(key) ? 3 : Keep.GLASS_TONE.equals(key) ? 0
+            : Keep.GLASS_CLEAR.equals(key) ? 55 : 100;
         value.setText(Keep.number(this, key, fallback) + "%");
         value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         value.setTextColor(Tone.primary());
@@ -876,6 +881,10 @@ public final class Tune extends Activity {
                     Rim.width = at / 100f;
                 } else if (Keep.TILE_ASPECT.equals(key)) {
                     Shape.aspect = at / 100f;
+                } else if (Keep.GLASS_TONE.equals(key)) {
+                    Rim.glassTone = at / 100f;
+                } else if (Keep.GLASS_CLEAR.equals(key)) {
+                    Rim.glassClear = at / 100f;
                 } else {
                     Style.nameScale = at / 100f;
                 }

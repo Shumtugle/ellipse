@@ -52,6 +52,9 @@ final class Rim {
     static int kind = NONE;
     static float width = 0.03f;
     static boolean glaze;
+    /** The glass's tone, from smoked dark to milk white, and how much of what is behind it shows. */
+    static float glassTone;
+    static float glassClear = 0.55f;
 
     private static Bitmap wood;
     private static Bitmap sequins;
@@ -128,8 +131,12 @@ final class Rim {
                 paint.setColor(Tone.containerHigh() | 0xFF000000);
                 return;
             case GLASS:
-                /* Near black in the accent's hue, a little more than half seen through. */
-                paint.setColor((0x73 << 24) | (Color.HSVToColor(new float[] {Tone.hue(), 0.35f, 0.12f}) & 0xFFFFFF));
+                /* Glass of the accent's hue, from smoked near black to milk
+                   white, and as clear as the owner asks. */
+                float light = 0.10f + 0.85f * glassTone;
+                float sat = 0.40f - 0.30f * glassTone;
+                int alpha = Math.round(255f * (1f - glassClear));
+                paint.setColor((alpha << 24) | (Color.HSVToColor(new float[] {Tone.hue(), sat, light}) & 0xFFFFFF));
                 return;
             case GOLD:
                 paint.setShader(gold());

@@ -109,6 +109,8 @@ final class Style {
         Rim.kind = Keep.number(context, Keep.RIM_KIND, Rim.NONE);
         Rim.width = Keep.number(context, Keep.RIM_WIDTH, 3) / 100f;
         Rim.glaze = Keep.flag(context, Keep.GLAZE, false);
+        Rim.glassTone = Keep.number(context, Keep.GLASS_TONE, 0) / 100f;
+        Rim.glassClear = Keep.number(context, Keep.GLASS_CLEAR, 55) / 100f;
         Shape.window = Keep.number(context, Keep.WINDOW, Shape.WINDOW_TILE);
         Shape.aspect = Keep.number(context, Keep.TILE_ASPECT, 100) / 100f;
     }
