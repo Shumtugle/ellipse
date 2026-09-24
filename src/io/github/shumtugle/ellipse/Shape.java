@@ -151,6 +151,20 @@ final class Shape {
      * picture, whatever colour every icon wears.
      */
     static Drawable face(Drawable icon, int shape, int tint, int drawing) {
+        return face(icon, shape, tint, drawing, AUTO);
+    }
+
+    /** How a coloured picture becomes one colour: left to the picture, or as the owner chose for it. */
+    static final int AUTO = 0;
+    static final int OUTLINE = 1;
+    static final int LIGHT = 2;
+    static final int DARK = 3;
+    static final int APART = 4;
+    static final int METHODS = 5;
+    static final String[] METHOD_NAMES = {"By itself", "Its outline", "Its light parts", "Its dark parts",
+        "What stands apart"};
+
+    static Drawable face(Drawable icon, int shape, int tint, int drawing, int method) {
         int outline = shape >= 0 ? shape : current;
         int colour = tint >= 0 ? tint : Style.tint;
         if (icon != null && drawing != Marks.NONE) {
@@ -159,8 +173,10 @@ final class Shape {
             mark.setTint(paper ? deep(Tone.primary()) : Tone.primary());
             icon = new AdaptiveIconDrawable(new android.graphics.drawable.ColorDrawable(
                 paper ? PAPER_INK : Tone.primaryContainer()), mark);
+        } else if (icon != null && method != AUTO) {
+            icon = inked(icon, outline, Style.ALL, method);
         } else if (icon != null && colour != Style.OWN) {
-            icon = inked(icon, outline, colour);
+            icon = inked(icon, outline, colour, AUTO);
         }
         if (icon == null || outline == SYSTEM) {
             return icon;
@@ -178,10 +194,15 @@ final class Shape {
      * is flat. On the paper the ink is the accent darkened, as ink on paper
      * is. The phone's own outline cuts the result as it cuts any icon.
      */
-    static Drawable inked(Drawable icon, int outline, int colour) {
+    static Drawable inked(Drawable icon, int outline, int colour, int method) {
         boolean paper = outline == PAPER;
         int ink = paper ? deep(Tone.primary()) : Tone.primary();
         int ground = paper ? PAPER_INK : Tone.primaryContainer();
+        if (method != AUTO) {
+            /* Chosen for this icon: it wins over the app's own one-colour picture. */
+            return new AdaptiveIconDrawable(new android.graphics.drawable.ColorDrawable(ground),
+                stencilBy(icon, ink, method));
+        }
         Drawable mark = null;
         if (icon instanceof AdaptiveIconDrawable && android.os.Build.VERSION.SDK_INT >= 33) {
             Drawable mono = ((AdaptiveIconDrawable) icon).getMonochrome();
@@ -219,6 +240,61 @@ final class Shape {
      * square of one hundred and eight with the picture in its middle
      * seventy two: what stands out from the icon's ground becomes ink.
      */
+    /**
+     * A one-colour picture made the way the owner chose for this icon: its
+     * outline alone; its light parts; its dark parts; or whatever stands
+     * apart from the colour most of it is made of. The picture is looked at
+     * whole, its ground and its picture together, as it shows.
+     */
+    private static Drawable stencilBy(Drawable icon, int ink, int method) {
+        int n = 216;
+        Bitmap out = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888);
+        Canvas into = new Canvas(out);
+        if (icon instanceof AdaptiveIconDrawable) {
+            AdaptiveIconDrawable layers = (AdaptiveIconDrawable) icon;
+            if (method != OUTLINE && layers.getBackground() != null) {
+                layers.getBackground().setBounds(0, 0, n, n);
+                layers.getBackground().draw(into);
+            }
+            if (layers.getForeground() != null) {
+                layers.getForeground().setBounds(0, 0, n, n);
+                layers.getForeground().draw(into);
+            }
+        } else {
+            int side = Math.round(n * 72f / 108f * 0.8f);
+            int at = (n - side) / 2;
+            icon.setBounds(at, at, at + side, at + side);
+            icon.draw(into);
+        }
+        int[] px = new int[n * n];
+        out.getPixels(px, 0, n, 0, 0, n, n);
+        int main = method == APART ? mainColour(px) : 0;
+        int inkRgb = ink & 0x00FFFFFF;
+        for (int i = 0; i < px.length; i++) {
+            int c = px[i];
+            int a = c >>> 24;
+            int r = (c >> 16) & 0xFF;
+            int g = (c >> 8) & 0xFF;
+            int b = c & 0xFF;
+            float light = (0.299f * r + 0.587f * g + 0.114f * b) / 255f;
+            float keep = 1f;
+            if (method == LIGHT) {
+                keep = (light - 0.55f) / 0.2f;
+            } else if (method == DARK) {
+                keep = (0.45f - light) / 0.2f;
+            } else if (method == APART && main != 0) {
+                int dr = r - ((main >> 16) & 0xFF);
+                int dg = g - ((main >> 8) & 0xFF);
+                int db = b - (main & 0xFF);
+                keep = (float) Math.sqrt(dr * dr + dg * dg + db * db) / 90f;
+            }
+            a = Math.round(a * Math.max(0f, Math.min(1f, keep)));
+            px[i] = (a << 24) | inkRgb;
+        }
+        out.setPixels(px, 0, n, 0, 0, n, n);
+        return new android.graphics.drawable.BitmapDrawable((android.content.res.Resources) null, out);
+    }
+
     private static Drawable stencil(Drawable icon, int ink) {
         int n = 216;
         Bitmap out = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888);

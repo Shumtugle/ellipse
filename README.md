@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.31.0
+  sh build.sh ellipse-1.32.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -151,7 +151,10 @@ The apps every phone has — the phone, messages, the camera, pictures, maps,
 the calendar, the clock, contacts, settings, the web, mail, the store,
 files, music, the calculator, the weather — can be given the home screen's
 own drawing instead of a poor picture of their own; which app is which is
-asked of the phone by the work it does, not guessed from its name. Icons
+asked of the phone by the work it does, not guessed from its name. How a
+coloured picture becomes one colour can be chosen for any one icon too:
+by itself, by its outline, by its light parts, by its dark parts, or by
+what stands apart from its main colour — each shown on that very icon. Icons
 that come in layers are laid out as the platform lays them and cut by the
 outline; each outline is drawn a little smaller the more of its square it
 fills, so a grid weighs the same whatever the outline. A window at the

@@ -59,7 +59,7 @@ final class Apps {
             if (icon == null) {
                 int[] own = Style.faceOf(token());
                 int drawing = own[2] == 1 ? Marks.of(name.getPackageName()) : Marks.NONE;
-                icon = serial == 0 ? Shape.face(info.getIcon(density), own[0], own[1], drawing)
+                icon = serial == 0 ? Shape.face(info.getIcon(density), own[0], own[1], drawing, own[3])
                     : info.getBadgedIcon(density);
             }
             return icon;

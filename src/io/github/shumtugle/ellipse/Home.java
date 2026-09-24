@@ -1055,7 +1055,8 @@ public final class Home extends Activity {
     /** The door to this home screen's settings: not its own icon, but a face of their own. */
     private Cell ownCell(boolean named) {
         int[] mine = Style.faceOf(Keep.OWN_THING);
-        Cell own = new Cell(this, Shape.face(getDrawable(R.mipmap.door), mine[0], mine[1]), OWN, iconSize,
+        Cell own = new Cell(this, Shape.face(getDrawable(R.mipmap.door), mine[0], mine[1], Marks.NONE, mine[3]),
+            OWN, iconSize,
             named && Style.namesOnScreens);
         own.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -2450,7 +2451,7 @@ public final class Home extends Activity {
         try {
             int[] mine = Style.faceOf(token);
             icon = Shape.face(launcher.getShortcutIconDrawable(info, getResources().getDisplayMetrics().densityDpi),
-                mine[0], mine[1]);
+                mine[0], mine[1], Marks.NONE, mine[3]);
         } catch (RuntimeException none) {
             icon = null;
         }
@@ -2635,7 +2636,16 @@ public final class Home extends Activity {
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.OWN), THEIR_OWN, 2000));
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.ALL), IN_ACCENT, 2001));
         groups.add(colours);
-        String[] captions = {"Shape", "Colour"};
+        /* When the icon is to be in the accent, the ways a coloured picture can
+           become one colour, each shown on this very icon: one of them will
+           keep what matters in it. */
+        List<Chooser.Item> inkings = new ArrayList<>();
+        for (int m = 0; m < Shape.METHODS; m++) {
+            inkings.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.ALL, Marks.NONE, m),
+                Shape.METHOD_NAMES[m], 4000 + m));
+        }
+        groups.add(inkings);
+        String[] captions = {"Shape", "Colour", "Inking"};
         int drawing = door != null ? Marks.of(door.name.getPackageName()) : Marks.NONE;
         if (drawing != Marks.NONE) {
             /* The phone's common apps also have a drawing of the home
@@ -2645,7 +2655,7 @@ public final class Home extends Activity {
             drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], mine[1], drawing),
                 HOME_OWN, 3001));
             groups.add(drawings);
-            captions = new String[] {"Shape", "Colour", "Drawing"};
+            captions = new String[] {"Shape", "Colour", "Inking", "Drawing"};
         }
         choosingFace = true;
         faceToken = token;
@@ -2667,14 +2677,21 @@ public final class Home extends Activity {
         int shape = mine[0];
         int tint = mine[1];
         int drawing = mine[2];
+        int method = mine[3];
         if (key >= 999 && key < 1999) {
             shape = key - 1000;
         } else if (key >= 1999 && key < 3000) {
             tint = key - 2000;
-        } else if (key >= 3000) {
+            if (tint == Style.OWN) {
+                method = Shape.AUTO;
+            }
+        } else if (key >= 3000 && key < 4000) {
             drawing = key - 3000;
+        } else if (key >= 4000) {
+            method = key - 4000;
+            tint = Style.ALL;
         }
-        Keep.saveFace(this, faceToken, shape, tint, drawing);
+        Keep.saveFace(this, faceToken, shape, tint, drawing, method);
         Style.read(this);
         stamp = Keep.stamp(this);
         fill();
