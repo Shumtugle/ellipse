@@ -490,7 +490,18 @@ public final class Home extends Activity {
         return Math.round(value * density);
     }
 
+    /**
+     * The screen that was in front before the screens were built anew: a
+     * change of settings, of the phone's shape or of the colour builds them
+     * again, and the owner comes back to the screen they were on, not to the
+     * first one.
+     */
+    private int restore = -1;
+
     private void build() {
+        if (screens != null && !pages.isEmpty()) {
+            restore = screens.page();
+        }
         density = getResources().getDisplayMetrics().density;
         scaled = getResources().getDisplayMetrics().scaledDensity;
         int wide = getResources().getDisplayMetrics().widthPixels;
@@ -720,7 +731,8 @@ public final class Home extends Activity {
      * there in its stead.
      */
     private void fill() {
-        int showing = pages.isEmpty() ? Keep.home(this) : screens.page();
+        int showing = restore >= 0 ? restore : (pages.isEmpty() ? Keep.home(this) : screens.page());
+        restore = -1;
         screens.removeAllViews();
         pages.clear();
         dock.removeAllViews();
@@ -938,7 +950,7 @@ public final class Home extends Activity {
             Keep.flag(this, Keep.LIST_ENDLESS, false), Keep.flag(this, Keep.LIST_DOTS, true));
         drawer.fill(listed);
         screens.home(Keep.home(this));
-        screens.show(showing, false);
+        screens.show(Math.max(0, Math.min(pages.size() - 1, showing)), false);
         dots();
     }
 
