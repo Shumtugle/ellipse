@@ -144,8 +144,8 @@ final class Menu {
         title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         head.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         button = new FrameLayout(context);
-        buttonGlyph = new Glyph(context, Glyph.GEAR, dp(24));
-        button.addView(buttonGlyph, new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+        buttonGlyph = new Glyph(context, Glyph.SETTINGS, dp(26));
+        button.addView(buttonGlyph, new FrameLayout.LayoutParams(dp(26), dp(26), Gravity.CENTER));
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 if (!onSecond && second != null) {

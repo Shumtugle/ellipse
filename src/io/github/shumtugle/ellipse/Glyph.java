@@ -13,7 +13,9 @@ import android.view.View;
  * dots in a ring, a turning arrow, an arrow turning back, a phone, a grid
  * of dots, a palette, a stroke of a finger, a box with an arrow out of
  * it, a globe, a chevron pointing down, a cross, a small i in a ring, a
- * bin, two corners pulled apart, and a pen.
+ * bin, two corners pulled apart, a pen, and the mark of the home screen's
+ * own settings: the wide ellipse, a smaller spanner across it, and in its
+ * jaws the gold ball that runs along the ellipse.
  */
 final class Glyph extends View {
 
@@ -35,6 +37,7 @@ final class Glyph extends View {
     static final int TRASH = 15;
     static final int RESIZE = 16;
     static final int PEN = 17;
+    static final int SETTINGS = 18;
 
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -68,6 +71,75 @@ final class Glyph extends View {
     @Override
     protected void onMeasure(int widthSpec, int heightSpec) {
         setMeasuredDimension(Math.round(size), Math.round(size));
+    }
+
+    /** The ball's own gold, the one colour a drawing here keeps whatever its ink. */
+    private static final int GOLD = 0xFFD69A2A;
+
+    /**
+     * The settings mark, drawn from the same measures as the settings'
+     * icon, on a face of one hundred and twenty four brought down to this
+     * grid of twenty four.
+     */
+    private void settings(Canvas canvas, float u) {
+        float k = 0.2f * u;
+        float cx = 12f * u;
+        float cy = 12f * u;
+        canvas.save();
+        canvas.rotate(-16f, cx, cy + 4f * k);
+        oval.set(cx - 52f * k, cy + 4f * k - 20f * k, cx + 52f * k, cy + 4f * k + 20f * k);
+        line.setStrokeWidth(1.5f * u);
+        canvas.drawOval(oval, line);
+        canvas.restore();
+        double jaw = Math.toRadians(-35);
+        float c = (float) Math.cos(jaw);
+        float s = (float) Math.sin(jaw);
+        double t = Math.toRadians(-40);
+        float lx = (float) (52 * Math.cos(t));
+        float ly = (float) (20 * Math.sin(t));
+        double tilt = Math.toRadians(-16);
+        float bx = (float) (lx * Math.cos(tilt) - ly * Math.sin(tilt));
+        float by = (float) (lx * Math.sin(tilt) + ly * Math.cos(tilt)) + 4f;
+        float hx = bx - 7f * c;
+        float hy = by - 7f * s;
+        Path tool = new Path();
+        tool.addCircle(cx + hx * k, cy + hy * k, 17f * k, Path.Direction.CW);
+        Path handle = new Path();
+        float[][] bar = {{-6, -5.6f}, {-140, -6.6f}, {-140, 6.6f}, {-6, 5.6f}};
+        for (int i = 0; i < bar.length; i++) {
+            float x = cx + (hx + bar[i][0] * c - bar[i][1] * s) * k;
+            float y = cy + (hy + bar[i][0] * s + bar[i][1] * c) * k;
+            if (i == 0) {
+                handle.moveTo(x, y);
+            } else {
+                handle.lineTo(x, y);
+            }
+        }
+        handle.close();
+        tool.op(handle, Path.Op.UNION);
+        Path slot = new Path();
+        float[][] mouth = {{2, -8.4f}, {40, -8.4f}, {40, 8.4f}, {2, 8.4f}};
+        for (int i = 0; i < mouth.length; i++) {
+            float x = cx + (hx + mouth[i][0] * c - mouth[i][1] * s) * k;
+            float y = cy + (hy + mouth[i][0] * s + mouth[i][1] * c) * k;
+            if (i == 0) {
+                slot.moveTo(x, y);
+            } else {
+                slot.lineTo(x, y);
+            }
+        }
+        slot.close();
+        slot.addCircle(cx + (hx + 2f * c) * k, cy + (hy + 2f * s) * k, 8.4f * k, Path.Direction.CW);
+        tool.op(slot, Path.Op.DIFFERENCE);
+        /* Nothing beyond the round face of the drawing. */
+        Path face = new Path();
+        face.addCircle(cx, cy, 12f * u, Path.Direction.CW);
+        tool.op(face, Path.Op.INTERSECT);
+        canvas.drawPath(tool, fill);
+        int was = fill.getColor();
+        fill.setColor(GOLD);
+        canvas.drawCircle(cx + bx * k, cy + by * k, 7.2f * k, fill);
+        fill.setColor(was);
     }
 
     @Override
@@ -232,6 +304,9 @@ final class Glyph extends View {
                 path.close();
                 canvas.drawPath(path, line);
                 canvas.drawLine(13.5f * u, 7.5f * u, 16.5f * u, 10.5f * u, line);
+                break;
+            case SETTINGS:
+                settings(canvas, u);
                 break;
             case CROSS:
                 canvas.drawLine(6.5f * u, 6.5f * u, 17.5f * u, 17.5f * u, line);

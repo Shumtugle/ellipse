@@ -105,7 +105,7 @@ final class Shelf extends FrameLayout {
 
         foot = new Foot(context, this, WIDGETS, new Foot.Owner() {
             public Menu.Section[] sections() {
-                return new Menu.Section[] {new Menu.Section(null, new String[] {SETTINGS}, new int[] {0})};
+                return new Menu.Section[] {Home.settingsLine(SETTINGS, 0)};
             }
 
             public void picked(int section, int key) {

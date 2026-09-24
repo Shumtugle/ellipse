@@ -5,9 +5,9 @@ the thing itself, in ink.
 
   launcher  an ellipse in one stroke of ink, two red points sitting on it
             and a larger gold one slipped off it, running out past the edge
-  settings  the head of a spanner in the same ink, off the middle, its
-            handle running out past the edge, its jaws touched with gold,
-            and the ellipse drawn round it
+  settings  the ellipse, wide, in the same ink; a smaller spanner across
+            it; and in the spanner's jaws the gold ball that runs along the
+            ellipse
 
 Drawn large and brought down for smooth edges. Run from this folder;
 writes the layers into the resources and round previews here.
@@ -189,50 +189,56 @@ LAUNCHER_POINTS = reds + [(gx, gy)]
 
 # ------------------------------------------------------------- settings
 #
-# The head of a spanner in the same dark ink, set off the middle, its
-# handle running out past the edge, the jaws touched with gold where bolts
-# have turned. The ellipse goes round the head: behind it, the stroke is
-# hidden; where it crosses in front, the pen has left a fine line of bare
-# paper through the ink.
+# The mark of the home screen's own settings: the ellipse, wide, drawn in
+# one stroke of ink across nearly the whole face; a spanner smaller than
+# it, in the same ink, its head up to the right and its handle running out
+# past the edge; and in the spanner's jaws, sitting on the ellipse, the
+# gold ball that runs along it. Where the ellipse crosses in front of the
+# spanner, the pen has left a fine line of bare paper through the ink.
 
-ANGLE = -32
-HX, HY = 14, -10
+EX, EY, ERX, ERY, ETILT = 0, 4, 52, 20, -16
+BALL_T = -40
+JAW = -35
+bx, by = orbit_point(EX, EY, ERX, ERY, ETILT, BALL_T)
+HX = bx - 7 * math.cos(math.radians(JAW))
+HY = by - 7 * math.sin(math.radians(JAW))
 
 
 def spanner(x, y):
-    return turned(x, y, ANGLE)
+    a, b = turned(x, y, JAW)
+    return HX + a, HY + b
 
 
-outline = []
-for i in range(0, 361, 2):
-    a = math.radians(i)
-    outline.append((HX + spanner(27 * math.cos(a), 27 * math.sin(a))[0],
-                    HY + spanner(27 * math.cos(a), 27 * math.sin(a))[1]))
+outline = [spanner(17 * math.cos(math.radians(i)), 17 * math.sin(math.radians(i))) for i in range(0, 360, 2)]
 tool = Image.new("L", (N, N), 0)
 d = ImageDraw.Draw(tool)
-d.polygon([px(a, b) for a, b in wander(outline, 9, 0.9)], fill=255)
-handle = [spanner(x, y) for x, y in [(-10, -8.5), (-120, -9.5), (-120, 9.5), (-10, 8.5)]]
-d.polygon([px(HX + a, HY + b) for a, b in handle], fill=255)
-lean = math.tan(math.radians(15))
-jaw = [spanner(x, y) for x, y in [(4, -11.5), (46, -11.5 + 42 * lean), (46, 11.5 + 42 * lean), (4, 11.5)]]
+d.polygon([px(a, b) for a, b in wander(outline, 9, 0.6)], fill=255)
+d.polygon([px(*spanner(x, y)) for x, y in [(-6, -5.6), (-140, -6.6), (-140, 6.6), (-6, 5.6)]], fill=255)
 slot = Image.new("L", (N, N), 0)
 ds = ImageDraw.Draw(slot)
-ds.polygon([px(HX + a, HY + b) for a, b in jaw], fill=255)
-tx, ty = spanner(4, 0)
-a, b = px(HX + tx, HY + ty)
-ds.ellipse((a - 11.5 * U, b - 11.5 * U, a + 11.5 * U, b + 11.5 * U), fill=255)
+ds.polygon([px(*spanner(x, y)) for x, y in [(2, -8.4), (40, -8.4), (40, 8.4), (2, 8.4)]], fill=255)
+tx, ty = px(*spanner(2, 0))
+ds.ellipse((tx - 8.4 * U, ty - 8.4 * U, tx + 8.4 * U, ty + 8.4 * U), fill=255)
 tool = ImageChops.subtract(tool, slot).filter(ImageFilter.GaussianBlur(0.35 * U))
-worn = ImageChops.multiply(ImageChops.subtract(slot.filter(ImageFilter.MaxFilter(int(2.2 * U) | 1)), slot), tool)
 
-SX, SY, SRX, SRY, STILT = HX - 2, HY + 2, 40, 14, 18
 front = Image.new("RGBA", (N, N), (0, 0, 0, 0))
-front = inked(front, stroke(SX, SY, SRX, SRY, STILT, 200, 334, 2.0, 8), INK, rim=0.9)
+front = inked(front, stroke(EX, EY, ERX, ERY, ETILT, 200, 334, 2.6, 8), INK, rim=0.9)
 front = inked(front, tool, INK)
-front = inked(front, worn, (178, 128, 40))
-near = stroke(SX, SY, SRX, SRY, STILT, 12, 150, 1.4, 8)
+near = stroke(EX, EY, ERX, ERY, ETILT, 20, 150, 1.6, 8)
 front = Image.alpha_composite(front, solid(ImageChops.multiply(near, tool), GREY + (255,)))
+ball = point(bx, by, 7.2, 77)
+front = inked(front, ball, (178, 128, 40))
+flakes = Image.new("L", (N, N), 0)
+dfl = ImageDraw.Draw(flakes)
+for _ in range(10):
+    a, t = rng.uniform(0, 2 * math.pi), math.sqrt(rng.uniform(0, 1)) * 6.5
+    fx, fy = px(bx + math.cos(a) * t, by + math.sin(a) * t)
+    q = rng.uniform(0.2, 0.4) * U
+    dfl.ellipse((fx - q, fy - q, fx + q, fy + q), fill=int(rng.uniform(60, 140)))
+front = Image.alpha_composite(front, solid(ImageChops.multiply(flakes, ball), (240, 208, 130, 255)))
 back = paper(23, GREY)
 back.save(RES + "door_back.jpg", quality=88, optimize=True)
 save(front, "door_fg.png")
 preview(back, front, "settings.png")
 print("points", [(round(x, 1), round(y, 1)) for x, y in LAUNCHER_POINTS])
+print("ball", round(bx, 2), round(by, 2), "head", round(HX, 2), round(HY, 2))

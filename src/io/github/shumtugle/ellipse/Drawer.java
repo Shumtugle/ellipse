@@ -276,6 +276,7 @@ final class Drawer extends FrameLayout {
         Menu.Section sort = new Menu.Section(SORT, ORDERS, ORDER_KEYS);
         sort.chosen = order;
         Menu.Section away = new Menu.Section(null, AWAY, AWAY_KEYS);
+        away.glyphs = new int[] {Glyph.SETTINGS};
         float x = column.getLeft() + bar.getLeft() + blob.getLeft() + blob.getWidth() / 2f;
         float y = column.getTop() + bar.getTop() + blob.getTop() + blob.getHeight() / 2f;
         menu.show(new Menu.Section[] {sort, away}, x, y, blob.getHeight() / 2f + dp(22));

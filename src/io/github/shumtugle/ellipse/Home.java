@@ -1081,7 +1081,7 @@ public final class Home extends Activity {
         on.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
         /* The settings stand apart, under a hairline: they lead away. */
         menu.show(new Menu.Section[] {new Menu.Section(null, lines, keys),
-                new Menu.Section(null, new String[] {ASKS[SETTINGS]}, new int[] {SETTINGS})},
+                settingsLine(ASKS[SETTINGS], SETTINGS)},
             root.fingerX(), root.fingerY(), dp(20));
     }
 
@@ -2076,7 +2076,7 @@ public final class Home extends Activity {
             gap = thing.getHeight() / 2f + dp(8);
         }
         thing.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-        menu.showFaces(name, own.toArray(new Menu.Section[0]), Glyph.GEAR,
+        menu.showFaces(name, own.toArray(new Menu.Section[0]), Glyph.SETTINGS,
             ours.toArray(new Menu.Section[0]), door != null ? Glyph.INFO : -1, x, y, gap);
         if (whence != null && whence[0] != -2) {
             root.arm(new Runnable() {
@@ -2090,6 +2090,13 @@ public final class Home extends Activity {
                 }
             });
         }
+    }
+
+    /** The line that leads to the settings, with the settings' own mark before it. */
+    static Menu.Section settingsLine(String word, int key) {
+        Menu.Section line = new Menu.Section(null, new String[] {word}, new int[] {key});
+        line.glyphs = new int[] {Glyph.SETTINGS};
+        return line;
     }
 
     /** Lines of the home screen's own, each with its drawing. */
