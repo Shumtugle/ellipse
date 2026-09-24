@@ -758,6 +758,11 @@ public final class Home extends Activity {
      * there in its stead.
      */
     private void fill() {
+        /* The door to every app is built once with the dock, but its face
+           may change at any time: it is dressed again with every filling. */
+        if (blob != null) {
+            blob.face(allFace());
+        }
         int showing = restore >= 0 ? restore : (pages.isEmpty() ? Keep.home(this) : screens.page());
         restore = -1;
         screens.removeAllViews();
