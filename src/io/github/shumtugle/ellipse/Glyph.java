@@ -13,7 +13,7 @@ import android.view.View;
  * dots in a ring, a turning arrow, an arrow turning back, a phone, a grid
  * of dots, a palette, a stroke of a finger, a box with an arrow out of
  * it, a globe, a chevron pointing down, a cross, a small i in a ring, a
- * bin, two corners pulled apart, a pen, and the mark of the home screen's
+ * bin, two corners pulled apart, a pen, an arrow back, and the mark of the home screen's
  * own settings: an upright spanner's head with the gold ball in its jaws,
  * and an arc of a great ellipse running through the ball.
  */
@@ -38,6 +38,7 @@ final class Glyph extends View {
     static final int RESIZE = 16;
     static final int PEN = 17;
     static final int SETTINGS = 18;
+    static final int BACK = 19;
 
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -316,6 +317,13 @@ final class Glyph extends View {
                 break;
             case SETTINGS:
                 settings(canvas, u);
+                break;
+            case BACK:
+                canvas.drawLine(5f * u, 12f * u, 19f * u, 12f * u, line);
+                path.moveTo(11f * u, 6f * u);
+                path.lineTo(5f * u, 12f * u);
+                path.lineTo(11f * u, 18f * u);
+                canvas.drawPath(path, line);
                 break;
             case CROSS:
                 canvas.drawLine(6.5f * u, 6.5f * u, 17.5f * u, 17.5f * u, line);

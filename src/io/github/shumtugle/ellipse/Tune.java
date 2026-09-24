@@ -369,6 +369,12 @@ public final class Tune extends Activity {
         menu.hide(false);
         boolean inRoom = room() != ROOT;
         heading.setVisibility(inRoom ? View.VISIBLE : View.GONE);
+        /* In a room, the bar at the foot carries the way back out of it. */
+        foot.back(inRoom ? new Runnable() {
+            public void run() {
+                onBackPressed();
+            }
+        } : null);
         heading.setText(nameOf(room()));
         if (inRoom) {
             hideKeys();

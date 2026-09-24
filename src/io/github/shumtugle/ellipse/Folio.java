@@ -40,6 +40,14 @@ public final class Folio extends Activity {
     private WebView view;
     /** The window onto the home screen above the colour page, and the bridge the page tells it through. */
     private Glimpse glimpse;
+    /** The bar at the foot, and the ground the menu of its round button opens over. */
+    private Foot foot;
+    private FrameLayout host;
+    private static final String SETTINGS_LINE = "Settings";
+
+    private int dp(float value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
     private String page = LOOK;
     private String opened = LOOK;
     private String[][] finds;
@@ -90,6 +98,7 @@ public final class Folio extends Activity {
         Tone.read(this);
         String asked = getIntent().getStringExtra(PAGE);
         opened = asked == null ? LOOK : asked;
+        host = new FrameLayout(this);
         android.widget.LinearLayout root = new android.widget.LinearLayout(this);
         root.setOrientation(android.widget.LinearLayout.VERTICAL);
         root.setFitsSystemWindows(true);
@@ -123,7 +132,40 @@ public final class Folio extends Activity {
         }
         root.addView(view, new android.widget.LinearLayout.LayoutParams(
             android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
-        setContentView(root);
+        /* The bar every settings screen ends in: the way back at its start,
+           the page's name, and the round button whose cross leads home. */
+        foot = new Foot(this, host, "", new Foot.Owner() {
+            public Menu.Section[] sections() {
+                return new Menu.Section[] {Home.settingsLine(SETTINGS_LINE, 0)};
+            }
+
+            public void picked(int section, int key) {
+                startActivity(new Intent(Folio.this, Tune.class));
+                finish();
+            }
+
+            public void leave() {
+                startActivity(new Intent(Folio.this, Home.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK));
+                finish();
+            }
+
+            public void typed(String text) {
+            }
+        });
+        foot.back(new Runnable() {
+            public void run() {
+                onBackPressed();
+            }
+        });
+        android.widget.LinearLayout.LayoutParams footAt = new android.widget.LinearLayout.LayoutParams(
+            android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+            android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
+        footAt.setMargins(dp(8), dp(6), dp(8), dp(10));
+        host.addView(root, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT));
+        root.addView(foot, footAt);
+        setContentView(host);
         getWindow().setStatusBarColor(LOOK.equals(opened) ? Tone.frame() : Tone.surface());
         getWindow().setNavigationBarColor(Tone.surface());
         show(opened);
@@ -131,6 +173,10 @@ public final class Folio extends Activity {
 
     private void show(String which) {
         page = which;
+        if (foot != null) {
+            foot.named(LOOK.equals(which) ? Words.s("colour_text")
+                : PLACE.equals(which) ? Words.s("weather_place") : Words.s("weather"));
+        }
         String html;
         if (LOOK.equals(which)) {
             float[] look = Keep.look(this);
@@ -367,6 +413,10 @@ public final class Folio extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (foot != null && foot.menuShown()) {
+            foot.shutMenu(true);
+            return;
+        }
         if (PLACE.equals(page) && !PLACE.equals(opened) && Keep.here(this)[0].length() > 0) {
             show(WEATHER);
             return;

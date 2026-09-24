@@ -38,6 +38,10 @@ final class Foot extends LinearLayout {
     }
 
     private static final String MENU = "Menu";
+    private static final String BACK = "Back";
+
+    private final FrameLayout back;
+    private final Glyph backGlyph;
 
     private final Owner owner;
     private final EditText field;
@@ -76,6 +80,16 @@ final class Foot extends LinearLayout {
                 owner.typed(t.toString());
             }
         });
+        /* The way back, at the start of the bar: hidden where there is
+           nowhere to go back to within the screen. */
+        back = new FrameLayout(context);
+        backGlyph = new Glyph(context, Glyph.BACK, dp(24));
+        back.addView(backGlyph, new FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER));
+        back.setVisibility(GONE);
+        back.setContentDescription(BACK);
+        LayoutParams backAt = new LayoutParams(dp(44), dp(44));
+        backAt.rightMargin = dp(2);
+        addView(back, backAt);
         addView(field, new LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         blob = new Blob(context, dp(56), Blob.MENU);
@@ -120,8 +134,34 @@ final class Foot extends LinearLayout {
         return field;
     }
 
+    /** Shows the way back at the start of the bar, or hides it when given nothing. */
+    void back(final Runnable way) {
+        if (way == null) {
+            back.setVisibility(GONE);
+            back.setOnClickListener(null);
+            return;
+        }
+        back.setVisibility(VISIBLE);
+        back.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                hideKeys();
+                way.run();
+            }
+        });
+    }
+
+    /** A bar with nothing to find: the field only names the page. */
+    void named(String name) {
+        field.setHint(name);
+        field.setFocusable(false);
+        field.setFocusableInTouchMode(false);
+        field.setCursorVisible(false);
+    }
+
     void tint() {
         setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
+        backGlyph.tint(Tone.onSurface());
+        back.setBackground(Tone.touch(null, dp(22)));
         field.setTextColor(Tone.onSurface());
         field.setHintTextColor(Tone.faint());
         blob.tint();

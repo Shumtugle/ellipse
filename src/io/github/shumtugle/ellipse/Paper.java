@@ -754,7 +754,10 @@ private static String head(String title, String extra) {
     static String look(float hue, float sat, float val, int solid, int ground, int zoom, int from,
                        boolean system) {
         StringBuilder rules = new StringBuilder();
-        rules            .append(".pair{display:flex;gap:14px;margin:0 0 22px}")
+        /* The sliders keep a wide margin from the screen's edges, where the
+           phone's own gesture for going back begins. */
+        rules.append("body{padding-left:34px;padding-right:34px}")
+            .append(".pair{display:flex;gap:14px;margin:0 0 22px}")
             .append("a.orb{width:66px;height:66px;border-radius:50%;display:flex;")
             .append("align-items:center;justify-content:center;font-size:27px;")
             .append("text-decoration:none;background:").append(Tone.hex(Tone.containerHigh()))
