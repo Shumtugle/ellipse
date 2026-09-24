@@ -207,6 +207,14 @@ final class Keep {
         touch(context);
     }
 
+    /** How icons and names are drawn: sizes in percent, names on or off, the family of words. */
+    static final String ICON_SIZE = "icon_size";
+    static final String ICON_FILL = "icon_fill";
+    static final String NAMES_SCREENS = "names_screens";
+    static final String NAMES_LIST = "names_list";
+    static final String NAME_SIZE = "name_size";
+    static final String FONT = "font";
+
     /** The outline every icon is cut to; the phone's own at first. */
     static int shape(Context context) {
         return store(context).getInt("icon_shape", Shape.SYSTEM);

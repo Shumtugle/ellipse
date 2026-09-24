@@ -421,7 +421,7 @@ final class Drawer extends FrameLayout {
                 page.setPadding(dp(8), 0, dp(8), 0);
                 pager.addView(page);
             }
-            final Cell cell = new Cell(getContext(), doors.get(i), gridIcon, true);
+            final Cell cell = new Cell(getContext(), doors.get(i), gridIcon, Style.namesInList);
             cell.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     opener.open(cell, cell.door, cell.localIcon());
@@ -455,6 +455,7 @@ final class Drawer extends FrameLayout {
         for (int i = 0; i < list.getChildCount(); i++) {
             ((Row) list.getChildAt(i)).tint();
         }
+        Style.apply(bar);
     }
 
     boolean shown() {

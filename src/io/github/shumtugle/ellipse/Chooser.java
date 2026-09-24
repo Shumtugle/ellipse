@@ -134,6 +134,7 @@ final class Chooser extends FrameLayout {
         foot.tint();
         field.setText("");
         build();
+        Style.apply(this);
         scroll.scrollTo(0, 0);
         shown = true;
         setVisibility(VISIBLE);

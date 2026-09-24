@@ -204,8 +204,11 @@ final class Shape {
                 into.clipPath(outline(shape, inner));
                 /* The layers are larger than what shows: a quarter of the
                    visible side more on every edge, as the platform lays them. */
-                int spill = Math.round(inner / 4f);
-                int all = Math.round(inner) + 2 * spill;
+                /* The owner's fill draws the layers larger or smaller about
+                   the middle: more of the picture, less margin, or the reverse. */
+                float grown = inner * Style.fill;
+                int spill = Math.round(grown / 4f + (grown - inner) / 2f);
+                int all = Math.round(grown) + 2 * Math.round(grown / 4f);
                 Drawable ground = layers.getBackground();
                 if (ground != null) {
                     ground.setBounds(-spill, -spill, all - spill, all - spill);
@@ -283,7 +286,7 @@ final class Shape {
                 ? 0xFF000000 | (int) (r / seen) << 16 | (int) (g / seen) << 8 | (int) (b / seen)
                 : PAPER_INK;
             into.drawColor(ground);
-            float wide = full ? inside * 1.02f : inside * 0.72f;
+            float wide = full ? inside * 1.02f : inside * 0.72f * Style.fill;
             float at = (inside - wide) / 2f;
             icon.setBounds(Math.round(at), Math.round(at), Math.round(at + wide), Math.round(at + wide));
             icon.draw(into);
@@ -335,7 +338,7 @@ final class Shape {
                             Math.round(cx + groundSide / 2f), Math.round(cy + groundSide / 2f));
                         ground.draw(into);
                     }
-                    float pictureSide = inner.height() * 1.5f;
+                    float pictureSide = inner.height() * 1.5f * Style.fill;
                     Drawable picture = layers.getForeground();
                     if (picture != null) {
                         picture.setBounds(Math.round(cx - pictureSide / 2f), Math.round(cy - pictureSide / 2f),
@@ -343,7 +346,7 @@ final class Shape {
                         picture.draw(into);
                     }
                 } else {
-                    float flat = h * 0.7f;
+                    float flat = h * 0.7f * Style.fill;
                     icon.setBounds(Math.round(cx - flat / 2f), Math.round(cy - flat / 2f),
                         Math.round(cx + flat / 2f), Math.round(cy + flat / 2f));
                     icon.draw(into);

@@ -60,7 +60,7 @@ final class Sample extends LinearLayout {
         if (doors.isEmpty()) {
             return;
         }
-        addView(icon(doors.get(0), dp(92)), new LayoutParams(dp(124), dp(112)));
+        addView(icon(doors.get(0), dp(84) * Style.iconScale), new LayoutParams(dp(124), dp(124)));
         LinearLayout small = new LinearLayout(getContext());
         small.setOrientation(VERTICAL);
         LayoutParams smallAt = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f);
@@ -72,10 +72,11 @@ final class Sample extends LinearLayout {
                 int at = 1 + r * 3 + c;
                 FrameLayout slot = new FrameLayout(getContext());
                 if (at < doors.size()) {
-                    slot.addView(icon(doors.get(at), dp(44)), new FrameLayout.LayoutParams(
+                    slot.addView(named(doors.get(at), dp(40) * Style.iconScale), new FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
                 }
-                row.addView(slot, new LayoutParams(0, dp(60), 1f));
+                row.addView(slot, new LayoutParams(0, Math.round(dp(52) * Style.iconScale
+                    + (Style.namesOnScreens ? Cell.below(getContext()) : 0f)), 1f));
             }
             small.addView(row);
         }
@@ -87,6 +88,11 @@ final class Sample extends LinearLayout {
      * the window shows what the screens will: the same bounds, the same cut,
      * and room around it for an outline wider than its square.
      */
+    /** A small icon with its name under it, when names stand on the screens. */
+    private View named(Apps.Door door, float size) {
+        return new Cell(getContext(), Shape.face(door.plain()), door.label, size, Style.namesOnScreens);
+    }
+
     private View icon(Apps.Door door, float size) {
         return new Cell(getContext(), Shape.face(door.plain()), "", size, false);
     }

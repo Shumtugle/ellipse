@@ -253,13 +253,13 @@ final class Almanac extends View {
         int ink = Tone.onSecondaryContainer();
         words.setTextAlign(Paint.Align.CENTER);
         String hour = android.text.format.DateFormat.getTimeFormat(getContext()).format(now);
-        words.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+        words.setTypeface(Style.family == 0 ? Typeface.create("sans-serif-light", Typeface.NORMAL) : Style.face());
         words.setColor(ink);
         words.setTextSize(fit(hour, timeBox.width() * 0.84f, timeBox.height() * 0.5f));
         canvas.drawText(hour, timeBox.centerX(), timeBox.top + timeBox.height() * 0.56f, words);
         String day = new SimpleDateFormat(android.text.format.DateFormat.getBestDateTimePattern(
             Locale.getDefault(), "EEEdMMMM"), Locale.getDefault()).format(now);
-        words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        words.setTypeface(Style.face());
         words.setColor((ink & 0x00FFFFFF) | 0xB3000000);
         words.setTextSize(fit(day, timeBox.width() * 0.84f, timeBox.height() * 0.17f));
         canvas.drawText(day, timeBox.centerX(), timeBox.top + timeBox.height() * 0.84f, words);
@@ -277,7 +277,7 @@ final class Almanac extends View {
             window(canvas, earsBox);
             float s = Math.min(earsBox.width() * 0.5f, earsBox.height() * 0.42f);
             headphones(canvas, earsBox.centerX(), earsBox.top + earsBox.height() * 0.36f, s, quiet);
-            words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            words.setTypeface(Style.face());
             words.setColor(quiet);
             words.setTextAlign(Paint.Align.CENTER);
             String said = ears + "%";
@@ -296,7 +296,7 @@ final class Almanac extends View {
     /** A drawing and its words side by side in a small window: the sky, or headphones. */
     private void mark(Canvas canvas, RectF box, String text, int ink, boolean sky) {
         float s = Math.min(box.height() * 0.62f, box.width() * 0.34f);
-        words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        words.setTypeface(Style.face());
         words.setColor(ink);
         words.setTextAlign(Paint.Align.LEFT);
         words.setTextSize(fit(text, box.width() * 0.52f, box.height() * 0.4f));
@@ -348,7 +348,7 @@ final class Almanac extends View {
 
     private void pill(Canvas canvas, RectF box, String text, int ink) {
         float s = Math.min(box.height() * 0.5f, box.width() * 0.3f);
-        words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        words.setTypeface(Style.face());
         words.setColor(ink);
         words.setTextAlign(Paint.Align.LEFT);
         words.setTextSize(fit(text, box.width() * 0.5f, box.height() * 0.36f));
@@ -365,7 +365,7 @@ final class Almanac extends View {
         float s = Math.min(box.width() * 0.46f, box.height() * 0.4f);
         float cy = box.top + box.height() * 0.36f;
         battery(canvas, box.centerX(), cy, s, ink);
-        words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        words.setTypeface(Style.face());
         words.setColor(ink);
         words.setTextAlign(Paint.Align.CENTER);
         words.setTextSize(fit(text, box.width() * 0.78f, box.height() * 0.2f));

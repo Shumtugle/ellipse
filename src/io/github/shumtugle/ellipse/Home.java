@@ -514,6 +514,8 @@ public final class Home extends Activity {
         stamp = Keep.stamp(this);
         float column = (Math.min(wide, tall) - dp(16)) / (float) columns;
         iconSize = Math.max(dp(48), Math.min(dp(64), column * 0.58f));
+        /* The owner's own size, within the cell. */
+        iconSize = Math.min(column * 0.86f, iconSize * Style.iconScale);
 
         boolean was = drawer != null && drawer.shown();
         root = new Floor(this);
@@ -1041,7 +1043,8 @@ public final class Home extends Activity {
     /** The door to this home screen's own settings. */
     /** The door to this home screen's settings: not its own icon, but a face of their own. */
     private Cell ownCell(boolean named) {
-        Cell own = new Cell(this, Shape.face(getDrawable(R.mipmap.door)), OWN, iconSize, named);
+        Cell own = new Cell(this, Shape.face(getDrawable(R.mipmap.door)), OWN, iconSize,
+            named && Style.namesOnScreens);
         own.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 tune(v);
@@ -1108,7 +1111,7 @@ public final class Home extends Activity {
             });
             return;
         }
-        final Cell cell = new Cell(this, new Stack(doors), name, iconSize);
+        final Cell cell = new Cell(this, new Stack(doors), name, iconSize, Style.namesOnScreens);
         insides.put(cell, doors);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -1360,7 +1363,7 @@ public final class Home extends Activity {
         if (into == dock) {
             dockHeld[column] = door.token();
         }
-        final Cell cell = new Cell(this, door, iconSize, named);
+        final Cell cell = new Cell(this, door, iconSize, named && (into == dock || Style.namesOnScreens));
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 open(cell);
@@ -2431,7 +2434,8 @@ public final class Home extends Activity {
             icon = null;
         }
         CharSequence label = info.getShortLabel();
-        final Cell cell = new Cell(this, icon, label == null ? "" : label, iconSize, named);
+        final Cell cell = new Cell(this, icon, label == null ? "" : label, iconSize,
+            named && Style.namesOnScreens);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 try {

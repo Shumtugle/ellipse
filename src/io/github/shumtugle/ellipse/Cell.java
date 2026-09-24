@@ -58,7 +58,8 @@ final class Cell extends View {
         float density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
         gap = 6f * density;
-        words.setTextSize(14f * scaled);
+        words.setTextSize(14f * scaled * Style.nameScale);
+        words.setTypeface(Style.face());
         words.setTextAlign(Paint.Align.CENTER);
         words.setColor(Tone.onSurface());
         /* The names stand on the wallpaper, whatever it is; a soft dark
@@ -90,7 +91,8 @@ final class Cell extends View {
         float density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
         TextPaint probe = new TextPaint();
-        probe.setTextSize(14f * scaled);
+        probe.setTextSize(14f * scaled * Style.nameScale);
+        probe.setTypeface(Style.face());
         return 6f * density - probe.ascent() + probe.descent();
     }
 

@@ -399,7 +399,13 @@ public final class Tune extends Activity {
         }
     }
 
+    /** The room's lines anew, every word in the chosen family. */
     private void fill() {
+        fillRoom();
+        Style.apply(root);
+    }
+
+    private void fillRoom() {
         rows.removeAllViews();
         window.setVisibility(room() == ICONS ? View.VISIBLE : View.GONE);
         if (room() == HIDDEN) {
@@ -494,6 +500,10 @@ public final class Tune extends Activity {
                 public void onClick(View v) {
                     toggle.set(!toggle.on());
                     Keep.saveFlag(Tune.this, line.key, toggle.on());
+                    if (sample != null && room() == ICONS) {
+                        Style.read(Tune.this);
+                        sample.show();
+                    }
                     /* Dots need the phone's leave to know of notifications. */
                     if (Keep.DOTS_ON.equals(line.key) && toggle.on() && !Notices.on()) {
                         openSafely(new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
@@ -736,6 +746,27 @@ public final class Tune extends Activity {
         across.addView(tiles);
         rows.addView(across);
         arrive(across, 1);
+
+        caption("SIZE");
+        slider("Icons", "How large the icons stand", Keep.ICON_SIZE, 80, 130);
+        slider("Fill", "How much of its outline the picture fills", Keep.ICON_FILL, 85, 125);
+        caption("NAMES");
+        rows.addView(row(toggle("On the screens", "Names under the icons of the home screen",
+            Keep.NAMES_SCREENS, true)));
+        rows.addView(row(toggle("In the list", "Names under the icons of every app's pages",
+            Keep.NAMES_LIST, true)));
+        slider("Size of names", "How large the names are drawn", Keep.NAME_SIZE, 80, 140);
+        caption("TYPEFACE");
+        android.widget.HorizontalScrollView faces = new android.widget.HorizontalScrollView(this);
+        faces.setHorizontalScrollBarEnabled(false);
+        faces.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout chips = new LinearLayout(this);
+        chips.setPadding(dp(18), 0, dp(18), dp(24));
+        for (int i = 0; i < Style.FAMILIES.length; i++) {
+            chips.addView(faceChip(i));
+        }
+        faces.addView(chips);
+        rows.addView(faces);
         final android.widget.HorizontalScrollView row = across;
         final LinearLayout all = tiles;
         across.post(new Runnable() {
@@ -745,6 +776,92 @@ public final class Tune extends Activity {
                 row.scrollTo(Math.max(0, x), 0);
             }
         });
+    }
+
+    private void caption(String text) {
+        TextView caption = new TextView(this);
+        caption.setText(text);
+        caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+        caption.setLetterSpacing(0.12f);
+        caption.setTextColor(Tone.faint());
+        caption.setPadding(dp(24), dp(22), dp(24), dp(8));
+        rows.addView(caption);
+    }
+
+    /**
+     * A named slider: the window at the head of the room follows it while
+     * the finger moves, and what it shows is kept when the finger lifts.
+     */
+    private void slider(String title, String about, final String key, int least, int most) {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setPadding(dp(24), dp(6), dp(24), dp(6));
+        LinearLayout top = new LinearLayout(this);
+        final TextView name = new TextView(this);
+        name.setText(title);
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        name.setTextColor(Tone.onSurface());
+        top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView value = new TextView(this);
+        value.setText(Keep.number(this, key, 100) + "%");
+        value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        value.setTextColor(Tone.primary());
+        top.addView(value);
+        made.addView(top);
+        TextView said = new TextView(this);
+        said.setText(about);
+        said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+        said.setTextColor(Tone.faint());
+        made.addView(said);
+        made.addView(new Slide(this, least, most, Keep.number(this, key, 100), new Slide.Moved() {
+            public void moved(int at, boolean done) {
+                value.setText(at + "%");
+                if (Keep.ICON_SIZE.equals(key)) {
+                    Style.iconScale = at / 100f;
+                } else if (Keep.ICON_FILL.equals(key)) {
+                    Style.fill = at / 100f;
+                } else {
+                    Style.nameScale = at / 100f;
+                }
+                if (sample != null) {
+                    sample.show();
+                }
+                if (done) {
+                    Keep.saveNumber(Tune.this, key, at);
+                }
+            }
+        }));
+        rows.addView(made);
+    }
+
+    /** A family of words, written in itself; the chosen one wears the accent. */
+    private View faceChip(final int which) {
+        TextView chip = new TextView(this);
+        chip.setText("Aa  " + Style.FAMILIES[which].replace("sans-serif", "sans").replace('-', ' '));
+        chip.setTypeface(android.graphics.Typeface.create(Style.FAMILIES[which], android.graphics.Typeface.NORMAL));
+        chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        boolean on = Style.family == which;
+        chip.setTextColor(on ? Tone.onAccent() : Tone.onSurface());
+        chip.setPadding(dp(18), dp(12), dp(18), dp(12));
+        chip.setBackground(Tone.touch(Tone.box(on ? Tone.primary() : Tone.container(), dp(24), 0f), dp(24)));
+        LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        at.rightMargin = dp(8);
+        chip.setLayoutParams(at);
+        chip.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Keep.saveNumber(Tune.this, Keep.FONT, which);
+                Style.font(which);
+                int y = scroll.getScrollY();
+                fill();
+                scroll.post(new Runnable() {
+                    public void run() {
+                        scroll.scrollTo(0, y);
+                    }
+                });
+            }
+        });
+        return chip;
     }
 
     private View tile(final int shape) {

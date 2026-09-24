@@ -31,7 +31,8 @@ final class Row extends View {
         inset = 24f * density;
         gap = 18f * density;
         tall = Math.round(iconSize + 28f * density);
-        words.setTextSize(20f * scaled);
+        words.setTextSize(20f * scaled * Style.nameScale);
+        words.setTypeface(Style.face());
         tint();
     }
 

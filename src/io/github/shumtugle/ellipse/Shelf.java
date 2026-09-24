@@ -177,6 +177,7 @@ final class Shelf extends FrameLayout {
         field.setText("");
         tint();
         build();
+        Style.apply(this);
         scroll.scrollTo(0, 0);
         shown = true;
         setVisibility(VISIBLE);

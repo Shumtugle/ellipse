@@ -40,6 +40,7 @@ final class Tone {
         float wasEarth = earth;
         int wasVeil = veil;
         Shape.current = Keep.shape(context);
+        Style.read(context);
         float[] look = Keep.look(context);
         hue = look[0];
         rich = look[1];

@@ -164,6 +164,7 @@ final class Foot extends LinearLayout {
         back.setBackground(Tone.touch(null, dp(22)));
         field.setTextColor(Tone.onSurface());
         field.setHintTextColor(Tone.faint());
+        field.setTypeface(Style.face());
         blob.tint();
     }
 

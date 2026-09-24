@@ -238,6 +238,7 @@ final class Menu {
                 body.addView(line(section, s, i), lineParams());
             }
         }
+        Style.apply(card);
     }
 
     private LinearLayout.LayoutParams lineParams() {
