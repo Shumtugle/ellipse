@@ -817,7 +817,7 @@ private static String head(String title, String extra) {
         /* No save button. A slider that has come to rest under the finger has
            already said everything a button would ask it to repeat. */
 
-        b.append("<script>")
+        b.append("<script>var mixed=0;")
             .append("function mix(H,S,V){S/=100;V/=100;var C=V*S,X=C*(1-Math.abs((H/60)%2-1)),")
             .append("m=V-C,r,g,bl;")
             .append("if(H<60){r=C;g=X;bl=0}else if(H<120){r=X;g=C;bl=0}")
@@ -849,6 +849,8 @@ private static String head(String title, String extra) {
             .append("veil.style.background='linear-gradient(180deg,transparent 0%,'+floor+' 92%)'}")
             .append("g.style.background='linear-gradient(90deg,")
             .append("#090909,'+deep+')';")
+            .append("if(window.Ellipse)Ellipse.mix(mixed,+h.value,+s.value,+v.value,+a.value,+g.value,")
+            .append("+z.value);")
             .append("var ink=(+v.value>70&&+s.value<80)?'#120D00':'#F6F4F0';")
             .append("var g=document.querySelector('a.go');")
             .append("if(g){g.style.background=c;g.style.color=ink}}")
@@ -856,13 +858,15 @@ private static String head(String title, String extra) {
             .append(Tone.hex(Tone.surface())).append(",")
             .append(Tone.hex(Tone.containerHigh())).append(")';")
             .append("function size(){document.getElementById('sample').style.fontSize=")
-            .append("(16*z.value/100)+'px'}z.oninput=size;size();")
+            .append("(16*z.value/100)+'px';")
+            .append("if(window.Ellipse)Ellipse.mix(mixed,+h.value,+s.value,+v.value,+a.value,+g.value,")
+            .append("+z.value)}z.oninput=size;size();")
 
             .append("function keep(){location.href='ellipse:look?h='+h.value+'&s='+s.value")
             .append("+'&v='+v.value+'&a='+a.value+'&g='+g.value+'&z='+z.value+'&f='+(mixed?0:")
             .append(from).append(")}")
             .append("h.onchange=s.onchange=v.onchange=a.onchange=g.onchange=z.onchange=keep;")
-            .append("var mixed=0;h.oninput=s.oninput=v.oninput=function(){mixed=1;paint()};")
+            .append("h.oninput=s.oninput=v.oninput=function(){mixed=1;paint()};")
             .append("a.oninput=g.oninput=paint;paint();")
             .append("</script></body></html>");
         return b.toString();

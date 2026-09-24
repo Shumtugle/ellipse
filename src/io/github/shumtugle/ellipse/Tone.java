@@ -63,6 +63,30 @@ final class Tone {
         accent = shade(rich, bright);
         veil = Math.round(255f * Math.min(100f, Math.max(55f, look[3])) / 100f);
         earth = Keep.ground(context) / 100f;
+        hold();
+        return was != accent || wasEarth != earth || wasVeil != veil;
+    }
+
+    /**
+     * Colours tried under the thumb and not kept: the colour page's window
+     * shows them while a slider moves, and reading the look again puts back
+     * what is kept. A hue, richness and brightness below nought leave the
+     * accent where it is.
+     */
+    static void mix(float h, float s, float v, int solid, int ground) {
+        if (h >= 0f) {
+            hue = h;
+            rich = s;
+            bright = v;
+            accent = shade(rich, bright);
+        }
+        veil = Math.round(255f * Math.min(100f, Math.max(55f, solid)) / 100f);
+        earth = Math.max(0, Math.min(100, ground)) / 100f;
+        hold();
+    }
+
+    /** The containers of the design system, and their inks, from the hue. */
+    private static void hold() {
         float third = (hue + 60f) % 360f;
         held[0] = shade(Math.min(0.7f, rich + 0.1f), mix(0.34f, 0.42f));
         held[1] = shade(0.18f, 0.96f);
@@ -70,7 +94,6 @@ final class Tone {
         held[3] = shade(0.10f, 0.94f);
         held[4] = Color.HSVToColor(new float[] {third, 0.45f, mix(0.32f, 0.40f)});
         held[5] = Color.HSVToColor(new float[] {third, 0.12f, 0.96f});
-        return was != accent || wasEarth != earth || wasVeil != veil;
     }
 
     /** The wallpaper's leading colour, or nought when it will not say. */

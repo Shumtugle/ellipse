@@ -25,6 +25,13 @@
         <item name="android:colorEdgeEffect">@color/clear</item>
     </style>
 
+    <!-- The pages drawn as pages; the colour page opens a window onto the
+         wallpaper at its head, so the wallpaper lies behind it. -->
+    <style name="Folio" parent="@style/Room">
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@color/clear</item>
+    </style>
+
     <!-- A card over whatever is behind it, for a question asked from
          another application. -->
     <style name="Glass" parent="@android:style/Theme.Material.NoActionBar">

@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.23.1
+  sh build.sh ellipse-1.24.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -114,8 +114,10 @@ Look → Colour and text opens the colour page. The accent follows the phone
 at first — its system colour where it has one, else the wallpaper's — or
 is mixed by hand: a hue, how rich it is, how
 bright the accent, how solid the cards stand, how much colour the ground
-takes, and the size of words, all mixed under the thumb with the page
-itself showing the result. The whole home screen follows it.
+takes, and the size of words, all mixed under the thumb, with a window at
+the head of the page onto the wallpaper and the home screen's own things
+on it — the clock, a row of the owner's apps, the dock, a menu — drawn
+anew while a slider moves, before anything is kept. The whole home screen follows it.
 
 A touch on the clock's weather opens the weather, whole: this moment with
 the next two hours in quarters, the small facts as capsules (wind, damp,

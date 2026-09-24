@@ -38,6 +38,8 @@ public final class Folio extends Activity {
     private static final int WHERE = 41;
 
     private WebView view;
+    /** The window onto the home screen above the colour page, and the bridge the page tells it through. */
+    private Glimpse glimpse;
     private String page = LOOK;
     private String opened = LOOK;
     private String[][] finds;
@@ -86,9 +88,12 @@ public final class Folio extends Activity {
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
         Tone.read(this);
-        FrameLayout root = new FrameLayout(this);
+        String asked = getIntent().getStringExtra(PAGE);
+        opened = asked == null ? LOOK : asked;
+        android.widget.LinearLayout root = new android.widget.LinearLayout(this);
+        root.setOrientation(android.widget.LinearLayout.VERTICAL);
         root.setFitsSystemWindows(true);
-        root.setBackgroundColor(Tone.surface());
+        root.setBackgroundColor(LOOK.equals(opened) ? 0x00000000 : Tone.surface());
         view = new WebView(this);
         view.setBackgroundColor(Tone.surface());
         view.setVerticalScrollBarEnabled(false);
@@ -108,13 +113,19 @@ public final class Folio extends Activity {
                 return true;
             }
         });
-        root.addView(view, new FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        if (LOOK.equals(opened)) {
+            glimpse = new Glimpse(this);
+            glimpse.show(Keep.zoom(this));
+            root.addView(glimpse, new android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                android.widget.LinearLayout.LayoutParams.WRAP_CONTENT));
+            view.addJavascriptInterface(new Bridge(), "Ellipse");
+        }
+        root.addView(view, new android.widget.LinearLayout.LayoutParams(
+            android.widget.LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
         setContentView(root);
-        getWindow().setStatusBarColor(Tone.surface());
+        getWindow().setStatusBarColor(LOOK.equals(opened) ? Tone.frame() : Tone.surface());
         getWindow().setNavigationBarColor(Tone.surface());
-        String asked = getIntent().getStringExtra(PAGE);
-        opened = asked == null ? LOOK : asked;
         show(opened);
     }
 
@@ -150,6 +161,26 @@ public final class Folio extends Activity {
         view.loadDataWithBaseURL(BASE, html, "text/html", "utf-8", null);
     }
 
+    /**
+     * What the colour page says while a finger is on a slider. Only our own
+     * page is ever loaded here, so only our own page can speak through it.
+     */
+    private final class Bridge {
+        @android.webkit.JavascriptInterface
+        public void mix(final int mixed, final int h, final int s, final int v, final int a, final int g,
+                        final int z) {
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    if (glimpse == null) {
+                        return;
+                    }
+                    Tone.mix(mixed == 1 ? h : -1f, s / 100f, v / 100f, a, g);
+                    glimpse.show(z);
+                }
+            });
+        }
+    }
+
     private static String said(String command, String key) {
         int q = command.indexOf('?');
         if (q < 0) {
@@ -177,6 +208,9 @@ public final class Folio extends Activity {
         if (what.startsWith("from")) {
             Keep.saveFrom(this, number(what, "v", Keep.FROM_OWN));
             Tone.read(this);
+            if (glimpse != null) {
+                glimpse.show(Keep.zoom(this));
+            }
             getWindow().setStatusBarColor(Tone.surface());
             getWindow().setNavigationBarColor(Tone.surface());
             show(LOOK);
@@ -203,6 +237,9 @@ public final class Folio extends Activity {
             Tone.read(this);
             getWindow().setStatusBarColor(Tone.surface());
             getWindow().setNavigationBarColor(Tone.surface());
+            if (glimpse != null) {
+                glimpse.show(zoom);
+            }
             if (before != Keep.FROM_OWN && from == Keep.FROM_OWN) {
                 /* The chips above say where the colour comes from: now from the hand. */
                 show(LOOK);
