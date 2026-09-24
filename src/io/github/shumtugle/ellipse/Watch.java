@@ -34,10 +34,12 @@ import java.util.Locale;
  */
 final class Watch extends View implements Timepiece {
 
-    /** What the dial is made of: dark, or stamped in the accent's hue. */
-    static final int DIAL_DARK = 0;
-    static final int DIAL_STAMPED = 1;
-    static final String[] DIAL_NAMES = {"Dark", "Stamped"};
+    /**
+     * What the dial and the small windows are made of: dark, as the face of
+     * a good watch, or any of the materials a plate may be — then the words
+     * and hands on them turn dark where the material is light.
+     */
+    static final int DARK = -1;
 
     private static final int INK = 0xFFEFE7D6;
     private static final int QUIET = 0xFFB9B1A2;
@@ -54,6 +56,7 @@ final class Watch extends View implements Timepiece {
     private final RectF chargeBox = new RectF();
     private final int plate;
     private final int dial;
+    private final int fields;
     private boolean showWeather = true;
     private int ears = -1;
     private int charge = -1;
@@ -76,11 +79,12 @@ final class Watch extends View implements Timepiece {
         }
     };
 
-    Watch(Context context, int plate, int dial, Almanac.Hand hand) {
+    Watch(Context context, int plate, int dial, int fields, Almanac.Hand hand) {
         super(context);
         this.hand = hand;
         this.plate = plate;
         this.dial = dial;
+        this.fields = fields;
         density = context.getResources().getDisplayMetrics().density;
         taps = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
@@ -226,11 +230,11 @@ final class Watch extends View implements Timepiece {
         words.setTypeface(Style.family == 0 ? android.graphics.Typeface.create("sans-serif-light",
             android.graphics.Typeface.NORMAL) : Style.face());
         words.setTextAlign(Paint.Align.CENTER);
-        words.setColor(INK);
+        words.setColor(ink(fields));
         words.setTextSize(fit(time, timeBox.width() * 0.8f, timeBox.height() * 0.55f));
         canvas.drawText(time, timeBox.centerX(), timeBox.top + timeBox.height() * 0.6f, words);
         words.setTypeface(Style.face());
-        words.setColor(QUIET);
+        words.setColor(quiet(fields));
         words.setTextSize(fit(date, timeBox.width() * 0.8f, timeBox.height() * 0.2f));
         canvas.drawText(date, timeBox.centerX(), timeBox.top + timeBox.height() * 0.86f, words);
 
@@ -247,13 +251,47 @@ final class Watch extends View implements Timepiece {
         pair(canvas, chargeBox, charge >= 0 ? charge + "%" : "\u2013", 2);
     }
 
-    /** A window sunk in the plate: dark, a shadow under its upper edge, a fine light line round it. */
+    /** Whether a material reads light, so what is written on it must be dark. */
+    static boolean light(int which) {
+        switch (which) {
+            case Rim.METAL:
+            case Rim.GOLD:
+            case Rim.SEQUINS:
+            case Rim.STEEL:
+                return true;
+            case Rim.ACCENT:
+                return android.graphics.Color.luminance(Tone.primary()) > 0.4f;
+            case Rim.GLASS:
+                return Rim.glassTone > 0.55f;
+            default:
+                return false;
+        }
+    }
+
+    private static int ink(int which) {
+        return which != DARK && light(which) ? 0xFF1C1A17 : INK;
+    }
+
+    private static int quiet(int which) {
+        return which != DARK && light(which) ? 0xFF4A453E : QUIET;
+    }
+
+    /** A window sunk in the plate: of its material, a shadow under its upper edge, a fine light line round it. */
     private void sunk(Canvas canvas, RectF box) {
         float r = Math.min(box.height() / 2f, px(26));
-        paint.setShader(new LinearGradient(0, box.top, 0, box.bottom, 0xFF252321, 0xFF131211,
-            Shader.TileMode.CLAMP));
         paint.setStyle(Paint.Style.FILL);
-        canvas.drawRoundRect(box, r, r, paint);
+        if (fields == DARK) {
+            paint.setShader(new LinearGradient(0, box.top, 0, box.bottom, 0xFF252321, 0xFF131211,
+                Shader.TileMode.CLAMP));
+            canvas.drawRoundRect(box, r, r, paint);
+        } else {
+            canvas.save();
+            canvas.translate(box.left, box.top);
+            Paint made = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+            Rim.material(made, fields, box.width(), box.height());
+            canvas.drawRoundRect(new RectF(0, 0, box.width(), box.height()), r, r, made);
+            canvas.restore();
+        }
         paint.setShader(new LinearGradient(0, box.top, 0, box.top + box.height() * 0.25f, 0x66000000, 0x00000000,
             Shader.TileMode.CLAMP));
         canvas.drawRoundRect(box, r, r, paint);
@@ -274,14 +312,14 @@ final class Watch extends View implements Timepiece {
             Shader.TileMode.CLAMP));
         canvas.drawCircle(cx, cy, r, paint);
         float inner = r * 0.93f;
-        if (dial == DIAL_STAMPED) {
+        if (dial != DARK) {
             canvas.save();
             canvas.translate(cx - inner, cy - inner);
-            Paint stamped = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-            Rim.material(stamped, Rim.STAMPED, inner * 2f, inner * 2f);
-            canvas.drawCircle(inner, inner, inner, stamped);
+            Paint made = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+            Rim.material(made, dial, inner * 2f, inner * 2f);
+            canvas.drawCircle(inner, inner, inner, made);
             canvas.restore();
-            paint.setShader(new RadialGradient(cx, cy, inner, 0x00000000, 0x66000000, Shader.TileMode.CLAMP));
+            paint.setShader(new RadialGradient(cx, cy, inner, 0x00000000, 0x55000000, Shader.TileMode.CLAMP));
         } else {
             paint.setShader(new RadialGradient(cx, cy - inner * 0.2f, inner, 0xFF2E2B28, 0xFF0D0C0B,
                 Shader.TileMode.CLAMP));
@@ -300,7 +338,7 @@ final class Watch extends View implements Timepiece {
             float from = inner * (major ? 0.70f : 0.76f);
             float to = inner * 0.88f;
             paint.setStrokeWidth(inner * (major ? 0.05f : 0.028f));
-            paint.setColor(major ? INK : 0xFF8F887C);
+            paint.setColor(major ? ink(dial) : (dial != DARK && light(dial) ? 0xFF5E574D : 0xFF8F887C));
             canvas.drawLine(cx + (float) Math.sin(a) * from, cy - (float) Math.cos(a) * from,
                 cx + (float) Math.sin(a) * to, cy - (float) Math.cos(a) * to, paint);
         }
@@ -308,10 +346,11 @@ final class Watch extends View implements Timepiece {
         float sec = now.get(Calendar.SECOND);
         float min = now.get(Calendar.MINUTE) + sec / 60f;
         float hour = now.get(Calendar.HOUR) + min / 60f;
-        hand(canvas, cx, cy, hour / 12f, inner * 0.5f, inner * 0.07f, INK);
-        hand(canvas, cx, cy, min / 60f, inner * 0.78f, inner * 0.05f, INK);
-        hand(canvas, cx, cy, sec / 60f, inner * 0.85f, inner * 0.015f, 0xFFD8D2C6);
-        paint.setColor(0xFFCFC9BD);
+        hand(canvas, cx, cy, hour / 12f, inner * 0.5f, inner * 0.07f, ink(dial));
+        hand(canvas, cx, cy, min / 60f, inner * 0.78f, inner * 0.05f, ink(dial));
+        hand(canvas, cx, cy, sec / 60f, inner * 0.85f, inner * 0.015f,
+            dial != DARK && light(dial) ? 0xFF8A3A2E : 0xFFD8D2C6);
+        paint.setColor(ink(dial));
         canvas.drawCircle(cx, cy, inner * 0.05f, paint);
     }
 
@@ -327,7 +366,8 @@ final class Watch extends View implements Timepiece {
     private void pair(Canvas canvas, RectF box, String text, int what) {
         float s = Math.min(box.height() * 0.5f, box.width() * 0.32f);
         words.setTypeface(Style.face());
-        words.setColor(INK);
+        int mark = ink(fields);
+        words.setColor(mark);
         words.setTextAlign(Paint.Align.LEFT);
         words.setTextSize(fit(text, box.width() * 0.5f, box.height() * 0.4f));
         float textW = words.measureText(text);
@@ -336,10 +376,10 @@ final class Watch extends View implements Timepiece {
         float mx = start + s / 2f;
         float my = box.centerY();
         if (what == 0) {
-            Almanac.skyMark(canvas, Sky.sky(), mx, my, s, INK);
+            Almanac.skyMark(canvas, Sky.sky(), mx, my, s, mark);
         } else if (what == 1) {
             Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-            p.setColor(INK);
+            p.setColor(mark);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(s * 0.09f);
             canvas.drawArc(new RectF(mx - s * 0.34f, my - s * 0.36f, mx + s * 0.34f, my + s * 0.32f), 180f, 180f,
@@ -349,7 +389,7 @@ final class Watch extends View implements Timepiece {
             canvas.drawRoundRect(new RectF(mx + s * 0.2f, my, mx + s * 0.4f, my + s * 0.34f), s * 0.06f, s * 0.06f, p);
         } else {
             Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-            p.setColor(INK);
+            p.setColor(mark);
             p.setStyle(Paint.Style.STROKE);
             p.setStrokeWidth(s * 0.08f);
             RectF cell = new RectF(mx - s * 0.2f, my - s * 0.38f, mx + s * 0.2f, my + s * 0.42f);

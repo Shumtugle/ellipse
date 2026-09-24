@@ -1015,26 +1015,57 @@ public final class Tune extends Activity {
                         paintMaterial(c, w, h, value);
                     }
                 }));
+            int[] made = new int[Rim.NAMES.length + 1];
+            String[] madeNames = new String[Rim.NAMES.length + 1];
+            made[0] = Watch.DARK;
+            madeNames[0] = "Dark";
+            for (int i = 0; i < Rim.NAMES.length; i++) {
+                made[i + 1] = i;
+                madeNames[i + 1] = Rim.NAMES[i];
+            }
             caption("DIAL");
-            rows.addView(swatches(Keep.CLOCK_DIAL, Keep.number(this, Keep.CLOCK_DIAL, Watch.DIAL_DARK),
-                new int[] {Watch.DIAL_DARK, Watch.DIAL_STAMPED}, Watch.DIAL_NAMES, new Painter() {
+            rows.addView(swatches(Keep.CLOCK_DIAL, Keep.number(this, Keep.CLOCK_DIAL, Watch.DARK), made, madeNames,
+                new Painter() {
                     public void paint(android.graphics.Canvas c, float w, float h, int value) {
-                        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-                        float r = Math.min(w, h) / 2f;
-                        if (value == Watch.DIAL_STAMPED) {
-                            Rim.material(p, Rim.STAMPED, w, h);
-                        } else {
-                            p.setColor(0xFF1A1817);
-                        }
-                        c.drawCircle(w / 2f, h / 2f, r, p);
-                        android.graphics.Paint bar = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-                        bar.setColor(0xFFEFE7D6);
-                        bar.setStrokeWidth(r * 0.08f);
-                        bar.setStrokeCap(android.graphics.Paint.Cap.ROUND);
-                        c.drawLine(w / 2f, h / 2f, w / 2f, h / 2f - r * 0.6f, bar);
-                        c.drawLine(w / 2f, h / 2f, w / 2f + r * 0.4f, h / 2f + r * 0.2f, bar);
+                        paintField(c, w, h, value, true);
                     }
                 }));
+            caption("WINDOWS");
+            rows.addView(swatches(Keep.CLOCK_FIELDS, Keep.number(this, Keep.CLOCK_FIELDS, Watch.DARK), made, madeNames,
+                new Painter() {
+                    public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                        paintField(c, w, h, value, false);
+                    }
+                }));
+        }
+    }
+
+    /** A dial or a window of the plate clock in small, of its material, with its ink on it. */
+    private void paintField(android.graphics.Canvas c, float w, float h, int value, boolean round) {
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG
+            | android.graphics.Paint.FILTER_BITMAP_FLAG);
+        if (value == Watch.DARK) {
+            p.setColor(0xFF1A1817);
+        } else {
+            Rim.material(p, value, w, h);
+        }
+        boolean light = value != Watch.DARK && Watch.light(value);
+        int ink = light ? 0xFF1C1A17 : 0xFFEFE7D6;
+        android.graphics.Paint mark = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        mark.setColor(ink);
+        mark.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+        if (round) {
+            float r = Math.min(w, h) / 2f;
+            c.drawCircle(w / 2f, h / 2f, r, p);
+            mark.setStrokeWidth(r * 0.08f);
+            c.drawLine(w / 2f, h / 2f, w / 2f, h / 2f - r * 0.6f, mark);
+            c.drawLine(w / 2f, h / 2f, w / 2f + r * 0.4f, h / 2f + r * 0.2f, mark);
+        } else {
+            android.graphics.RectF box = new android.graphics.RectF(0, h * 0.22f, w, h * 0.78f);
+            c.drawRoundRect(box, box.height() / 2f, box.height() / 2f, p);
+            mark.setTextSize(h * 0.24f);
+            mark.setTextAlign(android.graphics.Paint.Align.CENTER);
+            c.drawText("93%", w / 2f, h * 0.58f, mark);
         }
     }
 

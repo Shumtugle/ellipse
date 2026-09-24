@@ -228,7 +228,8 @@ final class Keep {
     /** Which clock stands across the top — the first, or another — and what the plate and its dial are made of. */
     static final String CLOCK_FACE = "clock_face";
     static final String CLOCK_PLATE = "clock_plate";
-    static final String CLOCK_DIAL = "clock_dial";
+    static final String CLOCK_DIAL = "clock_dial_of";
+    static final String CLOCK_FIELDS = "clock_fields";
     /** The window cut in the icons' plate, and the tile's width to its height in percent. */
     static final String WINDOW = "icon_window";
     static final String TILE_ASPECT = "tile_aspect";

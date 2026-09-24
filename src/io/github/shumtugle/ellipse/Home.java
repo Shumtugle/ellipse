@@ -1060,7 +1060,8 @@ public final class Home extends Activity {
     static View timepiece(Context context, Almanac.Hand hand) {
         if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_PLATE) {
             return new Watch(context, Keep.number(context, Keep.CLOCK_PLATE, Rim.STEEL),
-                Keep.number(context, Keep.CLOCK_DIAL, Watch.DIAL_DARK), hand);
+                Keep.number(context, Keep.CLOCK_DIAL, Watch.DARK), Keep.number(context, Keep.CLOCK_FIELDS, Watch.DARK),
+                hand);
         }
         return new Almanac(context, hand);
     }

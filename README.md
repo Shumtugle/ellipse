@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.40.0
+  sh build.sh ellipse-1.41.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -191,4 +191,5 @@ touch away. The plate is a slab of a material — steel, wood, the accent, a
 stamped dial, glass and the rest — with dark windows sunk in it: a round
 dial behind a metal bezel, dark or stamped, the hour and date in a long
 window, and small windows for the weather, the headphones while they are
-near, and the phone's charge.
+near, and the phone's charge. The dial and the windows may be dark, or of
+any of the materials; on a light one the words and hands turn dark.
