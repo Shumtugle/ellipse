@@ -125,6 +125,11 @@ final class Chooser extends FrameLayout {
         return shown;
     }
 
+    /** What the field at the foot says it finds, for what is chosen now. */
+    void hint(String what) {
+        field.setHint(what);
+    }
+
     /** Rises with things in groups, each group under its caption; none for a group with no name. */
     void show(String[] captions, List<List<Item>> items, boolean grid) {
         this.grid = grid;

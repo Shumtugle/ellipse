@@ -28,13 +28,65 @@ final class Style {
     static final int OWN = 0;
     static final int ALL = 1;
     static final int ABLE = 2;
-    /** Icons given an outline or a colour of their own, by the word they are kept by. */
-    private static java.util.Map<String, int[]> faces = new java.util.HashMap<>();
+    /** Icons given a face of their own, by the word they are kept by. */
+    private static java.util.Map<String, String[]> faces = new java.util.HashMap<>();
 
-    /** The outline and colour one icon was given, or less than nought for each. */
+    /** One icon's own face: colour, drawing, inking, picture; less than nought or nought when not its own. */
     static int[] faceOf(String token) {
-        int[] own = token == null ? null : faces.get(token);
-        return own == null ? new int[] {-1, -1, 0, 0} : own;
+        String[] own = token == null ? null : faces.get(token);
+        if (own == null) {
+            return new int[] {-1, -1, 0, 0, 0};
+        }
+        int[] made = new int[5];
+        for (int i = 0; i < 5; i++) {
+            try {
+                made[i] = Integer.parseInt(own[i]);
+            } catch (NumberFormatException broken) {
+                made[i] = i < 2 ? -1 : 0;
+            }
+        }
+        return made;
+    }
+
+    /** The symbol one icon was given in place of its picture, by name, or an empty word. */
+    static String symbolOf(String token) {
+        String[] own = token == null ? null : faces.get(token);
+        return own == null ? "" : own[5];
+    }
+
+    /** Where the picture of the owner's own for one icon is kept. */
+    static java.io.File pictureOf(Context context, String token) {
+        java.io.File room = new java.io.File(context.getFilesDir(), "faces");
+        room.mkdirs();
+        return new java.io.File(room, Integer.toHexString(token.hashCode()) + ".png");
+    }
+
+    /**
+     * An icon as it is to be drawn, with its own face if it was given one: a
+     * picture of the owner's own in its place, a symbol in its place, the
+     * home screen's drawing, a chosen way of inking, its own colour — and
+     * always the outline every icon wears.
+     */
+    static android.graphics.drawable.Drawable dress(Context context, String token,
+                                                    android.graphics.drawable.Drawable raw, String owner) {
+        int[] own = faceOf(token);
+        if (own[4] == 1) {
+            android.graphics.Bitmap picture = android.graphics.BitmapFactory.decodeFile(
+                pictureOf(context, token).getPath());
+            if (picture != null) {
+                return Shape.face(new android.graphics.drawable.BitmapDrawable(context.getResources(), picture),
+                    -1, own[1], Marks.NONE, own[3]);
+            }
+        }
+        String symbol = symbolOf(token);
+        if (symbol.length() > 0) {
+            int id = context.getResources().getIdentifier("sym_" + symbol, "drawable", context.getPackageName());
+            if (id != 0) {
+                return Shape.faceMark(raw, -1, context.getDrawable(id));
+            }
+        }
+        int drawing = own[2] == 1 && owner != null ? Marks.of(owner) : Marks.NONE;
+        return Shape.face(raw, -1, own[1], drawing, own[3]);
     }
     private static Typeface face = Typeface.create(FAMILIES[0], Typeface.NORMAL);
     private static Typeface bold = Typeface.create(FAMILIES[0], Typeface.BOLD);

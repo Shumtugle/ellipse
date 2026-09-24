@@ -4,4 +4,5 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/door_back" />
     <foreground android:drawable="@drawable/door_fg" />
+    <monochrome android:drawable="@drawable/door_mono" />
 </adaptive-icon>

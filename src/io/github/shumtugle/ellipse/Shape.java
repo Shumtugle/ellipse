@@ -154,6 +154,21 @@ final class Shape {
         return face(icon, shape, tint, drawing, AUTO);
     }
 
+    /**
+     * An icon whose picture is replaced by a one-colour symbol: the symbol
+     * is laid in the accent on the deep ground, at the size the platform's
+     * own one-colour pictures take, and cut to the outline.
+     */
+    static Drawable faceMark(Drawable icon, int shape, Drawable symbol) {
+        int outline = shape >= 0 ? shape : current;
+        boolean paper = outline == PAPER;
+        Drawable mark = new android.graphics.drawable.InsetDrawable(symbol.mutate(), 0.28f);
+        mark.setTint(paper ? deep(Tone.primary()) : Tone.primary());
+        Drawable made = new AdaptiveIconDrawable(new android.graphics.drawable.ColorDrawable(
+            paper ? PAPER_INK : Tone.primaryContainer()), mark);
+        return outline == SYSTEM ? made : new Cut(made, outline);
+    }
+
     /** How a coloured picture becomes one colour: left to the picture, or as the owner chose for it. */
     static final int AUTO = 0;
     static final int OUTLINE = 1;
@@ -216,6 +231,15 @@ final class Shape {
                 return icon;
             }
             mark = stencil(icon, ink);
+            if (mark == null) {
+                /* Before giving up, what stands apart from the picture's main
+                   colour is tried: a white plate with a small picture on it
+                   still has a picture. */
+                mark = stencilBy(icon, ink, APART);
+                if (!fair(mark)) {
+                    mark = null;
+                }
+            }
             if (mark == null) {
                 /* A photograph, a face: nothing in it stands apart from a
                    ground, and a stencil of it would be a blank. It keeps its
@@ -293,6 +317,29 @@ final class Shape {
         }
         out.setPixels(px, 0, n, 0, 0, n, n);
         return new android.graphics.drawable.BitmapDrawable((android.content.res.Resources) null, out);
+    }
+
+    /** Whether a made one-colour picture holds a picture: neither nearly empty nor nearly full. */
+    private static boolean fair(Drawable mark) {
+        if (!(mark instanceof android.graphics.drawable.BitmapDrawable)) {
+            return mark != null;
+        }
+        Bitmap drawn = ((android.graphics.drawable.BitmapDrawable) mark).getBitmap();
+        int n = drawn.getWidth();
+        int[] px = new int[n * drawn.getHeight()];
+        drawn.getPixels(px, 0, n, 0, 0, n, drawn.getHeight());
+        long covered = 0;
+        /* Only what shows counts: the middle seventy two of the layers' hundred and eight. */
+        int from = n / 6;
+        int to = n - n / 6;
+        long area = (long) (to - from) * (to - from);
+        for (int y = from; y < to; y++) {
+            for (int x = from; x < to; x++) {
+                covered += px[y * n + x] >>> 24;
+            }
+        }
+        float share = covered / (255f * area);
+        return share > 0.03f && share < 0.62f;
     }
 
     private static Drawable stencil(Drawable icon, int ink) {

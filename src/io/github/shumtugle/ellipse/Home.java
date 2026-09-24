@@ -1054,8 +1054,7 @@ public final class Home extends Activity {
     /** The door to this home screen's own settings. */
     /** The door to this home screen's settings: not its own icon, but a face of their own. */
     private Cell ownCell(boolean named) {
-        int[] mine = Style.faceOf(Keep.OWN_THING);
-        Cell own = new Cell(this, Shape.face(getDrawable(R.mipmap.door), mine[0], mine[1], Marks.NONE, mine[3]),
+        Cell own = new Cell(this, Style.dress(this, Keep.OWN_THING, getDrawable(R.mipmap.door), null),
             OWN, iconSize,
             named && Style.namesOnScreens);
         own.setOnClickListener(new View.OnClickListener() {
@@ -2449,9 +2448,8 @@ public final class Home extends Activity {
         }
         android.graphics.drawable.Drawable icon = null;
         try {
-            int[] mine = Style.faceOf(token);
-            icon = Shape.face(launcher.getShortcutIconDrawable(info, getResources().getDisplayMetrics().densityDpi),
-                mine[0], mine[1], Marks.NONE, mine[3]);
+            icon = Style.dress(this, token,
+                launcher.getShortcutIconDrawable(info, getResources().getDisplayMetrics().densityDpi), null);
         } catch (RuntimeException none) {
             icon = null;
         }
@@ -2569,6 +2567,7 @@ public final class Home extends Activity {
         }
         groups.add(all);
         choosingFace = false;
+        chooser.hint(SEARCH_SHORTCUTS);
         chooser.show(new String[] {null}, groups, Keep.number(this, Keep.MAKERS_VIEW, Keep.LINES) == Keep.PAGES);
     }
 
@@ -2623,44 +2622,69 @@ public final class Home extends Activity {
             refuse(screens);
             return;
         }
+        /* The outline is one for all icons, chosen in the settings; one icon
+           is given only what makes it read: colour, inking, a drawing, a
+           picture or a symbol in its place. */
         int[] mine = Style.faceOf(token);
         List<List<Chooser.Item>> groups = new ArrayList<>();
-        List<Chooser.Item> shapes = new ArrayList<>();
-        shapes.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1]), AS_OTHERS, 999));
-        for (int s = 0; s < Shape.COUNT; s++) {
-            shapes.add(new Chooser.Item(Shape.face(rawIcon(token, door), s, mine[1]), Shape.NAMES[s], 1000 + s));
-        }
-        groups.add(shapes);
+        List<String> captions = new ArrayList<>();
         List<Chooser.Item> colours = new ArrayList<>();
-        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], -1), AS_OTHERS, 1999));
-        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.OWN), THEIR_OWN, 2000));
-        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.ALL), IN_ACCENT, 2001));
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, -1), AS_OTHERS, 1999));
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.OWN), THEIR_OWN, 2000));
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.ALL), IN_ACCENT, 2001));
         groups.add(colours);
-        /* When the icon is to be in the accent, the ways a coloured picture can
-           become one colour, each shown on this very icon: one of them will
-           keep what matters in it. */
+        captions.add("Colour");
         List<Chooser.Item> inkings = new ArrayList<>();
         for (int m = 0; m < Shape.METHODS; m++) {
-            inkings.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.ALL, Marks.NONE, m),
+            inkings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.ALL, Marks.NONE, m),
                 Shape.METHOD_NAMES[m], 4000 + m));
         }
         groups.add(inkings);
-        String[] captions = {"Shape", "Colour", "Inking"};
+        captions.add("Inking");
         int drawing = door != null ? Marks.of(door.name.getPackageName()) : Marks.NONE;
         if (drawing != Marks.NONE) {
-            /* The phone's common apps also have a drawing of the home
-               screen's own, to stand in for a poor picture of their own. */
             List<Chooser.Item> drawings = new ArrayList<>();
-            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], mine[1]), APPS_OWN, 3000));
-            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], mine[1], drawing),
-                HOME_OWN, 3001));
+            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1]), APPS_OWN, 3000));
+            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1], drawing), HOME_OWN, 3001));
             groups.add(drawings);
-            captions = new String[] {"Shape", "Colour", "Inking", "Drawing"};
+            captions.add("Drawing");
         }
+        /* A picture of the owner's own, from the phone's pictures. */
+        List<Chooser.Item> pictures = new ArrayList<>();
+        pictures.add(new Chooser.Item(getDrawable(R.drawable.sym_photo_library), FROM_PICTURE, 5000));
+        if (mine[4] == 1) {
+            pictures.add(new Chooser.Item(Style.dress(this, token, rawIcon(token, door), null), DROP_PICTURE, 5001));
+        }
+        groups.add(pictures);
+        captions.add("Picture");
+        /* Symbols to put in the picture's place, found by their names. */
+        List<Chooser.Item> symbols = new ArrayList<>();
+        symbolNames = Folio.asset(this, "symbols.txt").trim().split("\\s+");
+        if (Style.symbolOf(token).length() > 0) {
+            symbols.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1]), NO_SYMBOL, 6999));
+        }
+        for (int i = 0; i < symbolNames.length; i++) {
+            int id = getResources().getIdentifier("sym_" + symbolNames[i], "drawable", getPackageName());
+            if (id != 0) {
+                symbols.add(new Chooser.Item(Shape.faceMark(rawIcon(token, door), -1, getDrawable(id)),
+                    symbolNames[i].replace('_', ' '), 7000 + i));
+            }
+        }
+        groups.add(symbols);
+        captions.add("Symbols");
         choosingFace = true;
         faceToken = token;
-        chooser.show(captions, groups, true);
+        chooser.hint(SEARCH_SYMBOLS);
+        chooser.show(captions.toArray(new String[0]), groups, true);
     }
+
+    private String[] symbolNames = new String[0];
+    private static final String FROM_PICTURE = "From a picture";
+    private static final String SEARCH_SYMBOLS = "Search symbols";
+    private static final String SEARCH_SHORTCUTS = "Search shortcuts";
+    private static final String DROP_PICTURE = "Without the picture";
+    private static final String NO_SYMBOL = "Without a symbol";
+    private static final int ASK_PICTURE = 14;
 
     private static final String AS_OTHERS = "As all the others";
     private static final String APPS_OWN = "The app's own";
@@ -2674,27 +2698,84 @@ public final class Home extends Activity {
             return;
         }
         int[] mine = Style.faceOf(faceToken);
-        int shape = mine[0];
         int tint = mine[1];
         int drawing = mine[2];
         int method = mine[3];
-        if (key >= 999 && key < 1999) {
-            shape = key - 1000;
-        } else if (key >= 1999 && key < 3000) {
+        int image = mine[4];
+        String symbol = Style.symbolOf(faceToken);
+        if (key >= 1999 && key < 3000) {
             tint = key - 2000;
             if (tint == Style.OWN) {
                 method = Shape.AUTO;
             }
         } else if (key >= 3000 && key < 4000) {
             drawing = key - 3000;
-        } else if (key >= 4000) {
+            symbol = "";
+            image = 0;
+        } else if (key >= 4000 && key < 5000) {
             method = key - 4000;
             tint = Style.ALL;
+            symbol = "";
+            image = 0;
+        } else if (key == 5000) {
+            Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            pick.addCategory(Intent.CATEGORY_OPENABLE);
+            pick.setType("image/*");
+            try {
+                startActivityForResult(pick, ASK_PICTURE);
+            } catch (RuntimeException none) {
+                refuse(screens);
+            }
+            return;
+        } else if (key == 5001) {
+            image = 0;
+        } else if (key == 6999) {
+            symbol = "";
+        } else if (key >= 7000 && key - 7000 < symbolNames.length) {
+            symbol = symbolNames[key - 7000];
+            image = 0;
         }
-        Keep.saveFace(this, faceToken, shape, tint, drawing, method);
+        Keep.saveFace(this, faceToken, tint, drawing, method, image, symbol);
         Style.read(this);
         stamp = Keep.stamp(this);
         fill();
+    }
+
+    /**
+     * A picture chosen from the phone's pictures becomes the icon: it is
+     * brought down to a size an icon needs, kept with the home screen's own
+     * files, and set in the outline like any flat icon.
+     */
+    private void takePicture(Intent data) {
+        if (faceToken == null || data == null || data.getData() == null) {
+            return;
+        }
+        try {
+            java.io.InputStream in = getContentResolver().openInputStream(data.getData());
+            android.graphics.Bitmap whole = android.graphics.BitmapFactory.decodeStream(in);
+            if (in != null) {
+                in.close();
+            }
+            if (whole == null) {
+                refuse(screens);
+                return;
+            }
+            int most = 288;
+            float scale = Math.min(1f, most / (float) Math.max(whole.getWidth(), whole.getHeight()));
+            android.graphics.Bitmap kept = android.graphics.Bitmap.createScaledBitmap(whole,
+                Math.max(1, Math.round(whole.getWidth() * scale)), Math.max(1, Math.round(whole.getHeight() * scale)),
+                true);
+            java.io.FileOutputStream out = new java.io.FileOutputStream(Style.pictureOf(this, faceToken));
+            kept.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out);
+            out.close();
+            int[] mine = Style.faceOf(faceToken);
+            Keep.saveFace(this, faceToken, mine[1], 0, Shape.AUTO, 1, "");
+            Style.read(this);
+            stamp = Keep.stamp(this);
+            fill();
+        } catch (Exception broken) {
+            refuse(screens);
+        }
     }
 
     // --------------------------------------------------- folders of one's own
@@ -2967,6 +3048,12 @@ public final class Home extends Activity {
     @Override
     protected void onActivityResult(int asked, int answer, Intent data) {
         super.onActivityResult(asked, answer, data);
+        if (asked == ASK_PICTURE) {
+            if (answer == RESULT_OK) {
+                takePicture(data);
+            }
+            return;
+        }
         if (asked == ASK_SHORTCUT) {
             if (answer == RESULT_OK && data != null) {
                 try {

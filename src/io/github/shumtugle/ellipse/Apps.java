@@ -57,9 +57,7 @@ final class Apps {
         /** Drawn once, when first asked for: a long list is not painted all at once. A work app wears its badge. */
         Drawable icon() {
             if (icon == null) {
-                int[] own = Style.faceOf(token());
-                int drawing = own[2] == 1 ? Marks.of(name.getPackageName()) : Marks.NONE;
-                icon = serial == 0 ? Shape.face(info.getIcon(density), own[0], own[1], drawing, own[3])
+                icon = serial == 0 ? Style.dress(appContext, token(), info.getIcon(density), name.getPackageName())
                     : info.getBadgedIcon(density);
             }
             return icon;
@@ -77,6 +75,12 @@ final class Apps {
     }
 
     private final Context context;
+    /** The application's own context, for the pictures and symbols an icon may be given. */
+    static Context context() {
+        return appContext;
+    }
+
+    private static Context appContext;
     private final PackageManager manager;
     /** Every package with a front door, by its name, holding the first door. */
     private final Map<String, LauncherActivityInfo> doors = new HashMap<>();
@@ -132,6 +136,7 @@ final class Apps {
         manager = context.getPackageManager();
         users = (android.os.UserManager) context.getSystemService(Context.USER_SERVICE);
         Marks.learn(context, false);
+        appContext = context.getApplicationContext();
         LauncherApps apps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
         UserHandle me = Process.myUserHandle();
         /* Every profile of the phone: the owner's own first, then work. */

@@ -220,35 +220,34 @@ final class Keep {
     private static final String FACE = "face.";
 
     /**
-     * One icon's own outline and colour, kept by the word the thing is kept
-     * by; less than nought for either keeps what every icon wears. Nought
-     * for both forgets it.
+     * One icon's own face, kept by the word the thing is kept by: its
+     * colour (less than nought: as every icon), the home screen's drawing
+     * for it (one: yes), the way it is inked, a picture of the owner's own
+     * put in its place (one: yes), and a symbol put in its place, by name.
+     * All at rest forgets it.
      */
-    static void saveFace(Context context, String token, int shape, int tint, int drawing, int method) {
+    static void saveFace(Context context, String token, int tint, int drawing, int method, int image,
+                         String symbol) {
         SharedPreferences.Editor edit = store(context).edit();
-        if (shape < 0 && tint < 0 && drawing <= 0 && method <= 0) {
+        String sym = symbol == null ? "" : symbol;
+        if (tint < 0 && drawing <= 0 && method <= 0 && image <= 0 && sym.length() == 0) {
             edit.remove(FACE + token);
         } else {
-            edit.putString(FACE + token, shape + "," + tint + "," + drawing + "," + method);
+            edit.putString(FACE + token, "-1," + tint + "," + drawing + "," + method + "," + image + "," + sym);
         }
         edit.apply();
         touch(context);
     }
 
-    /** Every icon given its own outline or colour: word, outline, colour. */
-    static java.util.Map<String, int[]> faces(Context context) {
-        java.util.Map<String, int[]> all = new java.util.HashMap<>();
+    /** Every icon given a face of its own: word, and the parts of its face as kept. */
+    static java.util.Map<String, String[]> faces(Context context) {
+        java.util.Map<String, String[]> all = new java.util.HashMap<>();
         for (java.util.Map.Entry<String, ?> each : store(context).getAll().entrySet()) {
-            if (!each.getKey().startsWith(FACE) || !(each.getValue() instanceof String)) {
-                continue;
-            }
-            String[] part = ((String) each.getValue()).split(",");
-            try {
-                all.put(each.getKey().substring(FACE.length()), new int[] {Integer.parseInt(part[0]),
-                    Integer.parseInt(part[1]), part.length > 2 ? Integer.parseInt(part[2]) : 0,
-                    part.length > 3 ? Integer.parseInt(part[3]) : 0});
-            } catch (RuntimeException broken) {
-                // Forgotten.
+            if (each.getKey().startsWith(FACE) && each.getValue() instanceof String) {
+                String[] part = ((String) each.getValue()).split(",", -1);
+                String[] six = {"-1", "-1", "0", "0", "0", ""};
+                System.arraycopy(part, 0, six, 0, Math.min(6, part.length));
+                all.put(each.getKey().substring(FACE.length()), six);
             }
         }
         return all;

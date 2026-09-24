@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The settings' mark in one colour, for the phone's one-colour icons: an
+     upright spanner's head with the ball in its jaws, a stub of its handle,
+     and one arc of the ellipse through the ball. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4.5" android:strokeLineCap="round"
+        android:pathData="M20,74 Q52,50 92,36" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="9"
+        android:pathData="M58.25,51.17 A12.5,12.5 0 1,1 45.75,51.17" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M47.5,72 L56.5,72 L57,94 L47,94 Z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M52,40 A7,7 0 1,1 51.99,40 Z" />
+</vector>
