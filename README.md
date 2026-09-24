@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.37.0
+  sh build.sh ellipse-1.38.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -161,7 +161,7 @@ outline stays one for all icons.
 
 Icons may wear a rim, as icon masks were once built in three layers: a
 plate of a material in the icon's outline — metal, gold, the accent, wood,
-sequins, black, steel, or a stamped dial — lit from above and shaded
+sequins, black, steel, a stamped dial, or dark glass the wallpaper shows through — lit from above and shaded
 below, the icon seen through a window cut in it, and, if asked for, the
 curved glaze of glass across the top. The rim runs from a thread to a
 frame. The window may follow the tile's outline or be cut round — a

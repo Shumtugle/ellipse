@@ -623,7 +623,7 @@ final class Shape {
                 if (plate) {
                     Rim.cut(into, cut, least);
                 }
-                if (Rim.glaze) {
+                if (Rim.glaze || Rim.kind == Rim.GLASS) {
                     Rim.glaze(into, outer, 0f, 0f, tileW, tileH);
                 }
             }

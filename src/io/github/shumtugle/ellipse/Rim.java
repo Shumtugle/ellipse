@@ -38,9 +38,15 @@ final class Rim {
     static final int BLACK = 5;
     static final int STEEL = 6;
     static final int STAMPED = 7;
+    /**
+     * Dark glass: the wallpaper shows through it, a light edge runs round
+     * it, and the curve of light lies across its top whether asked for or not.
+     */
+    static final int GLASS = 8;
     /** A plate of the surface's own raised tone, for a window with no material chosen. */
-    static final int GROUND = 8;
-    static final String[] NAMES = {"Metal", "Gold", "Accent", "Wood", "Sequins", "Black", "Steel", "Stamped"};
+    static final int GROUND = 99;
+    static final String[] NAMES = {"Metal", "Gold", "Accent", "Wood", "Sequins", "Black", "Steel", "Stamped",
+        "Glass"};
 
     /** What the icons' rim is made of, how wide it is as a share of the icon, and whether glass lies over it. */
     static int kind = NONE;
@@ -79,6 +85,15 @@ final class Rim {
             new int[] {0x38FFFFFF, 0x00FFFFFF, 0x00000000, 0x42000000},
             new float[] {0f, 0.35f, 0.6f, 1f}, Shader.TileMode.CLAMP));
         canvas.drawPath(shape, bevel);
+        if (which == GLASS) {
+            /* Glass shows its edge: a fine light line, brighter where the
+               light falls on it from above. */
+            Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
+            edge.setStyle(Paint.Style.STROKE);
+            edge.setStrokeWidth(Math.max(1.5f, Math.min(width, height) * 0.025f));
+            edge.setShader(new LinearGradient(0f, 0f, 0f, height, 0x8CFFFFFF, 0x1AFFFFFF, Shader.TileMode.CLAMP));
+            canvas.drawPath(shape, edge);
+        }
     }
 
     /** The thin dark line of a window cut in the plate. */
@@ -111,6 +126,10 @@ final class Rim {
                 return;
             case GROUND:
                 paint.setColor(Tone.containerHigh() | 0xFF000000);
+                return;
+            case GLASS:
+                /* Near black in the accent's hue, a little more than half seen through. */
+                paint.setColor((0x73 << 24) | (Color.HSVToColor(new float[] {Tone.hue(), 0.35f, 0.12f}) & 0xFFFFFF));
                 return;
             case GOLD:
                 paint.setShader(gold());
