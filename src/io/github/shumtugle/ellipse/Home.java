@@ -254,6 +254,7 @@ public final class Home extends Activity {
         } else if (Tone.read(this)) {
             tint();
         }
+        bars();
         listen();
         Notices.tell(new Runnable() {
             public void run() {
@@ -434,6 +435,55 @@ public final class Home extends Activity {
         }
     }
 
+    /**
+     * The phone's bars over the home screen: shown, or hidden as the
+     * settings ask — the status bar, the navigation bar, or both. Hidden,
+     * a swipe in from the edge brings them back for a moment. Other
+     * windows, the settings and every app, keep their bars.
+     */
+    private void bars() {
+        boolean status = Keep.flag(this, Keep.HIDE_STATUS, false);
+        boolean navigation = Keep.flag(this, Keep.HIDE_NAVIGATION, false);
+        if (Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowInsetsController bars = getWindow().getInsetsController();
+            if (bars == null) {
+                return;
+            }
+            bars.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+            if (status) {
+                bars.hide(WindowInsets.Type.statusBars());
+            } else {
+                bars.show(WindowInsets.Type.statusBars());
+            }
+            if (navigation) {
+                bars.hide(WindowInsets.Type.navigationBars());
+            } else {
+                bars.show(WindowInsets.Type.navigationBars());
+            }
+            return;
+        }
+        int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;
+        if (status) {
+            flags |= View.SYSTEM_UI_FLAG_FULLSCREEN;
+        }
+        if (navigation) {
+            flags |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
+        }
+        if (status || navigation) {
+            flags |= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+        }
+        getWindow().getDecorView().setSystemUiVisibility(flags);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean focused) {
+        super.onWindowFocusChanged(focused);
+        if (focused) {
+            bars();
+        }
+    }
+
     private void fitBars(View root) {
         root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             public WindowInsets onApplyWindowInsets(View view, WindowInsets insets) {
@@ -556,16 +606,13 @@ public final class Home extends Activity {
         });
         stage.addView(screens, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        /* Once the screens have a size, it is kept for the clock's proofs;
-           and if things were set out by a guess at it, they are set out again. */
+        /* If things were set out by a guess at the screens' size, they are
+           set out again once the screens have one. */
         screens.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
                 if (r - l <= 0 || b - t <= 0 || (r - l == or - ol && b - t == ob - ot)) {
                     return;
                 }
-                float d = getResources().getDisplayMetrics().density;
-                Keep.saveNumber(Home.this, Keep.PAGE_WIDE, Math.round((r - l - dp(16)) / d));
-                Keep.saveNumber(Home.this, Keep.PAGE_TALL, Math.round((b - t - dp(16)) / d));
                 if (guessed) {
                     guessed = false;
                     screens.post(new Runnable() {
@@ -1153,6 +1200,17 @@ public final class Home extends Activity {
         });
         page.put(clock, column, row, across, down);
         page.edge(clock, Keep.flag(this, Keep.CLOCK_EDGE, false));
+        /* Its size as it stands, kept for the settings to show it at. */
+        clock.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                if (r - l <= 0 || b - t <= 0 || (r - l == or - ol && b - t == ob - ot)) {
+                    return;
+                }
+                float d = getResources().getDisplayMetrics().density;
+                Keep.saveNumber(Home.this, Keep.CLOCK_WIDE, Math.round((r - l) / d));
+                Keep.saveNumber(Home.this, Keep.CLOCK_TALL, Math.round((b - t) / d));
+            }
+        });
         cells.add(clock);
         Timepiece piece = (Timepiece) clock;
         piece.weather(Keep.flag(this, Keep.WEATHER, true));

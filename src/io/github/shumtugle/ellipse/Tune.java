@@ -151,6 +151,10 @@ public final class Tune extends Activity {
                         Keep.WALL_MOVES, true),
                     toggle("Add new apps", "An app put on the phone is set down on a free place",
                         Keep.AUTO_ADD, false),
+                    toggle("Hide the status bar", "The home screen takes the top of the screen; a swipe down "
+                        + "from the edge shows the bar for a moment", Keep.HIDE_STATUS, false),
+                    toggle("Hide the navigation bar", "The home screen takes the foot of the screen; a swipe up "
+                        + "from the edge shows the bar for a moment", Keep.HIDE_NAVIGATION, false),
                     choice("Widget shelf", "How the widgets to add are laid out", Keep.SHELF_VIEW,
                         Keep.LINES, new String[] {"Lines", "Grid"}, new int[] {Keep.LINES, Keep.PAGES}),
                     choice("Shortcut makers", "How the shortcuts to add are laid out", Keep.MAKERS_VIEW,
@@ -997,8 +1001,7 @@ public final class Tune extends Activity {
     private void fillClock() {
         showClock();
         caption("SIZE");
-        note("Hold the clock on the screen and choose Resize: it takes as many places as it is given, "
-            + "and never fewer than its face needs on the grid.");
+        note("The clock is sized on the home screen: hold it and choose Resize.");
         rows.addView(row(toggle("To the edges", "The clock runs past the grid's margins to the screen's edges",
             Keep.CLOCK_EDGE, false)));
         caption("FACE");
@@ -1193,107 +1196,29 @@ public final class Tune extends Activity {
         rows.addView(said);
     }
 
-    /** Which proof the window shows: this phone's grid, a grid of many rows, or a narrow block. */
-    private int proof;
-
-    /**
-     * The proofs: the clock as it will stand on this phone's grid, on a
-     * grid of eleven rows, and in a narrow block two places wide and three
-     * high on a grid of four by five — each at its true size in dp, made
-     * smaller only to fit the window. What breaks is seen here first.
-     */
-    private float[][] proofs() {
-        float pageW = Keep.number(this, Keep.PAGE_WIDE, 0);
-        float pageH = Keep.number(this, Keep.PAGE_TALL, 0);
-        android.util.DisplayMetrics m = getResources().getDisplayMetrics();
-        if (pageW <= 0 || pageH <= 0) {
-            pageW = m.widthPixels / m.density - 16f;
-            pageH = m.heightPixels / m.density * 0.72f;
-        }
-        int grid = Keep.number(this, Keep.DESK_GRID, 45);
-        int columns = Keep.columns(grid);
-        int rowsOf = Keep.rows(grid);
-        int[] here = clockBlock(columns, rowsOf, pageW / columns, pageH / rowsOf);
-        int[] many = clockBlock(5, 11, pageW / 5f, pageH / 11f);
-        return new float[][] {
-            {here[0] * pageW / columns, here[1] * pageH / rowsOf, columns, rowsOf, here[0], here[1]},
-            {pageW, many[1] * pageH / 11f, 5, 11, 5, many[1]},
-            {2 * pageW / 4f, 3 * pageH / 5f, 4, 5, 2, 3}
-        };
-    }
-
-    /** The clock's block on a grid: as it stands, grown to its face's least box. */
-    private int[] clockBlock(int columns, int rowsOf, float cellW, float cellH) {
-        float[] least = Home.leastBox(this);
-        int leastA = Math.max(1, Math.min(columns, (int) Math.ceil(least[0] / cellW - 0.05f)));
-        int leastD = Math.max(1, Math.min(rowsOf, (int) Math.ceil(least[1] / cellH - 0.05f)));
-        int across = columns;
-        int down = leastD;
-        for (Keep.Spot spot : Keep.placed(this)) {
-            String[] part = spot.token.split(":");
-            if (Keep.CLOCK_THING.equals(part[0]) && part.length == 3) {
-                try {
-                    across = Math.min(columns, Integer.parseInt(part[1]));
-                    down = Math.min(rowsOf, Integer.parseInt(part[2]));
-                } catch (NumberFormatException broken) {
-                    // As it would stand at first, then.
-                }
-            }
-        }
-        return new int[] {Math.max(across, leastA), Math.max(down, leastD)};
-    }
-
     /**
      * The clock the settings describe, in the window at the head of the
-     * room, as a sheet of proofs: three sizes to choose between, each
-     * drawn at its true size in dp and made smaller only to fit.
+     * room, at the size it stands at on the home screen — made smaller
+     * only to fit the window.
      */
     private void showClock() {
         window.removeAllViews();
-        final float[][] sizes = proofs();
-        LinearLayout sheet = new LinearLayout(this);
-        sheet.setOrientation(LinearLayout.VERTICAL);
-        LinearLayout tabs = new LinearLayout(this);
-        tabs.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
-        for (int i = 0; i < sizes.length; i++) {
-            final int which = i;
-            TextView tab = new TextView(this);
-            float[] s = sizes[i];
-            tab.setText(i == 0 ? "Here, " + (int) s[4] + "\u00D7" + (int) s[5]
-                : (int) s[2] + "\u00D7" + (int) s[3] + ", " + (int) s[4] + "\u00D7" + (int) s[5]);
-            tab.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
-            tab.setTextColor(i == proof ? Tone.onAccent() : Tone.onVariant());
-            android.graphics.drawable.GradientDrawable pill = new android.graphics.drawable.GradientDrawable();
-            pill.setCornerRadius(dp(16));
-            pill.setColor(i == proof ? Tone.primary() : 0x00000000);
-            pill.setStroke(dp(1), i == proof ? Tone.primary() : Tone.outline());
-            tab.setBackground(pill);
-            tab.setPadding(dp(12), dp(5), dp(12), dp(5));
-            LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            gap.setMargins(dp(4), 0, dp(4), dp(8));
-            tab.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    proof = which;
-                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
-                    showClock();
-                }
-            });
-            tabs.addView(tab, gap);
-        }
-        sheet.addView(tabs);
         View clock = Home.timepiece(this, new Almanac.Hand() {
             public void pressed(String which, View from, android.graphics.RectF box) {
             }
         });
         ((Timepiece) clock).weather(Keep.flag(this, Keep.WEATHER, true));
         ((Timepiece) clock).ears(80);
-        float[] chosen = sizes[Math.max(0, Math.min(sizes.length - 1, proof))];
-        sheet.addView(new Proof(this, clock, Math.round(chosen[0] * density()), Math.round(chosen[1] * density()),
-            dp(200)), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT));
-        window.addView(sheet, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT));
+        float wide = Keep.number(this, Keep.CLOCK_WIDE, 0);
+        float tall = Keep.number(this, Keep.CLOCK_TALL, 0);
+        if (wide <= 0 || tall <= 0) {
+            android.util.DisplayMetrics m = getResources().getDisplayMetrics();
+            wide = m.widthPixels / m.density - 16f;
+            tall = 132f;
+        }
+        window.addView(new Proof(this, clock, Math.round(wide * density()), Math.round(tall * density()), dp(220)),
+            new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT));
     }
 
     private float density() {

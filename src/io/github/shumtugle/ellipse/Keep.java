@@ -235,9 +235,12 @@ final class Keep {
     static final String CLOCK_FIELDS = "clock_fields";
     /** Whether the clock reaches the screen's edges; its size is kept with its place. */
     static final String CLOCK_EDGE = "clock_edge";
-    /** The size of a screen's grid as last laid out, in dp: what the clock's proofs are drawn to. */
-    static final String PAGE_WIDE = "page_wide";
-    static final String PAGE_TALL = "page_tall";
+    /** The clock's size as it last stood on a screen, in dp: what the settings show it at. */
+    static final String CLOCK_WIDE = "clock_wide";
+    static final String CLOCK_TALL = "clock_tall";
+    /** Whether the phone's bars are hidden over the home screen: the status bar, the navigation bar. */
+    static final String HIDE_STATUS = "hide_status";
+    static final String HIDE_NAVIGATION = "hide_navigation";
     /** How dark the outline clock's ground is, in percent: nought is clear. */
     static final String CLOCK_GROUND = "clock_ground";
     /** Which of the widget clock's own seconds hands is drawn. */
