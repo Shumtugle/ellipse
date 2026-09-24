@@ -401,9 +401,35 @@ public final class Tune extends Activity {
 
     /** The room's lines anew, every word in the chosen family. */
     private void fill() {
+        /* The room is built anew, but every row that scrolls sideways, and
+           the room itself, stay where the finger left them. */
+        final java.util.List<Integer> across = new java.util.ArrayList<>();
+        for (int i = 0; i < rows.getChildCount(); i++) {
+            if (rows.getChildAt(i) instanceof android.widget.HorizontalScrollView) {
+                across.add(rows.getChildAt(i).getScrollX());
+            }
+        }
+        final int down = scroll.getScrollY();
+        final boolean same = lastRoom == room();
+        lastRoom = room();
         fillRoom();
         Style.apply(root);
+        if (same) {
+            scroll.post(new Runnable() {
+                public void run() {
+                    int k = 0;
+                    for (int i = 0; i < rows.getChildCount() && k < across.size(); i++) {
+                        if (rows.getChildAt(i) instanceof android.widget.HorizontalScrollView) {
+                            rows.getChildAt(i).scrollTo(across.get(k++), 0);
+                        }
+                    }
+                    scroll.scrollTo(0, down);
+                }
+            });
+        }
     }
+
+    private int lastRoom = -1;
 
     private void fillRoom() {
         rows.removeAllViews();
@@ -768,29 +794,26 @@ public final class Tune extends Activity {
         tints.addView(tintChips);
         rows.addView(tints);
         caption("WINDOW");
-        android.widget.HorizontalScrollView windows = new android.widget.HorizontalScrollView(this);
-        windows.setHorizontalScrollBarEnabled(false);
-        windows.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        LinearLayout windowChips = new LinearLayout(this);
-        windowChips.setPadding(dp(18), 0, dp(18), dp(8));
-        for (int i = 0; i < Shape.WINDOW_NAMES.length; i++) {
-            windowChips.addView(chip(Shape.WINDOW_NAMES[i], Shape.window == i, Keep.WINDOW, i));
-        }
-        windows.addView(windowChips);
-        rows.addView(windows);
+        rows.addView(swatches(Keep.WINDOW, Shape.window, windowValues(), Shape.WINDOW_NAMES, new Painter() {
+            public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                paintWindow(c, w, h, value);
+            }
+        }));
         slider("Proportion", "Wider than tall, square, or taller than wide", Keep.TILE_ASPECT, 70, 135);
         caption("RIM");
-        android.widget.HorizontalScrollView rims = new android.widget.HorizontalScrollView(this);
-        rims.setHorizontalScrollBarEnabled(false);
-        rims.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        LinearLayout rimChips = new LinearLayout(this);
-        rimChips.setPadding(dp(18), 0, dp(18), dp(8));
-        rimChips.addView(chip("None", Rim.kind == Rim.NONE, Keep.RIM_KIND, Rim.NONE));
+        String[] rimNames = new String[Rim.NAMES.length + 1];
+        int[] rimValues = new int[Rim.NAMES.length + 1];
+        rimNames[0] = "None";
+        rimValues[0] = Rim.NONE;
         for (int i = 0; i < Rim.NAMES.length; i++) {
-            rimChips.addView(chip(Rim.NAMES[i], Rim.kind == i, Keep.RIM_KIND, i));
+            rimNames[i + 1] = Rim.NAMES[i];
+            rimValues[i + 1] = i;
         }
-        rims.addView(rimChips);
-        rows.addView(rims);
+        rows.addView(swatches(Keep.RIM_KIND, Rim.kind, rimValues, rimNames, new Painter() {
+            public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                paintMaterial(c, w, h, value);
+            }
+        }));
         slider("Rim width", "From a thread to a frame", Keep.RIM_WIDTH, 1, 14);
         if (Rim.kind == Rim.GLASS) {
             slider("Glass tone", "From smoked dark to milk white", Keep.GLASS_TONE, 0, 100);
@@ -799,16 +822,15 @@ public final class Tune extends Activity {
         rows.addView(row(toggle("Glaze", "The curved light of glass across the top of every icon",
             Keep.GLAZE, false)));
         caption("FOLDERS");
-        android.widget.HorizontalScrollView folders = new android.widget.HorizontalScrollView(this);
-        folders.setHorizontalScrollBarEnabled(false);
-        folders.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        LinearLayout folderChips = new LinearLayout(this);
-        folderChips.setPadding(dp(18), 0, dp(18), dp(8));
-        for (int i = 0; i < Stack.NAMES.length; i++) {
-            folderChips.addView(chip(Stack.NAMES[i], Stack.layout == i, Keep.FOLDER_FACE, i));
+        int[] layouts = new int[Stack.NAMES.length];
+        for (int i = 0; i < layouts.length; i++) {
+            layouts[i] = i;
         }
-        folders.addView(folderChips);
-        rows.addView(folders);
+        rows.addView(swatches(Keep.FOLDER_FACE, Stack.layout, layouts, Stack.NAMES, new Painter() {
+            public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                paintFolder(c, w, h, value);
+            }
+        }));
         rows.addView(row(toggle("Folder ground", "A container behind the small icons of a folder",
             Keep.FOLDER_GROUND, true)));
         caption("TYPEFACE");
@@ -955,6 +977,225 @@ public final class Tune extends Activity {
             }
         });
         return chip;
+    }
+
+    // ------------------------------------------------------------- swatches
+
+    /** Draws one choice as what it looks like, in a box of the given size. */
+    interface Painter {
+        void paint(android.graphics.Canvas canvas, float w, float h, int value);
+    }
+
+    private int[] windowValues() {
+        int[] values = new int[Shape.WINDOW_NAMES.length];
+        for (int i = 0; i < values.length; i++) {
+            values[i] = i;
+        }
+        return values;
+    }
+
+    /**
+     * A row of choices shown as themselves: each a small picture of what it
+     * does, with its name under it; the chosen one ringed in the accent. A
+     * touch chooses in place — the window at the head follows, and the row
+     * stays where it is.
+     */
+    private View swatches(final String key, int now, final int[] values, String[] names, final Painter painter) {
+        android.widget.HorizontalScrollView across = new android.widget.HorizontalScrollView(this);
+        across.setHorizontalScrollBarEnabled(false);
+        across.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout line = new LinearLayout(this);
+        line.setPadding(dp(18), 0, dp(18), dp(8));
+        final int[] chosen = {now};
+        final List<View> faces = new ArrayList<>();
+        for (int i = 0; i < values.length; i++) {
+            final int value = values[i];
+            LinearLayout one = new LinearLayout(this);
+            one.setOrientation(LinearLayout.VERTICAL);
+            one.setGravity(Gravity.CENTER_HORIZONTAL);
+            one.setPadding(dp(5), 0, dp(5), 0);
+            final View face = new View(this) {
+                @Override
+                protected void onDraw(android.graphics.Canvas canvas) {
+                    boolean on = chosen[0] == value;
+                    float inset = dp(10);
+                    canvas.save();
+                    canvas.translate(inset, inset);
+                    painter.paint(canvas, getWidth() - 2 * inset, getHeight() - 2 * inset, value);
+                    canvas.restore();
+                    if (on) {
+                        android.graphics.Paint ring = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                        ring.setStyle(android.graphics.Paint.Style.STROKE);
+                        ring.setStrokeWidth(dp(2.5f));
+                        ring.setColor(Tone.primary());
+                        canvas.drawRoundRect(new android.graphics.RectF(dp(1.5f), dp(1.5f), getWidth() - dp(1.5f),
+                            getHeight() - dp(1.5f)), dp(20), dp(20), ring);
+                    }
+                }
+            };
+            face.setBackground(Tone.box(Tone.container(), dp(20), 0f));
+            faces.add(face);
+            one.addView(face, new LinearLayout.LayoutParams(dp(84), dp(84)));
+            TextView name = new TextView(this);
+            name.setText(names[i]);
+            name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scaled);
+            name.setTextColor(Tone.faint());
+            name.setGravity(Gravity.CENTER);
+            name.setMaxLines(2);
+            name.setPadding(0, dp(6), 0, 0);
+            one.addView(name, new LinearLayout.LayoutParams(dp(88), LinearLayout.LayoutParams.WRAP_CONTENT));
+            one.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    int was = chosen[0];
+                    chosen[0] = value;
+                    Keep.saveNumber(Tune.this, key, value);
+                    Style.read(Tune.this);
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    for (View f : faces) {
+                        f.invalidate();
+                    }
+                    if (sample != null) {
+                        sample.show();
+                    }
+                    /* Glass has sliders of its own: they come and go with it. */
+                    if (Keep.RIM_KIND.equals(key) && (was == Rim.GLASS) != (value == Rim.GLASS)) {
+                        fill();
+                    }
+                }
+            });
+            line.addView(one);
+        }
+        across.addView(line);
+        /* On entering, the chosen one is in sight. */
+        final android.widget.HorizontalScrollView row = across;
+        final LinearLayout all = line;
+        final int at = indexOf(values, now);
+        across.post(new Runnable() {
+            public void run() {
+                if (at >= 0 && at < all.getChildCount()) {
+                    View chosenView = all.getChildAt(at);
+                    row.scrollTo(Math.max(0, chosenView.getLeft() - (row.getWidth() - chosenView.getWidth()) / 2), 0);
+                }
+            }
+        });
+        return across;
+    }
+
+    private static int indexOf(int[] values, int value) {
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == value) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    /** A small plate of a material, a round window cut in it, as the icons wear it. */
+    private void paintMaterial(android.graphics.Canvas c, float w, float h, int value) {
+        android.graphics.Path plate = Shape.outline(Shape.ROUNDED, w, h);
+        if (value == Rim.NONE) {
+            android.graphics.Paint flat = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            flat.setColor(Tone.faint());
+            c.drawPath(plate, flat);
+            return;
+        }
+        Rim.plate(c, plate, value, w, h);
+        android.graphics.Path hole = new android.graphics.Path();
+        hole.addOval(new android.graphics.RectF(w * 0.24f, h * 0.24f, w * 0.76f, h * 0.76f),
+            android.graphics.Path.Direction.CW);
+        android.graphics.Paint dark = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        dark.setColor(Tone.surface());
+        c.drawPath(hole, dark);
+        Rim.cut(c, hole, w);
+        if (value == Rim.GLASS || Rim.glaze) {
+            Rim.glaze(c, plate, 0f, 0f, w, h);
+        }
+    }
+
+    /** The window a plate may have, cut in the chosen material, the accent seen through it. */
+    private void paintWindow(android.graphics.Canvas c, float w, float h, int value) {
+        android.graphics.Path plate = Shape.outline(Shape.ROUNDED, w, h);
+        Rim.plate(c, plate, Rim.kind == Rim.NONE ? Rim.GROUND : Rim.kind, w, h);
+        android.graphics.Path hole = new android.graphics.Path();
+        float d = Math.min(w, h) * 0.66f;
+        float l = (w - d) / 2f;
+        float t = (h - d) / 2f;
+        if (value == Shape.WINDOW_TILE) {
+            hole = Shape.outline(Shape.ROUNDED, w * 0.8f, h * 0.8f);
+            hole.offset(w * 0.1f, h * 0.1f);
+        } else if (value == Shape.WINDOW_ROUND) {
+            hole.addOval(new android.graphics.RectF(l, t, l + d, t + d), android.graphics.Path.Direction.CW);
+        } else if (value == Shape.WINDOW_SQUIRCLE) {
+            Shape.superellipse(hole, l, t, d, d, 5.0);
+        } else {
+            for (int i = 0; i <= 360; i++) {
+                double a = 2 * Math.PI * i / 360;
+                float r = (float) (d / 2f / 1.05f * (1 + 0.05 * Math.cos(12 * a)));
+                float x = (float) (w / 2f + r * Math.cos(a));
+                float y = (float) (h / 2f + r * Math.sin(a));
+                if (i == 0) {
+                    hole.moveTo(x, y);
+                } else {
+                    hole.lineTo(x, y);
+                }
+            }
+            hole.close();
+        }
+        android.graphics.Paint seen = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        seen.setColor(Tone.primary());
+        c.drawPath(hole, seen);
+        Rim.cut(c, hole, w);
+    }
+
+    /** How a folder lays out what it holds, drawn as small round icons in the accent. */
+    private void paintFolder(android.graphics.Canvas c, float w, float h, int value) {
+        android.graphics.Paint ground = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        ground.setColor(Tone.containerHigh());
+        c.drawCircle(w / 2f, h / 2f, Math.min(w, h) / 2f, ground);
+        android.graphics.Paint dot = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        float s = Math.min(w, h);
+        float cx = w / 2f;
+        float cy = h / 2f;
+        switch (value) {
+            case Stack.NINE:
+                for (int i = 0; i < 9; i++) {
+                    dot.setColor(i == 0 ? Tone.primary() : Tone.faint());
+                    c.drawCircle(cx + (i % 3 - 1) * s * 0.25f, cy + (i / 3 - 1) * s * 0.25f, s * 0.09f, dot);
+                }
+                break;
+            case Stack.RING:
+                for (int i = 0; i < 5; i++) {
+                    double a = -Math.PI / 2 + 2 * Math.PI * i / 5;
+                    dot.setColor(i == 0 ? Tone.primary() : Tone.faint());
+                    c.drawCircle(cx + (float) Math.cos(a) * s * 0.27f, cy + (float) Math.sin(a) * s * 0.27f,
+                        s * 0.1f, dot);
+                }
+                break;
+            case Stack.PILE:
+                for (int i = 2; i >= 0; i--) {
+                    float at = (1 - i) * s * 0.12f;
+                    dot.setColor(i == 0 ? Tone.primary() : Tone.faint());
+                    c.drawCircle(cx + at, cy + at, s * (0.23f - 0.02f * i), dot);
+                }
+                break;
+            case Stack.FAN:
+            case Stack.TOWER:
+                boolean fan = value == Stack.FAN;
+                float[] off = {-0.22f, 0.22f, 0f};
+                for (int k = 0; k < 3; k++) {
+                    dot.setColor(k == 2 ? Tone.primary() : Tone.faint());
+                    float r = s * (k == 2 ? 0.23f : 0.18f);
+                    c.drawCircle(cx + (fan ? off[k] * s : 0f), cy + (fan ? 0f : off[k] * s), r, dot);
+                }
+                break;
+            default:
+                for (int i = 0; i < 4; i++) {
+                    dot.setColor(i == 0 ? Tone.primary() : Tone.faint());
+                    c.drawCircle(cx + (i % 2 == 0 ? -1 : 1) * s * 0.17f, cy + (i < 2 ? -1 : 1) * s * 0.17f,
+                        s * 0.14f, dot);
+                }
+                break;
+        }
     }
 
     private View tile(final int shape) {
