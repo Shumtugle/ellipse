@@ -230,6 +230,12 @@ final class Shape {
                 }
             }
             edge = seen == 0 ? 0 : 0xFF000000 | (int) (r / seen) << 16 | (int) (g / seen) << 8 | (int) (b / seen);
+            if (edge == 0) {
+                /* Clear edges: the icon is a disc, a coin, a shape on
+                   nothing. Its own ground is then the colour most of it is
+                   made of, and only what differs from that becomes ink. */
+                edge = mainColour(px);
+            }
         }
         int inkRgb = ink & 0x00FFFFFF;
         for (int i = 0; i < px.length; i++) {
@@ -246,6 +252,73 @@ final class Shape {
         }
         out.setPixels(px, 0, n, 0, 0, n, n);
         return new android.graphics.drawable.BitmapDrawable((android.content.res.Resources) null, out);
+    }
+
+    /**
+     * The colour most of a picture is made of, among its solid pixels:
+     * colours are counted in coarse bins, and the fullest bin's average is
+     * taken. Nought when the picture has almost nothing solid in it.
+     */
+    private static int mainColour(int[] px) {
+        int[] count = new int[4096];
+        long[] sumR = new long[4096];
+        long[] sumG = new long[4096];
+        long[] sumB = new long[4096];
+        int solid = 0;
+        for (int c : px) {
+            if ((c >>> 24) < 200) {
+                continue;
+            }
+            int r = (c >> 16) & 0xFF;
+            int g = (c >> 8) & 0xFF;
+            int b = c & 0xFF;
+            int bin = (r >> 4) << 8 | (g >> 4) << 4 | (b >> 4);
+            count[bin]++;
+            sumR[bin] += r;
+            sumG[bin] += g;
+            sumB[bin] += b;
+            solid++;
+        }
+        if (solid < 50) {
+            return 0;
+        }
+        int best = 0;
+        for (int i = 1; i < count.length; i++) {
+            if (count[i] > count[best]) {
+                best = i;
+            }
+        }
+        /* Neighbouring bins belong to the same colour, a little shaded. */
+        long r = 0;
+        long g = 0;
+        long b = 0;
+        int all = 0;
+        int br = best >> 8;
+        int bg = (best >> 4) & 0xF;
+        int bb = best & 0xF;
+        for (int dr = -1; dr <= 1; dr++) {
+            for (int dg = -1; dg <= 1; dg++) {
+                for (int db = -1; db <= 1; db++) {
+                    int rr = br + dr;
+                    int gg = bg + dg;
+                    int bbb = bb + db;
+                    if (rr < 0 || gg < 0 || bbb < 0 || rr > 15 || gg > 15 || bbb > 15) {
+                        continue;
+                    }
+                    int bin = rr << 8 | gg << 4 | bbb;
+                    r += sumR[bin];
+                    g += sumG[bin];
+                    b += sumB[bin];
+                    all += count[bin];
+                }
+            }
+        }
+        /* A picture that is mostly one colour on nothing, and little else:
+           its shape itself is the ink, not what differs from it. */
+        if (all > solid * 0.97f) {
+            return 0;
+        }
+        return 0xFF000000 | (int) (r / all) << 16 | (int) (g / all) << 8 | (int) (b / all);
     }
 
     /** A fine grain for the paper and its rim, made once. */
