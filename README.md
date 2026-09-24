@@ -20,7 +20,7 @@ updated first, and the settings are a touch away. Lines or pages (of four
 by five icons with their names) are chosen in the settings.
 
 Three screens stand side by side from the start, the middle one home.
-The home screen carries the home screen's own clock across its top row, with the weather where the phone is and the charge of headphones near, drawn
+The home screen carries the home screen's own clock across its top row, with the weather of a chosen place and the charge of headphones near, drawn
 the design system's way — a scalloped dial, the hour and the date, the
 phone's charge — and four everyday applications at its foot. The screen
 before it holds a folder of the applications signed by the same hand as
@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.21.0
+  sh build.sh ellipse-1.22.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -107,3 +107,17 @@ Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
 ## License
 
 MIT
+
+## Colour and the weather as pages
+
+Look → Colour and text opens the colour page: a hue, how rich it is, how
+bright the accent, how solid the cards stand, how much colour the ground
+takes, and the size of words, all mixed under the thumb with the page
+itself showing the result. The whole home screen follows it.
+
+A touch on the clock's weather opens the weather, whole: this moment with
+the next two hours in quarters, the small facts as capsules (wind, damp,
+pressure, the sun, the air, pollen, light, geomagnetic activity), the next
+hours and the days. Its place is found by name, or taken once from where
+the phone stands, with leave; nothing follows the phone about. The
+addresses asked live in the package, not in the source.

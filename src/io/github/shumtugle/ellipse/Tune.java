@@ -110,6 +110,8 @@ public final class Tune extends Activity {
     private static final int RESTART = 1;
     private static final int RESET = 2;
     private static final int DEFAULT = 3;
+    private static final int COLOUR = 4;
+    private static final int PLACE = 5;
 
     private static final String SEARCH = "Search settings";
     private static final String RESTART_LINE = "Restart launcher";
@@ -166,6 +168,9 @@ public final class Tune extends Activity {
             case LOOK:
                 return new Line[] {
                     soon("Icon style", "Masks, shapes and sizes of icons"),
+                    deed(Glyph.LOOK, "Colour and text",
+                        "The accent, the ground, how solid the cards are, the size of words", COLOUR),
+                    deed(Glyph.DESK, "The weather's place", "Where the clock's weather is for", PLACE),
                     toggle("Clock", "The home screen's own clock across the top of the home screen",
                         Keep.CLOCK, true),
                     toggle("Weather on the clock", "The warmth and the sky where the phone is",
@@ -450,7 +455,9 @@ public final class Tune extends Activity {
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
         words.addView(title);
         final TextView about = new TextView(this);
-        String said = line.kind == DEED && line.room == DEFAULT && isHome() ? ALREADY : line.about;
+        String said = line.kind == DEED && line.room == DEFAULT && isHome() ? ALREADY
+            : line.kind == DEED && line.room == PLACE && Keep.here(this)[0].length() > 0 ? Keep.here(this)[0]
+            : line.about;
         about.setText(soon ? line.about + ". " + LATER + "." : said);
         about.setTextColor(Tone.faint());
         about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
@@ -594,6 +601,11 @@ public final class Tune extends Activity {
             askToBeHome();
             return;
         }
+        if (line.room == COLOUR || line.room == PLACE) {
+            startActivity(new Intent(this, Folio.class)
+                .putExtra(Folio.PAGE, line.room == COLOUR ? Folio.LOOK : Folio.PLACE));
+            return;
+        }
         /* Setting everything back is asked twice: the first tap says what
            the second will do, and is forgotten after a few seconds. */
         long now = System.currentTimeMillis();
@@ -654,8 +666,17 @@ public final class Tune extends Activity {
     }
 
     @Override
+    protected void attachBaseContext(android.content.Context base) {
+        super.attachBaseContext(Home.sized(base));
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
+        if (Tone.read(this)) {
+            recreate();
+            return;
+        }
         if (rows != null && path.size() > 0 && room() == OTHER) {
             fill();
         }

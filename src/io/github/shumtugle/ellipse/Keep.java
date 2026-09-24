@@ -168,6 +168,59 @@ final class Keep {
         store(context).edit().putInt(STAMP, stamp(context) + 1).apply();
     }
 
+    // ---------------------------------------------------------------- look
+
+    /** Hue, saturation, brightness of the accent, and how solid the containers stand. */
+    static float[] look(Context context) {
+        SharedPreferences kept = store(context);
+        return new float[] {
+            kept.getFloat("hue", 38f),
+            kept.getFloat("sat", 0.58f),
+            kept.getFloat("val", 1f),
+            kept.getInt("solid", 100)
+        };
+    }
+
+    static void saveLook(Context context, float hue, float sat, float val, int solid) {
+        store(context).edit()
+            .putFloat("hue", hue < 0f ? 0f : (hue > 360f ? 360f : hue))
+            .putFloat("sat", sat < 0f ? 0f : (sat > 1f ? 1f : sat))
+            .putFloat("val", val < 0.4f ? 0.4f : (val > 1f ? 1f : val))
+            .putInt("solid", solid < 55 ? 55 : (solid > 100 ? 100 : solid))
+            .apply();
+        touch(context);
+    }
+
+    /** How much of the accent's colour the ground takes, in percent; none is near black. */
+    static int ground(Context context) {
+        return store(context).getInt("ground", 0);
+    }
+
+    static void saveGround(Context context, int depth) {
+        store(context).edit().putInt("ground", depth < 0 ? 0 : (depth > 100 ? 100 : depth)).apply();
+        touch(context);
+    }
+
+    /** How large the home screen's own words are drawn, in percent. */
+    static int zoom(Context context) {
+        return store(context).getInt("zoom", 100);
+    }
+
+    static void saveZoom(Context context, int size) {
+        store(context).edit().putInt("zoom", size < 70 ? 70 : (size > 200 ? 200 : size)).apply();
+        touch(context);
+    }
+
+    /** The place the weather is for: its name, and its latitude and longitude as written. */
+    static String[] here(Context context) {
+        SharedPreferences kept = store(context);
+        return new String[] {kept.getString("place", ""), kept.getString("lat", ""), kept.getString("lon", "")};
+    }
+
+    static void saveHere(Context context, String name, String lat, String lon) {
+        store(context).edit().putString("place", name).putString("lat", lat).putString("lon", lon).apply();
+    }
+
     // ---------------------------------------------------------------- dock
 
     private static final String DOCK_SLOT = "dock.";

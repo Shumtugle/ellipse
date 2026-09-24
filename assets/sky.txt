@@ -1,0 +1,1 @@
+Weather and air from Open-Meteo, CC BY 4.0. The geomagnetic index from NOAA SWPC, public domain.

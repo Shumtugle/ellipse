@@ -1,0 +1,1 @@
+https://geocoding-api.open-meteo.com/v1/search?count=8&language=en&format=json&name=%s

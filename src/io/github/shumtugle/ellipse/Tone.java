@@ -10,55 +10,56 @@ import android.os.Build;
 /**
  * Colour as roles, not as a palette.
  *
- * One dark ground, containers a step lighter each, one accent. Depth is told
- * by neighbouring tones rather than by shadows. From Android 12 the hue is
- * taken from the system, which grows it from the wallpaper, so the frame
- * around the wallpaper carries a trace of the picture it holds; older
- * systems keep a warm default.
+ * One ground, one accent, no light mode, as the owner mixes them on the
+ * colour page: a hue, how rich it is, how bright the accent, how solid the
+ * containers stand over what is behind them, and how much colour the
+ * ground itself takes. Everything else is derived from the same hue:
+ * surfaces carry a trace of it at very low saturation, so the whole home
+ * screen drifts with the slider instead of leaving grey furniture around a
+ * coloured button. Depth comes from neighbouring tones of the same surface
+ * rather than from shadows.
  */
 final class Tone {
 
     private static float hue = 38f;
     private static float rich = 0.58f;
     private static int accent = shade(0.58f, 1f);
+    private static int veil = 255;
+    /** How coloured the ground is: nought is the old near black, one a deep colour. */
+    private static float earth;
     /** The design system's containers and their inks, first, second and third. */
     private static final int[] held = new int[6];
 
     private Tone() {
     }
 
-    /** Reads the seed again; true when anything visible changed. */
+    /** Reads the look again; true when anything visible changed. */
     static boolean read(Context context) {
         int was = accent;
-        if (Build.VERSION.SDK_INT >= 31) {
-            int seed = context.getColor(android.R.color.system_accent1_200);
-            float[] hsv = new float[3];
-            Color.colorToHSV(seed, hsv);
-            hue = hsv[0];
-            rich = Math.min(0.58f, Math.max(0.18f, hsv[1]));
-            accent = seed | 0xFF000000;
-        } else {
-            hue = 38f;
-            rich = 0.58f;
-            accent = shade(rich, 1f);
-        }
-        if (Build.VERSION.SDK_INT >= 31) {
-            held[0] = context.getColor(android.R.color.system_accent1_700);
-            held[1] = context.getColor(android.R.color.system_accent1_100);
-            held[2] = context.getColor(android.R.color.system_accent2_700);
-            held[3] = context.getColor(android.R.color.system_accent2_100);
-            held[4] = context.getColor(android.R.color.system_accent3_700);
-            held[5] = context.getColor(android.R.color.system_accent3_100);
-        } else {
-            float third = (hue + 60f) % 360f;
-            held[0] = shade(Math.min(0.7f, rich + 0.1f), 0.34f);
-            held[1] = shade(0.18f, 0.96f);
-            held[2] = shade(rich * 0.4f, 0.28f);
-            held[3] = shade(0.10f, 0.94f);
-            held[4] = Color.HSVToColor(new float[] {third, 0.45f, 0.32f});
-            held[5] = Color.HSVToColor(new float[] {third, 0.12f, 0.96f});
-        }
-        return was != accent;
+        float wasEarth = earth;
+        int wasVeil = veil;
+        float[] look = Keep.look(context);
+        hue = look[0];
+        rich = look[1];
+        accent = shade(rich, look[2]);
+        veil = Math.round(255f * Math.min(100f, Math.max(55f, look[3])) / 100f);
+        earth = Keep.ground(context) / 100f;
+        float third = (hue + 60f) % 360f;
+        held[0] = shade(Math.min(0.7f, rich + 0.1f), mix(0.34f, 0.42f));
+        held[1] = shade(0.18f, 0.96f);
+        held[2] = shade(Math.min(0.6f, rich * 0.4f + earth * 0.2f), mix(0.28f, 0.36f));
+        held[3] = shade(0.10f, 0.94f);
+        held[4] = Color.HSVToColor(new float[] {third, 0.45f, mix(0.32f, 0.40f)});
+        held[5] = Color.HSVToColor(new float[] {third, 0.12f, 0.96f});
+        return was != accent || wasEarth != earth || wasVeil != veil;
+    }
+
+    private static float mix(float from, float to) {
+        return from + (to - from) * earth;
+    }
+
+    private static int veiled(int colour) {
+        return (veil << 24) | (colour & 0x00FFFFFF);
     }
 
     static int primaryContainer() {
@@ -89,30 +90,58 @@ final class Tone {
         return Color.HSVToColor(new float[] {hue, sat, val});
     }
 
-    /** The ground: near black, holding the hue so faintly it reads as dark. */
+    /**
+     * The ground. At rest it is near black, carrying the hue: on an unlit
+     * screen it is still black. Given colour, it deepens into the accent's
+     * own hue but stays dark enough for light words and a lit accent; the
+     * containers climb with it, a step lighter each.
+     */
     static int surface() {
-        return shade(Math.min(0.30f, rich * 0.4f), 0.035f);
+        float sat = mix(Math.min(0.30f, rich * 0.4f), Math.min(0.80f, 0.30f + rich * 0.6f));
+        return shade(sat, mix(0.035f, 0.19f));
     }
 
     static int container() {
-        return shade(Math.min(0.26f, rich * 0.34f), 0.095f);
+        float sat = mix(Math.min(0.26f, rich * 0.34f), Math.min(0.70f, 0.26f + rich * 0.5f));
+        return veiled(shade(sat, mix(0.095f, 0.26f)));
     }
 
     static int containerHigh() {
-        return shade(Math.min(0.24f, rich * 0.30f), 0.14f);
+        float sat = mix(Math.min(0.24f, rich * 0.30f), Math.min(0.60f, 0.24f + rich * 0.42f));
+        return veiled(shade(sat, mix(0.14f, 0.33f)));
     }
 
     static int onSurface() {
         return shade(rich * 0.07f, 0.96f);
     }
 
-    /** Quiet words: a hint, not an instruction. */
+    static int onVariant() {
+        return shade(rich * 0.12f, mix(0.66f, 0.80f));
+    }
+
+    /** Quiet words; on a coloured ground they need more light to be read at all. */
     static int faint() {
-        return shade(rich * 0.14f, 0.52f);
+        return shade(rich * 0.14f, mix(0.42f, 0.64f));
     }
 
     static int outline() {
         return (0x26 << 24) | (shade(rich * 0.2f, 0.85f) & 0x00FFFFFF);
+    }
+
+    /** A lamp of the chosen hue: the light the colour page fills a room with. */
+    static int lit(float weight, float richness) {
+        return shade(Math.min(1f, rich * richness), Math.min(1f, weight));
+    }
+
+    /** A colour with a given opacity, for the pages drawn as pages. */
+    static String rgba(int colour, float alpha) {
+        return "rgba(" + ((colour >> 16) & 0xFF) + "," + ((colour >> 8) & 0xFF) + ","
+            + (colour & 0xFF) + "," + alpha + ")";
+    }
+
+    /** For the pages drawn as pages. */
+    static String hex(int colour) {
+        return String.format("#%06X", colour & 0x00FFFFFF);
     }
 
     static int primary() {

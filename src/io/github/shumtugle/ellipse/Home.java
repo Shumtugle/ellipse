@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.ActivityOptions;
 import android.app.WallpaperManager;
 import android.animation.ValueAnimator;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.LauncherApps;
 import android.content.res.Configuration;
@@ -131,8 +132,6 @@ public final class Home extends Activity {
     private int earsLevel = -1;
     private boolean listening;
     private static final int ASK_WORLD = 31;
-    private static final int KEY_SOURCE = 6;
-    private static final String SOURCE = "Weather source";
     private static final int ASK_SHORTCUT = 13;
     private static final int KEY_INFO = 1;
     private static final int KEY_UNINSTALL = 2;
@@ -237,6 +236,10 @@ public final class Home extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (Keep.zoom(this) != sizedAt) {
+            recreate();
+            return;
+        }
         if (Keep.stamp(this) != stamp) {
             Tone.read(this);
             build();
@@ -1015,7 +1018,7 @@ public final class Home extends Activity {
         });
         page.put(clock, 0, row, columns, 1);
         cells.add(clock);
-        clock.weather(Sky.now(this), Keep.flag(this, Keep.WEATHER, true));
+        clock.weather(Keep.flag(this, Keep.WEATHER, true));
         clock.ears(Keep.flag(this, Keep.EARS, true) ? earsLevel : -1);
         clockView = clock;
         stand(page, clock, Keep.CLOCK_THING);
@@ -1121,13 +1124,8 @@ public final class Home extends Activity {
     /** A window of the clock was pressed: what it shows about is opened out of it. */
     private void look(String window, View from, android.graphics.RectF box) {
         if (Almanac.WEATHER.equals(window)) {
-            /* The weather's own page is to come; for now a press asks for
-               the place if it was not allowed, and for fresh weather if it was. */
-            if (!Sky.mayLocate(this)) {
-                requestPermissions(new String[] {android.Manifest.permission.ACCESS_COARSE_LOCATION}, ASK_WORLD);
-            } else {
-                Sky.freshen(this, weatherCame);
-            }
+            /* The weather, whole, on its own page; the first time, its place. */
+            startActivity(new Intent(this, Folio.class).putExtra(Folio.PAGE, Folio.WEATHER));
             return;
         }
         Intent open;
@@ -2152,11 +2150,6 @@ public final class Home extends Activity {
             keys.add(KEY_RESIZE);
             glyphs.add(Glyph.RESIZE);
         }
-        if (Keep.CLOCK_THING.equals(token) && Keep.flag(this, Keep.WEATHER, true)) {
-            lines.add(SOURCE);
-            keys.add(KEY_SOURCE);
-            glyphs.add(Glyph.INFO);
-        }
         if (!lines.isEmpty()) {
             ours.add(pictured(lines, keys, glyphs));
         }
@@ -2331,8 +2324,7 @@ public final class Home extends Activity {
                 reshapeAt(offerToken, offerWhence[0], offerWhence[1], offerWhence[2]);
             } else if (key == KEY_RENAME) {
                 rename(folderId(offerToken));
-            } else if (key == KEY_SOURCE) {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Sky.WEATHER_SOURCE)));
+
             }
         } catch (RuntimeException refused) {
             refuse(screens);
@@ -2616,13 +2608,43 @@ public final class Home extends Activity {
         }
     }
 
+    // ------------------------------------------------------------- words' size
+
+    /**
+     * A context whose words are drawn at the size chosen on the colour page,
+     * over whatever size the phone itself sets.
+     */
+    static Context sized(Context base) {
+        int zoom = Keep.zoom(base);
+        if (zoom == 100) {
+            return base;
+        }
+        android.content.res.Configuration shape =
+            new android.content.res.Configuration(base.getResources().getConfiguration());
+        shape.fontScale = shape.fontScale * zoom / 100f;
+        return base.createConfigurationContext(shape);
+    }
+
+    private int sizedAt;
+
+    @Override
+    protected void attachBaseContext(Context base) {
+        sizedAt = Keep.zoom(base);
+        super.attachBaseContext(sized(base));
+    }
+
     // ------------------------------------------------------ weather, headphones
 
+    /** The sky has answered, on whatever thread it answered on: the clock is drawn again. */
     private final Runnable weatherCame = new Runnable() {
         public void run() {
-            if (clockView != null) {
-                clockView.weather(Sky.now(Home.this), Keep.flag(Home.this, Keep.WEATHER, true));
-            }
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    if (clockView != null) {
+                        clockView.weather(Keep.flag(Home.this, Keep.WEATHER, true));
+                    }
+                }
+            });
         }
     };
 
@@ -2657,9 +2679,6 @@ public final class Home extends Activity {
             Keep.saveFlag(this, Keep.ASKED_WORLD, true);
             stamp = Keep.stamp(this);
             List<String> asks = new ArrayList<>();
-            if (Keep.flag(this, Keep.WEATHER, true) && !Sky.mayLocate(this)) {
-                asks.add(android.Manifest.permission.ACCESS_COARSE_LOCATION);
-            }
             if (Keep.flag(this, Keep.EARS, true) && !hearsEars()) {
                 asks.add(android.Manifest.permission.BLUETOOTH_CONNECT);
             }
@@ -2682,7 +2701,7 @@ public final class Home extends Activity {
             }
         }
         if (Keep.flag(this, Keep.WEATHER, true)) {
-            Sky.freshen(this, weatherCame);
+            Folio.freshen(this, weatherCame);
         }
     }
 

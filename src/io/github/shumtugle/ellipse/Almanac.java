@@ -52,8 +52,7 @@ final class Almanac extends View {
     private final RectF chargeBox = new RectF();
     private final RectF weatherBox = new RectF();
     private final RectF earsBox = new RectF();
-    /** The weather last known, whether it is shown at all, and the charge of headphones near, or none. */
-    private Sky.Now weather;
+    /** Whether the weather is shown at all, and the charge of headphones near, or none. */
     private boolean showWeather = true;
     private int ears = -1;
     private final float density;
@@ -171,9 +170,8 @@ final class Almanac extends View {
         hand.pressed(which, this, box);
     }
 
-    /** The weather to show, and whether to show it at all. */
-    void weather(Sky.Now now, boolean shown) {
-        weather = now;
+    /** Whether to show the weather at all; what it is comes from the sky as last asked. */
+    void weather(boolean shown) {
         showWeather = shown;
         invalidate();
     }
@@ -272,7 +270,7 @@ final class Almanac extends View {
         pill(canvas, chargeBox, level, quiet);
         if (!weatherBox.isEmpty()) {
             window(canvas, weatherBox);
-            String warmth = weather != null ? weather.said() : "\u2013";
+            String warmth = Sky.degrees() != Sky.MISSING ? Sky.degrees() + "\u00B0" : "\u2013";
             mark(canvas, weatherBox, warmth, quiet, true);
         }
         if (!earsBox.isEmpty()) {
@@ -306,7 +304,7 @@ final class Almanac extends View {
         float all = s + px(8f) + textW;
         float start = box.centerX() - all / 2f;
         if (sky) {
-            Sky.draw(canvas, weather, start + s / 2f, box.centerY(), s, ink);
+            skyMark(canvas, Sky.sky(), start + s / 2f, box.centerY(), s, ink);
         } else {
             headphones(canvas, start + s / 2f, box.centerY(), s, ink);
         }
@@ -445,5 +443,101 @@ final class Almanac extends View {
             bolt.close();
             canvas.drawPath(bolt, p);
         }
+    }
+
+    /**
+     * The sky drawn in one ink, in a square of the given size about a centre,
+     * from what the weather says it is doing: clear, cloud, fog, rain, snow
+     * or a storm.
+     */
+    static void skyMark(Canvas canvas, int kind, float cx, float cy, float size, int ink) {
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        paint.setColor(ink);
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        int[] codes = {0, 3, 45, 61, 71, 95};
+        int code = kind >= 0 && kind < codes.length ? codes[kind] : 3;
+        boolean day = true;
+        boolean clear = code == 0 || code == 1;
+        boolean part = code == 2 || code == 1;
+        boolean fog = code == 45 || code == 48;
+        boolean snow = (code >= 71 && code <= 77) || code == 85 || code == 86;
+        boolean rain = (code >= 51 && code <= 67) || (code >= 80 && code <= 82);
+        boolean bolt = code >= 95;
+        float s = size;
+        if (clear || part) {
+            float bx = part ? cx - s * 0.16f : cx;
+            float by = part ? cy - s * 0.14f : cy;
+            float r = s * (part ? 0.2f : 0.24f);
+            if (day) {
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(s * 0.06f);
+                canvas.drawCircle(bx, by, r, paint);
+                for (int i = 0; i < 8; i++) {
+                    double a = Math.PI * 2 * i / 8;
+                    canvas.drawLine(bx + (float) Math.cos(a) * r * 1.45f, by + (float) Math.sin(a) * r * 1.45f,
+                        bx + (float) Math.cos(a) * r * 1.9f, by + (float) Math.sin(a) * r * 1.9f, paint);
+                }
+            } else {
+                Path moon = new Path();
+                moon.addCircle(bx, by, r * 1.2f, Path.Direction.CW);
+                Path bite = new Path();
+                bite.addCircle(bx + r * 0.6f, by - r * 0.45f, r * 1.05f, Path.Direction.CW);
+                moon.op(bite, Path.Op.DIFFERENCE);
+                paint.setStyle(Paint.Style.FILL);
+                canvas.drawPath(moon, paint);
+            }
+            if (clear && !part) {
+                return;
+            }
+        }
+        if (fog) {
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(s * 0.07f);
+            for (int i = -1; i <= 1; i++) {
+                float y = cy + i * s * 0.18f;
+                canvas.drawLine(cx - s * 0.34f + (i == 0 ? s * 0.06f : 0f), y,
+                    cx + s * 0.34f - (i == 1 ? s * 0.08f : 0f), y, paint);
+            }
+            return;
+        }
+        float lift = rain || snow || bolt ? s * 0.1f : 0f;
+        cloud(canvas, paint, part ? cx + s * 0.08f : cx, cy - lift + (part ? s * 0.08f : 0f), s * (part ? 0.8f : 1f));
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(s * 0.055f);
+        float base = cy + s * 0.2f;
+        if (rain) {
+            for (int i = -1; i <= 1; i++) {
+                float x = cx + i * s * 0.18f;
+                canvas.drawLine(x, base, x - s * 0.06f, base + s * 0.2f, paint);
+            }
+        } else if (snow) {
+            paint.setStyle(Paint.Style.FILL);
+            for (int i = -1; i <= 1; i++) {
+                canvas.drawCircle(cx + i * s * 0.18f, base + s * 0.1f + (i == 0 ? s * 0.08f : 0f), s * 0.045f, paint);
+            }
+        } else if (bolt) {
+            Path zig = new Path();
+            zig.moveTo(cx + s * 0.04f, base - s * 0.02f);
+            zig.lineTo(cx - s * 0.08f, base + s * 0.16f);
+            zig.lineTo(cx + s * 0.02f, base + s * 0.16f);
+            zig.lineTo(cx - s * 0.06f, base + s * 0.32f);
+            paint.setStyle(Paint.Style.STROKE);
+            canvas.drawPath(zig, paint);
+        }
+    }
+
+    private static void cloud(Canvas canvas, Paint paint, float cx, float cy, float s) {
+        Path cloud = new Path();
+        cloud.addCircle(cx - s * 0.16f, cy + s * 0.02f, s * 0.15f, Path.Direction.CW);
+        cloud.addCircle(cx + s * 0.02f, cy - s * 0.08f, s * 0.2f, Path.Direction.CW);
+        cloud.addCircle(cx + s * 0.2f, cy + s * 0.03f, s * 0.14f, Path.Direction.CW);
+        cloud.addRoundRect(new RectF(cx - s * 0.31f, cy + s * 0.0f, cx + s * 0.34f, cy + s * 0.17f),
+            s * 0.08f, s * 0.08f, Path.Direction.CW);
+        cloud.setFillType(Path.FillType.WINDING);
+        Path solid = new Path();
+        solid.op(cloud, Path.Op.UNION);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(s * 0.055f);
+        canvas.drawPath(solid, paint);
     }
 }
