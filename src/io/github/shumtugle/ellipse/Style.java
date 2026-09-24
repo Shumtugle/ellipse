@@ -105,6 +105,10 @@ final class Style {
         faces = Keep.faces(context);
         Stack.layout = Keep.number(context, Keep.FOLDER_FACE, Stack.FOUR);
         Stack.ground = Keep.flag(context, Keep.FOLDER_GROUND, true);
+        Rim.materials(context.getResources());
+        Rim.kind = Keep.number(context, Keep.RIM_KIND, Rim.NONE);
+        Rim.width = Keep.number(context, Keep.RIM_WIDTH, 3) / 100f;
+        Rim.glaze = Keep.flag(context, Keep.GLAZE, false);
     }
 
     /** Sets the family every word is set in. */

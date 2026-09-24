@@ -767,6 +767,21 @@ public final class Tune extends Activity {
         }
         tints.addView(tintChips);
         rows.addView(tints);
+        caption("RIM");
+        android.widget.HorizontalScrollView rims = new android.widget.HorizontalScrollView(this);
+        rims.setHorizontalScrollBarEnabled(false);
+        rims.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout rimChips = new LinearLayout(this);
+        rimChips.setPadding(dp(18), 0, dp(18), dp(8));
+        rimChips.addView(chip("None", Rim.kind == Rim.NONE, Keep.RIM_KIND, Rim.NONE));
+        for (int i = 0; i < Rim.NAMES.length; i++) {
+            rimChips.addView(chip(Rim.NAMES[i], Rim.kind == i, Keep.RIM_KIND, i));
+        }
+        rims.addView(rimChips);
+        rows.addView(rims);
+        slider("Rim width", "From a thread to a frame", Keep.RIM_WIDTH, 1, 14);
+        rows.addView(row(toggle("Glaze", "The curved light of glass across the top of every icon",
+            Keep.GLAZE, false)));
         caption("FOLDERS");
         android.widget.HorizontalScrollView folders = new android.widget.HorizontalScrollView(this);
         folders.setHorizontalScrollBarEnabled(false);
@@ -827,7 +842,8 @@ public final class Tune extends Activity {
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         final TextView value = new TextView(this);
-        value.setText(Keep.number(this, key, 100) + "%");
+        final int fallback = Keep.RIM_WIDTH.equals(key) ? 3 : 100;
+        value.setText(Keep.number(this, key, fallback) + "%");
         value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         value.setTextColor(Tone.primary());
         top.addView(value);
@@ -837,13 +853,15 @@ public final class Tune extends Activity {
         said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
         said.setTextColor(Tone.faint());
         made.addView(said);
-        made.addView(new Slide(this, least, most, Keep.number(this, key, 100), new Slide.Moved() {
+        made.addView(new Slide(this, least, most, Keep.number(this, key, fallback), new Slide.Moved() {
             public void moved(int at, boolean done) {
                 value.setText(at + "%");
                 if (Keep.ICON_SIZE.equals(key)) {
                     Style.iconScale = at / 100f;
                 } else if (Keep.ICON_FILL.equals(key)) {
                     Style.fill = at / 100f;
+                } else if (Keep.RIM_WIDTH.equals(key)) {
+                    Rim.width = at / 100f;
                 } else {
                     Style.nameScale = at / 100f;
                 }

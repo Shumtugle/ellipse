@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.35.0
+  sh build.sh ellipse-1.36.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -158,6 +158,13 @@ what stands apart from its main colour — each shown on that very icon. An
 icon's picture can also be replaced: by a picture of the owner's own from
 the phone, or by one of more than two hundred symbols, found by name. The
 outline stays one for all icons.
+
+Icons may wear a rim, as icon masks were once built in three layers: a
+plate of a material in the icon's outline — metal, gold, the accent, wood,
+sequins, black, steel, or a stamped dial — lit from above and shaded
+below, the icon seen through a window cut in it, and, if asked for, the
+curved glaze of glass across the top. The rim runs from a thread to a
+frame.
 
 Folder faces are laid out one of six ways — four, nine, a ring of five, a
 stack, a fan, a tower — with or without a container behind the small icons.

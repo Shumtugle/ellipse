@@ -219,6 +219,10 @@ final class Keep {
     /** How a folder's face lays out what it holds, and whether its container is drawn. */
     static final String FOLDER_FACE = "folder_face";
     static final String FOLDER_GROUND = "folder_ground";
+    /** The icons' rim: its material (less than nought for none), its width in percent, and glass over it. */
+    static final String RIM_KIND = "rim_kind";
+    static final String RIM_WIDTH = "rim_width";
+    static final String GLAZE = "glaze";
 
     private static final String FACE = "face.";
 

@@ -532,35 +532,36 @@ final class Shape {
             if (drawn == null || drawn.getWidth() != side) {
                 drawn = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
                 Canvas into = new Canvas(drawn);
-                if (!(icon instanceof AdaptiveIconDrawable)) {
-                    flat(into, side);
-                    float left = getBounds().left + (getBounds().width() - side) / 2f;
-                    float top = getBounds().top + (getBounds().height() - side) / 2f;
-                    canvas.drawBitmap(drawn, left, top, paint);
-                    return;
-                }
-                AdaptiveIconDrawable layers = (AdaptiveIconDrawable) icon;
-                float inner = side * weight(shape);
-                float edge = (side - inner) / 2f;
+                float inside = side * weight(shape);
+                float edge = (side - inside) / 2f;
+                /* With a rim, the outline is a plate of the rim's material and
+                   the icon is seen through a window cut in it. */
+                float rim = Rim.kind != Rim.NONE ? Rim.width * inside : 0f;
                 into.save();
                 into.translate(edge, edge);
-                into.clipPath(outline(shape, inner));
-                /* The layers are larger than what shows: a quarter of the
-                   visible side more on every edge, as the platform lays them. */
-                /* The owner's fill draws the layers larger or smaller about
-                   the middle: more of the picture, less margin, or the reverse. */
-                float grown = inner * Style.fill;
-                int spill = Math.round(grown / 4f + (grown - inner) / 2f);
-                int all = Math.round(grown) + 2 * Math.round(grown / 4f);
-                Drawable ground = layers.getBackground();
-                if (ground != null) {
-                    ground.setBounds(-spill, -spill, all - spill, all - spill);
-                    ground.draw(into);
+                Path outer = outline(shape, inside);
+                if (rim > 0f) {
+                    Rim.plate(into, outer, Rim.kind, inside, inside);
                 }
-                Drawable picture = layers.getForeground();
-                if (picture != null) {
-                    picture.setBounds(-spill, -spill, all - spill, all - spill);
-                    picture.draw(into);
+                float window = inside - 2f * rim;
+                into.save();
+                into.translate(rim, rim);
+                Path cut = outline(shape, window);
+                into.clipPath(cut);
+                if (!(icon instanceof AdaptiveIconDrawable)) {
+                    flat(into, window);
+                } else {
+                    layered(into, (AdaptiveIconDrawable) icon, window);
+                }
+                into.restore();
+                if (rim > 0f) {
+                    into.save();
+                    into.translate(rim, rim);
+                    Rim.cut(into, cut, inside);
+                    into.restore();
+                }
+                if (Rim.glaze) {
+                    Rim.glaze(into, outer, 0f, 0f, inside, inside);
                 }
                 into.restore();
             }
@@ -570,13 +571,34 @@ final class Shape {
         }
 
         /**
+         * An icon in layers laid under a window of the given side, as the
+         * platform lays them: a quarter of the visible side more on every
+         * edge; the owner's fill draws them larger or smaller about the middle.
+         */
+        private void layered(Canvas into, AdaptiveIconDrawable layers, float inner) {
+            float grown = inner * Style.fill;
+            int spill = Math.round(grown / 4f + (grown - inner) / 2f);
+            int all = Math.round(grown) + 2 * Math.round(grown / 4f);
+            Drawable ground = layers.getBackground();
+            if (ground != null) {
+                ground.setBounds(-spill, -spill, all - spill, all - spill);
+                ground.draw(into);
+            }
+            Drawable picture = layers.getForeground();
+            if (picture != null) {
+                picture.setBounds(-spill, -spill, all - spill, all - spill);
+                picture.draw(into);
+            }
+        }
+
+        /**
          * A flat icon set into the outline. It is looked at first, small: if
          * its edges are solid all round, it is a picture meant to fill, and
          * it is spread to the outline and cut; otherwise it stands on a
          * ground of the colour its edges carry, or on pale paper when its
          * edges carry nothing, at seven tenths of the outline.
          */
-        private void flat(Canvas into, int side) {
+        private void flat(Canvas into, float inside) {
             int look = 48;
             Bitmap small = Bitmap.createBitmap(look, look, Bitmap.Config.ARGB_8888);
             icon.setBounds(0, 0, look, look);
@@ -618,11 +640,6 @@ final class Shape {
                 }
             }
             small.recycle();
-            float inside = side * weight(shape);
-            float edge = (side - inside) / 2f;
-            into.save();
-            into.translate(edge, edge);
-            into.clipPath(outline(shape, inside));
             boolean full = solid > ring * 0.9f;
             int seen = solid + innerSolid;
             int ground = seen > (ring + inner) * 0.25f
@@ -633,7 +650,6 @@ final class Shape {
             float at = (inside - wide) / 2f;
             icon.setBounds(Math.round(at), Math.round(at), Math.round(at + wide), Math.round(at + wide));
             icon.draw(into);
-            into.restore();
         }
 
         /**
