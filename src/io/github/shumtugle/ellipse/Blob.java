@@ -30,6 +30,7 @@ final class Blob extends View {
 
     void shaped(boolean on) {
         shaped = on;
+        requestLayout();
         invalidate();
     }
 
@@ -106,12 +107,15 @@ final class Blob extends View {
 
     @Override
     protected void onMeasure(int widthSpec, int heightSpec) {
-        setMeasuredDimension(Math.round(size), Math.round(size));
+        /* Wearing the paper tile, the door is as wide as the tiles beside it. */
+        float wide = shaped && Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE : size;
+        setMeasuredDimension(Math.round(Math.max(size, wide)), Math.round(size));
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         float centre = size / 2f;
+        canvas.translate((getWidth() - size) / 2f, 0f);
         if (bin) {
             fill.setColor(binOver ? 0xFFD9472F : 0xFFE8674A);
             canvas.drawCircle(centre, centre, centre, fill);
@@ -125,9 +129,10 @@ final class Blob extends View {
         }
         if (shaped && Shape.current != Shape.SYSTEM) {
             /* In the dock, the door to every app wears the outline of the icons beside it. */
+            /* The same measure every icon is drawn to, so the door stands
+               as large as the icons beside it. */
             float side = Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
                 : size * Shape.weight(Shape.current);
-            side = Math.min(side, size);
             canvas.save();
             canvas.translate(centre - side / 2f, centre - side / 2f);
             canvas.drawPath(Shape.outline(Shape.current, side), fill);
