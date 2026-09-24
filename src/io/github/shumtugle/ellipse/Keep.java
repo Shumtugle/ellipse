@@ -214,6 +214,8 @@ final class Keep {
     static final String NAMES_LIST = "names_list";
     static final String NAME_SIZE = "name_size";
     static final String FONT = "font";
+    /** Icons in their own colours, all in the accent, or in the accent only where they can be. */
+    static final String ICON_TINT = "icon_tint";
 
     /** The outline every icon is cut to; the phone's own at first. */
     static int shape(Context context) {

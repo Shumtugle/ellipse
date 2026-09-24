@@ -23,6 +23,11 @@ final class Style {
     static boolean namesInList = true;
     static float nameScale = 1f;
     static int family;
+    /** Nought: the apps' own colours; one: every icon in the accent; two: only those drawn for it. */
+    static int tint;
+    static final int OWN = 0;
+    static final int ALL = 1;
+    static final int ABLE = 2;
     private static Typeface face = Typeface.create(FAMILIES[0], Typeface.NORMAL);
     private static Typeface bold = Typeface.create(FAMILIES[0], Typeface.BOLD);
 
@@ -36,6 +41,7 @@ final class Style {
         namesInList = Keep.flag(context, Keep.NAMES_LIST, true);
         nameScale = Keep.number(context, Keep.NAME_SIZE, 100) / 100f;
         font(Keep.number(context, Keep.FONT, 0));
+        tint = Keep.number(context, Keep.ICON_TINT, OWN);
     }
 
     /** Sets the family every word is set in. */

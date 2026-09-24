@@ -756,6 +756,18 @@ public final class Tune extends Activity {
         rows.addView(row(toggle("In the list", "Names under the icons of every app's pages",
             Keep.NAMES_LIST, true)));
         slider("Size of names", "How large the names are drawn", Keep.NAME_SIZE, 80, 140);
+        caption("COLOUR");
+        android.widget.HorizontalScrollView tints = new android.widget.HorizontalScrollView(this);
+        tints.setHorizontalScrollBarEnabled(false);
+        tints.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout tintChips = new LinearLayout(this);
+        tintChips.setPadding(dp(18), 0, dp(18), dp(8));
+        String[] tintNames = {"Their own", "In the accent", "Accent where drawn for it"};
+        for (int i = 0; i < tintNames.length; i++) {
+            tintChips.addView(chip(tintNames[i], Style.tint == i, Keep.ICON_TINT, i));
+        }
+        tints.addView(tintChips);
+        rows.addView(tints);
         caption("TYPEFACE");
         android.widget.HorizontalScrollView faces = new android.widget.HorizontalScrollView(this);
         faces.setHorizontalScrollBarEnabled(false);
@@ -832,6 +844,34 @@ public final class Tune extends Activity {
             }
         }));
         rows.addView(made);
+    }
+
+    /** A choice among a few, as a pill; the chosen one wears the accent. */
+    private View chip(String title, boolean on, final String key, final int value) {
+        TextView chip = new TextView(this);
+        chip.setText(title);
+        chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        chip.setTextColor(on ? Tone.onAccent() : Tone.onSurface());
+        chip.setPadding(dp(18), dp(12), dp(18), dp(12));
+        chip.setBackground(Tone.touch(Tone.box(on ? Tone.primary() : Tone.container(), dp(24), 0f), dp(24)));
+        LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        at.rightMargin = dp(8);
+        chip.setLayoutParams(at);
+        chip.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Keep.saveNumber(Tune.this, key, value);
+                Style.read(Tune.this);
+                final int y = scroll.getScrollY();
+                fill();
+                scroll.post(new Runnable() {
+                    public void run() {
+                        scroll.scrollTo(0, y);
+                    }
+                });
+            }
+        });
+        return chip;
     }
 
     /** A family of words, written in itself; the chosen one wears the accent. */

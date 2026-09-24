@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.28.0
+  sh build.sh ellipse-1.29.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -140,7 +140,10 @@ large the icons stand, how much of the outline the picture fills, names
 under the icons on the screens and in the list (each on or off), how large
 the names are, and the typeface every word of the home screen is set in —
 one of the phone's own families. The window at the head follows each
-slider while it moves. Icons
+slider while it moves. Icons can keep their own colours, or be laid in the
+accent: an app's own one-colour picture where it drew one, on a deep
+ground of the same hue — or, for every icon, one made from its picture;
+on the paper tile the ink is the accent darkened, on white. Icons
 that come in layers are laid out as the platform lays them and cut by the
 outline; each outline is drawn a little smaller the more of its square it
 fills, so a grid weighs the same whatever the outline. A window at the

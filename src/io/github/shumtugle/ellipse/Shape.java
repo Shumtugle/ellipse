@@ -130,6 +130,9 @@ final class Shape {
 
     /** An icon as it is to be drawn: cut to the outline when it comes in layers. */
     static Drawable face(Drawable icon) {
+        if (icon != null && Style.tint != Style.OWN) {
+            icon = inked(icon);
+        }
         if (icon == null || current == SYSTEM) {
             return icon;
         }
@@ -139,6 +142,110 @@ final class Shape {
             return new Cut(icon, current);
         }
         return new Cut(icon, current);
+    }
+
+    /**
+     * An icon in the accent. An app that drew a one-colour version of its
+     * picture for this gives it, and it is laid in the accent on a ground of
+     * the same hue, deep: the way the phone themes its own icons, in the
+     * home screen's colour. An app that did not is given one, if every icon
+     * is to be in the accent: from the picture over its ground, when it
+     * comes in layers; from whatever differs from its edge colour, when it
+     * is flat. On the paper the ink is the accent darkened, as ink on paper
+     * is. The phone's own outline cuts the result as it cuts any icon.
+     */
+    static Drawable inked(Drawable icon) {
+        boolean paper = current == PAPER;
+        int ink = paper ? deep(Tone.primary()) : Tone.primary();
+        int ground = paper ? PAPER_INK : Tone.primaryContainer();
+        Drawable mark = null;
+        if (icon instanceof AdaptiveIconDrawable && android.os.Build.VERSION.SDK_INT >= 33) {
+            Drawable mono = ((AdaptiveIconDrawable) icon).getMonochrome();
+            if (mono != null) {
+                mark = mono.mutate();
+                mark.setTint(ink);
+            }
+        }
+        if (mark == null) {
+            if (Style.tint != Style.ALL) {
+                return icon;
+            }
+            mark = stencil(icon, ink);
+        }
+        return new AdaptiveIconDrawable(new android.graphics.drawable.ColorDrawable(ground), mark);
+    }
+
+    /** The accent brought down to ink, dark enough to stand on white paper. */
+    private static int deep(int colour) {
+        float[] hsv = new float[3];
+        android.graphics.Color.colorToHSV(colour, hsv);
+        hsv[1] = Math.min(1f, hsv[1] * 1.25f + 0.1f);
+        hsv[2] = 0.42f;
+        return android.graphics.Color.HSVToColor(hsv);
+    }
+
+    /**
+     * A one-colour picture made from a coloured icon, in the layers' own
+     * square of one hundred and eight with the picture in its middle
+     * seventy two: what stands out from the icon's ground becomes ink.
+     */
+    private static Drawable stencil(Drawable icon, int ink) {
+        int n = 216;
+        Bitmap out = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888);
+        Canvas into = new Canvas(out);
+        if (icon instanceof AdaptiveIconDrawable) {
+            /* The picture layer alone: its shape is what the ground shows. */
+            Drawable picture = ((AdaptiveIconDrawable) icon).getForeground();
+            if (picture != null) {
+                picture.setBounds(0, 0, n, n);
+                picture.draw(into);
+            }
+        } else {
+            int side = Math.round(n * 72f / 108f * 0.8f);
+            int at = (n - side) / 2;
+            icon.setBounds(at, at, at + side, at + side);
+            icon.draw(into);
+        }
+        int[] px = new int[n * n];
+        out.getPixels(px, 0, n, 0, 0, n, n);
+        boolean flat = !(icon instanceof AdaptiveIconDrawable);
+        int edge = 0;
+        if (flat) {
+            /* The flat icon's own ground: the colour most of its border carries. */
+            long r = 0;
+            long g = 0;
+            long b = 0;
+            int seen = 0;
+            int side = Math.round(n * 72f / 108f * 0.8f);
+            int at = (n - side) / 2;
+            for (int i = at; i < at + side; i += 2) {
+                int[] ring = {px[at * n + i], px[(at + side - 1) * n + i], px[i * n + at], px[i * n + at + side - 1]};
+                for (int c : ring) {
+                    if ((c >>> 24) > 200) {
+                        r += (c >> 16) & 0xFF;
+                        g += (c >> 8) & 0xFF;
+                        b += c & 0xFF;
+                        seen++;
+                    }
+                }
+            }
+            edge = seen == 0 ? 0 : 0xFF000000 | (int) (r / seen) << 16 | (int) (g / seen) << 8 | (int) (b / seen);
+        }
+        int inkRgb = ink & 0x00FFFFFF;
+        for (int i = 0; i < px.length; i++) {
+            int c = px[i];
+            int a = c >>> 24;
+            if (flat && edge != 0 && a > 0) {
+                int dr = ((c >> 16) & 0xFF) - ((edge >> 16) & 0xFF);
+                int dg = ((c >> 8) & 0xFF) - ((edge >> 8) & 0xFF);
+                int db = (c & 0xFF) - (edge & 0xFF);
+                float far = (float) Math.sqrt(dr * dr + dg * dg + db * db) / 90f;
+                a = Math.round(a * Math.min(1f, far));
+            }
+            px[i] = (a << 24) | inkRgb;
+        }
+        out.setPixels(px, 0, n, 0, 0, n, n);
+        return new android.graphics.drawable.BitmapDrawable((android.content.res.Resources) null, out);
     }
 
     /** A fine grain for the paper and its rim, made once. */
