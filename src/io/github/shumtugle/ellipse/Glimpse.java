@@ -86,7 +86,10 @@ final class Glimpse extends FrameLayout {
         float icon = dp(44);
         Grid row = new Grid(sized, 4, 1);
         for (int i = 0; i < 4 && i < doors.size(); i++) {
-            row.put(new Cell(sized, doors.get(i), icon, true), i, 0);
+            /* Drawn afresh from the app's own layers each time: an icon in the
+               accent is to follow the accent under the thumb. */
+            row.put(new Cell(sized, Shape.face(doors.get(i).plain()), doors.get(i).label, icon,
+                Style.namesOnScreens), i, 0);
         }
         LinearLayout.LayoutParams rowAt = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
             Math.round(icon + dp(40) * zoom / 100f));
@@ -100,11 +103,14 @@ final class Glimpse extends FrameLayout {
         bar.setBackground(Tone.box(Tone.container(), dp(34), dp(0.5f)));
         Grid dock = new Grid(sized, 4, 1);
         for (int i = 4; i < 8 && i < doors.size(); i++) {
-            dock.put(new Cell(sized, doors.get(i), icon, false), i - 4, 0);
+            dock.put(new Cell(sized, Shape.face(doors.get(i).plain()), doors.get(i).label, icon, false),
+                i - 4, 0);
         }
         bar.addView(dock, new LinearLayout.LayoutParams(0, Math.round(icon + dp(8)), 1f));
         Blob blob = new Blob(sized, dp(48), Blob.GRID);
-        bar.addView(blob, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        blob.shaped(true);
+        bar.addView(blob, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT));
         LinearLayout.LayoutParams barAt = new LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         barAt.topMargin = dp(8);
