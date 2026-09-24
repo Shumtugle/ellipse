@@ -191,6 +191,22 @@ final class Keep {
         touch(context);
     }
 
+    /** Where the accent comes from: the owner's own mixing, the system's colour, or the wallpaper's. */
+    static final int FROM_OWN = 0;
+    static final int FROM_SYSTEM = 1;
+    static final int FROM_WALL = 2;
+
+    /** At first the colour follows the phone: its system colour where it has one, else the wallpaper. */
+    static int from(Context context) {
+        int fallback = android.os.Build.VERSION.SDK_INT >= 31 ? FROM_SYSTEM : FROM_WALL;
+        return store(context).getInt("look_from", fallback);
+    }
+
+    static void saveFrom(Context context, int from) {
+        store(context).edit().putInt("look_from", from).apply();
+        touch(context);
+    }
+
     /** How much of the accent's colour the ground takes, in percent; none is near black. */
     static int ground(Context context) {
         return store(context).getInt("ground", 0);

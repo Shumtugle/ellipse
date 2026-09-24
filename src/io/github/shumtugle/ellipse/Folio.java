@@ -123,7 +123,9 @@ public final class Folio extends Activity {
         String html;
         if (LOOK.equals(which)) {
             float[] look = Keep.look(this);
-            html = Paper.look(look[0], look[1], look[2], Math.round(look[3]), Keep.ground(this), Keep.zoom(this));
+            Tone.read(this);
+            html = Paper.look(Tone.hue(), Tone.rich(), Tone.bright(), Math.round(look[3]), Keep.ground(this),
+                Keep.zoom(this), Keep.from(this), android.os.Build.VERSION.SDK_INT >= 31);
         } else if (PLACE.equals(which)) {
             html = Paper.places(Sky.place(), finds, asking);
         } else {
@@ -172,10 +174,28 @@ public final class Folio extends Activity {
 
     /** What a link on one of the pages asks for. */
     private void command(String what) {
+        if (what.startsWith("from")) {
+            Keep.saveFrom(this, number(what, "v", Keep.FROM_OWN));
+            Tone.read(this);
+            getWindow().setStatusBarColor(Tone.surface());
+            getWindow().setNavigationBarColor(Tone.surface());
+            show(LOOK);
+            return;
+        }
         if (what.startsWith("look")) {
             float[] was = Keep.look(this);
-            Keep.saveLook(this, number(what, "h", Math.round(was[0])), number(what, "s", 58) / 100f,
-                number(what, "v", 100) / 100f, number(what, "a", 100));
+            int before = Keep.from(this);
+            int from = number(what, "f", before);
+            if (from == Keep.FROM_OWN) {
+                /* Mixed by hand: the sliders' colour is the owner's now. */
+                Keep.saveLook(this, number(what, "h", Math.round(was[0])), number(what, "s", 58) / 100f,
+                    number(what, "v", 100) / 100f, number(what, "a", 100));
+                if (Keep.from(this) != Keep.FROM_OWN) {
+                    Keep.saveFrom(this, Keep.FROM_OWN);
+                }
+            } else {
+                Keep.saveLook(this, was[0], was[1], was[2], number(what, "a", 100));
+            }
             Keep.saveGround(this, number(what, "g", Keep.ground(this)));
             int zoom = number(what, "z", Keep.zoom(this));
             Keep.saveZoom(this, zoom);
@@ -183,6 +203,10 @@ public final class Folio extends Activity {
             Tone.read(this);
             getWindow().setStatusBarColor(Tone.surface());
             getWindow().setNavigationBarColor(Tone.surface());
+            if (before != Keep.FROM_OWN && from == Keep.FROM_OWN) {
+                /* The chips above say where the colour comes from: now from the hand. */
+                show(LOOK);
+            }
             return;
         }
         if (what.startsWith("place")) {

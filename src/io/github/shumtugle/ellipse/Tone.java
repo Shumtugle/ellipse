@@ -22,6 +22,7 @@ import android.os.Build;
 final class Tone {
 
     private static float hue = 38f;
+    private static float bright = 1f;
     private static float rich = 0.58f;
     private static int accent = shade(0.58f, 1f);
     private static int veil = 255;
@@ -41,7 +42,25 @@ final class Tone {
         float[] look = Keep.look(context);
         hue = look[0];
         rich = look[1];
-        accent = shade(rich, look[2]);
+        bright = look[2];
+        /* Followed from the phone, the accent's hue and richness are read
+           from the system's colour or the wallpaper's; the rest stays the
+           owner's. */
+        int from = Keep.from(context);
+        int seed = 0;
+        if (from == Keep.FROM_SYSTEM && Build.VERSION.SDK_INT >= 31) {
+            seed = context.getColor(android.R.color.system_accent1_200);
+        } else if (from == Keep.FROM_WALL) {
+            seed = wallpaperColour(context);
+        }
+        if (seed != 0) {
+            float[] hsv = new float[3];
+            Color.colorToHSV(seed, hsv);
+            hue = hsv[0];
+            rich = Math.min(0.72f, Math.max(0.24f, hsv[1]));
+            bright = Math.max(0.82f, hsv[2]);
+        }
+        accent = shade(rich, bright);
         veil = Math.round(255f * Math.min(100f, Math.max(55f, look[3])) / 100f);
         earth = Keep.ground(context) / 100f;
         float third = (hue + 60f) % 360f;
@@ -52,6 +71,30 @@ final class Tone {
         held[4] = Color.HSVToColor(new float[] {third, 0.45f, mix(0.32f, 0.40f)});
         held[5] = Color.HSVToColor(new float[] {third, 0.12f, 0.96f});
         return was != accent || wasEarth != earth || wasVeil != veil;
+    }
+
+    /** The wallpaper's leading colour, or nought when it will not say. */
+    private static int wallpaperColour(Context context) {
+        try {
+            android.app.WallpaperColors colours = android.app.WallpaperManager.getInstance(context)
+                .getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM);
+            return colours == null ? 0 : colours.getPrimaryColor().toArgb() | 0xFF000000;
+        } catch (RuntimeException refused) {
+            return 0;
+        }
+    }
+
+    /** The hue, richness and brightness the accent stands at now, wherever they came from. */
+    static float hue() {
+        return hue;
+    }
+
+    static float rich() {
+        return rich;
+    }
+
+    static float bright() {
+        return bright;
     }
 
     private static float mix(float from, float to) {

@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.22.1
+  sh build.sh ellipse-1.23.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -110,7 +110,9 @@ MIT
 
 ## Colour and the weather as pages
 
-Look → Colour and text opens the colour page: a hue, how rich it is, how
+Look → Colour and text opens the colour page. The accent follows the phone
+at first — its system colour where it has one, else the wallpaper's — or
+is mixed by hand: a hue, how rich it is, how
 bright the accent, how solid the cards stand, how much colour the ground
 takes, and the size of words, all mixed under the thumb with the page
 itself showing the result. The whole home screen follows it.

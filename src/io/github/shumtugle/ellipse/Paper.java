@@ -751,7 +751,8 @@ private static String head(String title, String extra) {
     }
 
     /** The colour page: three bands and a veil, mixed under the thumb. */
-    static String look(float hue, float sat, float val, int solid, int ground, int zoom) {
+    static String look(float hue, float sat, float val, int solid, int ground, int zoom, int from,
+                       boolean system) {
         StringBuilder rules = new StringBuilder();
         rules            .append(".pair{display:flex;gap:14px;margin:0 0 22px}")
             .append("a.orb{width:66px;height:66px;border-radius:50%;display:flex;")
@@ -775,6 +776,19 @@ private static String head(String title, String extra) {
 
         StringBuilder b = new StringBuilder();
         b.append(head(Words.s("look"), rules.toString()));
+        /* Where the accent comes from: the phone's own colour, the
+           wallpaper's, or the owner's mixing. Moving the hue, the richness
+           or the brightness is mixing, and says so. */
+        b.append("<div class=chips>");
+        if (system) {
+            b.append("<a class='chip").append(from == Keep.FROM_SYSTEM ? " on" : "")
+                .append("' href='ellipse:from?v=1'>").append(safe(Words.s("by_system"))).append("</a>");
+        }
+        b.append("<a class='chip").append(from == Keep.FROM_WALL ? " on" : "")
+            .append("' href='ellipse:from?v=2'>").append(safe(Words.s("by_wall"))).append("</a>");
+        b.append("<a class='chip").append(from == Keep.FROM_OWN ? " on" : "")
+            .append("' href='ellipse:from?v=0'>").append(safe(Words.s("by_hand"))).append("</a>");
+        b.append("</div>");
         b.append("<div id=show>").append(safe(Words.s("accent"))).append("</div>");
         b.append("<label>").append(safe(Words.s("hue")))
             .append("</label><input id=h type=range min=0 max=360 value='")
@@ -845,9 +859,11 @@ private static String head(String title, String extra) {
             .append("(16*z.value/100)+'px'}z.oninput=size;size();")
 
             .append("function keep(){location.href='ellipse:look?h='+h.value+'&s='+s.value")
-            .append("+'&v='+v.value+'&a='+a.value+'&g='+g.value+'&z='+z.value}")
+            .append("+'&v='+v.value+'&a='+a.value+'&g='+g.value+'&z='+z.value+'&f='+(mixed?0:")
+            .append(from).append(")}")
             .append("h.onchange=s.onchange=v.onchange=a.onchange=g.onchange=z.onchange=keep;")
-            .append("h.oninput=s.oninput=v.oninput=a.oninput=g.oninput=paint;paint();")
+            .append("var mixed=0;h.oninput=s.oninput=v.oninput=function(){mixed=1;paint()};")
+            .append("a.oninput=g.oninput=paint;paint();")
             .append("</script></body></html>");
         return b.toString();
     }

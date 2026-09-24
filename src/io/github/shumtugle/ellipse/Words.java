@@ -74,7 +74,10 @@ final class Words {
         "december",
         "date_form",
         "colour_text",
-        "weather_place"
+        "weather_place",
+        "by_system",
+        "by_wall",
+        "by_hand"
     };
 
     private static final String[] EN = {
@@ -140,7 +143,10 @@ final class Words {
         "December",
         "{w}, {d} {m}",
         "colour and text",
-        "the weather's place"
+        "the weather's place",
+        "by the system",
+        "by the wallpaper",
+        "my own"
     };
 
     private static final Map<String, String> table = new HashMap<>();
