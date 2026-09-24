@@ -3,7 +3,7 @@ package io.github.shumtugle.ellipse;
 import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
+import android.view.View;
 import android.widget.LinearLayout;
 
 import java.util.ArrayList;
@@ -60,7 +60,7 @@ final class Sample extends LinearLayout {
         if (doors.isEmpty()) {
             return;
         }
-        addView(icon(doors.get(0)), new LayoutParams(dp(112), dp(112)));
+        addView(icon(doors.get(0), dp(92)), new LayoutParams(dp(124), dp(112)));
         LinearLayout small = new LinearLayout(getContext());
         small.setOrientation(VERTICAL);
         LayoutParams smallAt = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f);
@@ -72,20 +72,22 @@ final class Sample extends LinearLayout {
                 int at = 1 + r * 3 + c;
                 FrameLayout slot = new FrameLayout(getContext());
                 if (at < doors.size()) {
-                    slot.addView(icon(doors.get(at)), new FrameLayout.LayoutParams(dp(48), dp(48),
-                        android.view.Gravity.CENTER));
+                    slot.addView(icon(doors.get(at), dp(44)), new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
                 }
-                row.addView(slot, new LayoutParams(0, dp(56), 1f));
+                row.addView(slot, new LayoutParams(0, dp(60), 1f));
             }
             small.addView(row);
         }
         addView(small, smallAt);
     }
 
-    private ImageView icon(Apps.Door door) {
-        ImageView view = new ImageView(getContext());
-        Drawable face = Shape.face(door.plain());
-        view.setImageDrawable(face);
-        return view;
+    /**
+     * An icon drawn the way the home screen draws it, by the same cell, so
+     * the window shows what the screens will: the same bounds, the same cut,
+     * and room around it for an outline wider than its square.
+     */
+    private View icon(Apps.Door door, float size) {
+        return new Cell(getContext(), Shape.face(door.plain()), "", size, false);
     }
 }

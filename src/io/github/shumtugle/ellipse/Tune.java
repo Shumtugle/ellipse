@@ -126,7 +126,7 @@ public final class Tune extends Activity {
     private static final Line[] ROOMS = {
         door(Glyph.DESK, "Desktop", "Dock, grid, scrolling, page points, new apps", DESK),
         door(Glyph.LIST, "All apps", "Grid, lines or pages, hidden apps", LIST),
-        door(Glyph.LOOK, "Look", "Icon style, the clock, notification dots", LOOK),
+        door(Glyph.LOOK, "Look", "Colour, icons, the clock, notification dots", LOOK),
         door(Glyph.HANDS, "Gestures", "Up, down, Back and Home on the home screen", HANDS),
         door(Glyph.BACKUP, "Backup and restore", "Keep the set-out, bring it back, bring one in", BACKUP),
         door(Glyph.LANGUAGE, "Languages", "Language modules for the words of the home screen", LANGUAGE),
@@ -168,10 +168,9 @@ public final class Tune extends Activity {
                 };
             case LOOK:
                 return new Line[] {
-                    soon("Icon style", "Masks, shapes and sizes of icons"),
                     deed(Glyph.LOOK, "Colour and text",
                         "The accent, the ground, how solid the cards are, the size of words", COLOUR),
-                    door(-1, "Icons", "The outline every icon is cut to", ICONS),
+                    door(Glyph.ICONS, "Icons", "The outline every icon is cut to", ICONS),
                     deed(Glyph.DESK, "The weather's place", "Where the clock's weather is for", PLACE),
                     toggle("Clock", "The home screen's own clock across the top of the home screen",
                         Keep.CLOCK, true),
@@ -737,6 +736,15 @@ public final class Tune extends Activity {
         across.addView(tiles);
         rows.addView(across);
         arrive(across, 1);
+        final android.widget.HorizontalScrollView row = across;
+        final LinearLayout all = tiles;
+        across.post(new Runnable() {
+            public void run() {
+                View chosen = all.getChildAt(Math.max(0, Math.min(all.getChildCount() - 1, Shape.current)));
+                int x = chosen.getLeft() - (row.getWidth() - chosen.getWidth()) / 2;
+                row.scrollTo(Math.max(0, x), 0);
+            }
+        });
     }
 
     private View tile(final int shape) {
