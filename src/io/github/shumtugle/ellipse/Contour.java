@@ -273,12 +273,12 @@ final class Contour extends View implements Timepiece {
                 earsBox.set(x - tallRow, rowTop, x, rowBottom);
                 x = earsBox.left - gap;
             }
-            line.setColor(LINE);
-            line.setStrokeWidth(thin);
-            canvas.drawOval(chargeBox, line);
+            /* Low, the charge and the headphones are rings too: a fine one in
+               their colour, filled as far as their measure goes. */
+            thinRing(canvas, chargeBox, POWER, charge < 0 ? 0f : charge / 100f, thin);
             small(canvas, chargeBox, charge >= 0 ? charge + "%" : "\u2013");
             if (!earsBox.isEmpty()) {
-                canvas.drawOval(earsBox, line);
+                thinRing(canvas, earsBox, EARS_RING, ears / 100f, thin);
                 small(canvas, earsBox, ears + "%");
             }
             if (showWeather) {
@@ -442,6 +442,17 @@ final class Contour extends View implements Timepiece {
         words.setColor(QUIET);
         words.setTextSize(fit(text, box.width() * 0.6f, box.height() * 0.2f));
         canvas.drawText(text, cx, box.top + box.height() * 0.74f, words);
+    }
+
+    private void thinRing(Canvas canvas, RectF box, int colour, float filled, float thin) {
+        float stroke = Math.max(thin * 1.6f, box.width() * 0.045f);
+        RectF inner = new RectF(box.left + stroke / 2f, box.top + stroke / 2f, box.right - stroke / 2f,
+            box.bottom - stroke / 2f);
+        line.setStrokeWidth(stroke);
+        line.setColor((colour & 0x00FFFFFF) | 0x40000000);
+        canvas.drawOval(inner, line);
+        line.setColor(colour);
+        canvas.drawArc(inner, -90f, 360f * Math.max(0f, Math.min(1f, filled)), false, line);
     }
 
     private void small(Canvas canvas, RectF box, String text) {
