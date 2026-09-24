@@ -14,8 +14,8 @@ import android.view.View;
  * of dots, a palette, a stroke of a finger, a box with an arrow out of
  * it, a globe, a chevron pointing down, a cross, a small i in a ring, a
  * bin, two corners pulled apart, a pen, and the mark of the home screen's
- * own settings: the wide ellipse, a smaller spanner across it, and in its
- * jaws the gold ball that runs along the ellipse.
+ * own settings: an upright spanner's head with the gold ball in its jaws,
+ * and an arc of a great ellipse running through the ball.
  */
 final class Glyph extends View {
 
@@ -79,67 +79,71 @@ final class Glyph extends View {
     /**
      * The settings mark, drawn from the same measures as the settings'
      * icon, on a face of one hundred and twenty four brought down to this
-     * grid of twenty four.
+     * grid of twenty four: the upright head of a spanner, its handle a
+     * stub; the gold ball in its jaws; and one arc of a great ellipse
+     * running through the ball, the rest of it off the face.
      */
     private void settings(Canvas canvas, float u) {
         float k = 0.2f * u;
         float cx = 12f * u;
         float cy = 12f * u;
+        float hx = -4f;
+        float hy = 14f;
+        float bx = hx;
+        float by = hy - 11f;
         canvas.save();
-        canvas.rotate(-16f, cx, cy + 4f * k);
-        oval.set(cx - 52f * k, cy + 4f * k - 20f * k, cx + 52f * k, cy + 4f * k + 20f * k);
-        line.setStrokeWidth(1.5f * u);
-        canvas.drawOval(oval, line);
-        canvas.restore();
-        double jaw = Math.toRadians(-35);
-        float c = (float) Math.cos(jaw);
-        float s = (float) Math.sin(jaw);
-        double t = Math.toRadians(-40);
-        float lx = (float) (52 * Math.cos(t));
-        float ly = (float) (20 * Math.sin(t));
-        double tilt = Math.toRadians(-16);
-        float bx = (float) (lx * Math.cos(tilt) - ly * Math.sin(tilt));
-        float by = (float) (lx * Math.sin(tilt) + ly * Math.cos(tilt)) + 4f;
-        float hx = bx - 7f * c;
-        float hy = by - 7f * s;
-        Path tool = new Path();
-        tool.addCircle(cx + hx * k, cy + hy * k, 17f * k, Path.Direction.CW);
-        Path handle = new Path();
-        float[][] bar = {{-6, -5.6f}, {-140, -6.6f}, {-140, 6.6f}, {-6, 5.6f}};
-        for (int i = 0; i < bar.length; i++) {
-            float x = cx + (hx + bar[i][0] * c - bar[i][1] * s) * k;
-            float y = cy + (hy + bar[i][0] * s + bar[i][1] * c) * k;
-            if (i == 0) {
-                handle.moveTo(x, y);
-            } else {
-                handle.lineTo(x, y);
-            }
-        }
-        handle.close();
-        tool.op(handle, Path.Op.UNION);
-        Path slot = new Path();
-        float[][] mouth = {{2, -8.4f}, {40, -8.4f}, {40, 8.4f}, {2, 8.4f}};
-        for (int i = 0; i < mouth.length; i++) {
-            float x = cx + (hx + mouth[i][0] * c - mouth[i][1] * s) * k;
-            float y = cy + (hy + mouth[i][0] * s + mouth[i][1] * c) * k;
-            if (i == 0) {
-                slot.moveTo(x, y);
-            } else {
-                slot.lineTo(x, y);
-            }
-        }
-        slot.close();
-        slot.addCircle(cx + (hx + 2f * c) * k, cy + (hy + 2f * s) * k, 8.4f * k, Path.Direction.CW);
-        tool.op(slot, Path.Op.DIFFERENCE);
-        /* Nothing beyond the round face of the drawing. */
         Path face = new Path();
         face.addCircle(cx, cy, 12f * u, Path.Direction.CW);
-        tool.op(face, Path.Op.INTERSECT);
+        canvas.clipPath(face);
+
+        /* The arc of the ellipse through the ball. */
+        double tilt = Math.toRadians(-14);
+        double edge = Math.toRadians(-104);
+        float lx = (float) (170 * Math.cos(edge));
+        float ly = (float) (62 * Math.sin(edge));
+        float ex = bx - (float) (lx * Math.cos(tilt) - ly * Math.sin(tilt));
+        float ey = by - (float) (lx * Math.sin(tilt) + ly * Math.cos(tilt));
+        path.reset();
+        for (int i = 0; i <= 40; i++) {
+            double t = edge + Math.toRadians(-40 + 2 * i);
+            float x = (float) (170 * Math.cos(t));
+            float y = (float) (62 * Math.sin(t));
+            float px = cx + (ex + (float) (x * Math.cos(tilt) - y * Math.sin(tilt))) * k;
+            float py = cy + (ey + (float) (x * Math.sin(tilt) + y * Math.cos(tilt))) * k;
+            if (i == 0) {
+                path.moveTo(px, py);
+            } else {
+                path.lineTo(px, py);
+            }
+        }
+        line.setStrokeWidth(1.7f * u);
+        canvas.drawPath(path, line);
+
+        /* The head, upright, and a stub of its handle; the jaws cut out. */
+        Path tool = new Path();
+        tool.addCircle(cx + hx * k, cy + hy * k, 27f * k, Path.Direction.CW);
+        Path stub = new Path();
+        stub.moveTo(cx + (hx - 10.5f) * k, cy + hy * k);
+        stub.lineTo(cx + (hx - 12f) * k, cy + 120f * k);
+        stub.lineTo(cx + (hx + 12f) * k, cy + 120f * k);
+        stub.lineTo(cx + (hx + 10.5f) * k, cy + hy * k);
+        stub.close();
+        tool.op(stub, Path.Op.UNION);
+        Path mouth = new Path();
+        mouth.moveTo(cx + (hx - 12.5f) * k, cy + (hy - 12f) * k);
+        mouth.lineTo(cx + (hx - 15.5f) * k, cy + (hy - 60f) * k);
+        mouth.lineTo(cx + (hx + 15.5f) * k, cy + (hy - 60f) * k);
+        mouth.lineTo(cx + (hx + 12.5f) * k, cy + (hy - 12f) * k);
+        mouth.close();
+        mouth.addCircle(cx + hx * k, cy + (hy - 10f) * k, 12.5f * k, Path.Direction.CW);
+        tool.op(mouth, Path.Op.DIFFERENCE);
         canvas.drawPath(tool, fill);
+
         int was = fill.getColor();
         fill.setColor(GOLD);
-        canvas.drawCircle(cx + bx * k, cy + by * k, 7.2f * k, fill);
+        canvas.drawCircle(cx + bx * k, cy + by * k, 11.5f * k, fill);
         fill.setColor(was);
+        canvas.restore();
     }
 
     @Override

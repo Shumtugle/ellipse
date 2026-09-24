@@ -5,9 +5,8 @@ the thing itself, in ink.
 
   launcher  an ellipse in one stroke of ink, two red points sitting on it
             and a larger gold one slipped off it, running out past the edge
-  settings  the ellipse, wide, in the same ink; a smaller spanner across
-            it; and in the spanner's jaws the gold ball that runs along the
-            ellipse
+  settings  the upright head of a spanner, its handle a stub; the gold
+            ball in its jaws; and one arc of a great ellipse through it
 
 Drawn large and brought down for smooth edges. Run from this folder;
 writes the layers into the resources and round previews here.
@@ -189,51 +188,50 @@ LAUNCHER_POINTS = reds + [(gx, gy)]
 
 # ------------------------------------------------------------- settings
 #
-# The mark of the home screen's own settings: the ellipse, wide, drawn in
-# one stroke of ink across nearly the whole face; a spanner smaller than
-# it, in the same ink, its head up to the right and its handle running out
-# past the edge; and in the spanner's jaws, sitting on the ellipse, the
-# gold ball that runs along it. Where the ellipse crosses in front of the
-# spanner, the pen has left a fine line of bare paper through the ink.
+# The mark of the home screen's own settings, drawn to be read at the size
+# of an icon: the head of a spanner, upright, its jaws open upward and its
+# handle no more than a stub before the edge takes it; in the jaws, the
+# gold ball; and through the ball one arc of the ellipse, so large that
+# only this piece of it crosses the face. The rest of it, like the rest of
+# the handle, the eye supplies.
 
-EX, EY, ERX, ERY, ETILT = 0, 4, 52, 20, -16
-BALL_T = -40
-JAW = -35
-bx, by = orbit_point(EX, EY, ERX, ERY, ETILT, BALL_T)
-HX = bx - 7 * math.cos(math.radians(JAW))
-HY = by - 7 * math.sin(math.radians(JAW))
+HX, HY = -4, 14
+HEAD = 27
+MOUTH = 12.5
+BALL = 11.5
+bx, by = HX, HY - 11
+# The ellipse: large, tilted, its centre off the face below and to the
+# right, placed so that its upper arc runs through the ball.
+ERX, ERY, ETILT, EDGE_T = 170, 62, -14, -104
+lx, ly = ERX * math.cos(math.radians(EDGE_T)), ERY * math.sin(math.radians(EDGE_T))
+ox, oy = turned(lx, ly, ETILT)
+EX, EY = bx - ox, by - oy
 
-
-def spanner(x, y):
-    a, b = turned(x, y, JAW)
-    return HX + a, HY + b
-
-
-outline = [spanner(17 * math.cos(math.radians(i)), 17 * math.sin(math.radians(i))) for i in range(0, 360, 2)]
 tool = Image.new("L", (N, N), 0)
 d = ImageDraw.Draw(tool)
+outline = [(HX + HEAD * math.cos(math.radians(i)), HY + HEAD * math.sin(math.radians(i))) for i in range(0, 360, 2)]
 d.polygon([px(a, b) for a, b in wander(outline, 9, 0.6)], fill=255)
-d.polygon([px(*spanner(x, y)) for x, y in [(-6, -5.6), (-140, -6.6), (-140, 6.6), (-6, 5.6)]], fill=255)
+d.polygon([px(a, b) for a, b in [(HX - 10.5, HY), (HX - 12, 120), (HX + 12, 120), (HX + 10.5, HY)]], fill=255)
 slot = Image.new("L", (N, N), 0)
 ds = ImageDraw.Draw(slot)
-ds.polygon([px(*spanner(x, y)) for x, y in [(2, -8.4), (40, -8.4), (40, 8.4), (2, 8.4)]], fill=255)
-tx, ty = px(*spanner(2, 0))
-ds.ellipse((tx - 8.4 * U, ty - 8.4 * U, tx + 8.4 * U, ty + 8.4 * U), fill=255)
+ds.polygon([px(a, b) for a, b in [(HX - MOUTH, HY - 12), (HX - MOUTH - 3, HY - 60),
+                                  (HX + MOUTH + 3, HY - 60), (HX + MOUTH, HY - 12)]], fill=255)
+tx, ty = px(HX, HY - 10)
+ds.ellipse((tx - MOUTH * U, ty - MOUTH * U, tx + MOUTH * U, ty + MOUTH * U), fill=255)
 tool = ImageChops.subtract(tool, slot).filter(ImageFilter.GaussianBlur(0.35 * U))
 
 front = Image.new("RGBA", (N, N), (0, 0, 0, 0))
-front = inked(front, stroke(EX, EY, ERX, ERY, ETILT, 200, 334, 2.6, 8), INK, rim=0.9)
+arc = stroke(EX, EY, ERX, ERY, ETILT, EDGE_T - 40, 80, 4.2, 8)
+front = inked(front, arc, INK, rim=0.9)
 front = inked(front, tool, INK)
-near = stroke(EX, EY, ERX, ERY, ETILT, 20, 150, 1.6, 8)
-front = Image.alpha_composite(front, solid(ImageChops.multiply(near, tool), GREY + (255,)))
-ball = point(bx, by, 7.2, 77)
+ball = point(bx, by, BALL, 77)
 front = inked(front, ball, (178, 128, 40))
 flakes = Image.new("L", (N, N), 0)
 dfl = ImageDraw.Draw(flakes)
-for _ in range(10):
-    a, t = rng.uniform(0, 2 * math.pi), math.sqrt(rng.uniform(0, 1)) * 6.5
+for _ in range(14):
+    a, t = rng.uniform(0, 2 * math.pi), math.sqrt(rng.uniform(0, 1)) * BALL * 0.9
     fx, fy = px(bx + math.cos(a) * t, by + math.sin(a) * t)
-    q = rng.uniform(0.2, 0.4) * U
+    q = rng.uniform(0.2, 0.45) * U
     dfl.ellipse((fx - q, fy - q, fx + q, fy + q), fill=int(rng.uniform(60, 140)))
 front = Image.alpha_composite(front, solid(ImageChops.multiply(flakes, ball), (240, 208, 130, 255)))
 back = paper(23, GREY)
@@ -241,4 +239,4 @@ back.save(RES + "door_back.jpg", quality=88, optimize=True)
 save(front, "door_fg.png")
 preview(back, front, "settings.png")
 print("points", [(round(x, 1), round(y, 1)) for x, y in LAUNCHER_POINTS])
-print("ball", round(bx, 2), round(by, 2), "head", round(HX, 2), round(HY, 2))
+print("ellipse centre", round(EX, 2), round(EY, 2), "ball", bx, by)
