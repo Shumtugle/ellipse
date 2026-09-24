@@ -139,6 +139,11 @@ public final class Home extends Activity {
     private static final int KEY_RESIZE = 4;
     private static final int KEY_RENAME = 5;
     private static final int KEY_SHORTCUT = 100;
+    private static final int KEY_FACE = 7;
+    private static final String FACE_LINE = "Change icon";
+    /** What the whole screen of choices is choosing now: a shortcut's maker, or one icon's face. */
+    private boolean choosingFace;
+    private String faceToken;
     private static final String APP_INFO = "App info";
     private static final String UNINSTALL = "Uninstall";
     private static final String REMOVE = "Remove";
@@ -658,7 +663,11 @@ public final class Home extends Activity {
         chooser = new Chooser(this, iconSize, new Chooser.Hand() {
             public void chosen(int key) {
                 chooser.close(true);
-                make(key);
+                if (choosingFace) {
+                    face(key);
+                } else {
+                    make(key);
+                }
             }
 
             public void settings() {
@@ -1043,7 +1052,8 @@ public final class Home extends Activity {
     /** The door to this home screen's own settings. */
     /** The door to this home screen's settings: not its own icon, but a face of their own. */
     private Cell ownCell(boolean named) {
-        Cell own = new Cell(this, Shape.face(getDrawable(R.mipmap.door)), OWN, iconSize,
+        int[] mine = Style.faceOf(Keep.OWN_THING);
+        Cell own = new Cell(this, Shape.face(getDrawable(R.mipmap.door), mine[0], mine[1]), OWN, iconSize,
             named && Style.namesOnScreens);
         own.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -2151,6 +2161,11 @@ public final class Home extends Activity {
         List<String> lines = new ArrayList<>();
         List<Integer> keys = new ArrayList<>();
         List<Integer> glyphs = new ArrayList<>();
+        if (door != null || token.startsWith(Keep.SHORTCUT_THING) || Keep.OWN_THING.equals(token)) {
+            lines.add(FACE_LINE);
+            keys.add(KEY_FACE);
+            glyphs.add(Glyph.ICONS);
+        }
         if (door != null && !systemApp(door)) {
             lines.add(UNINSTALL);
             keys.add(KEY_UNINSTALL);
@@ -2340,6 +2355,8 @@ public final class Home extends Activity {
                 reshapeAt(offerToken, offerWhence[0], offerWhence[1], offerWhence[2]);
             } else if (key == KEY_RENAME) {
                 rename(folderId(offerToken));
+            } else if (key == KEY_FACE) {
+                chooseFace(offerToken, offerDoor);
 
             }
         } catch (RuntimeException refused) {
@@ -2429,7 +2446,9 @@ public final class Home extends Activity {
         }
         android.graphics.drawable.Drawable icon = null;
         try {
-            icon = Shape.face(launcher.getShortcutIconDrawable(info, getResources().getDisplayMetrics().densityDpi));
+            int[] mine = Style.faceOf(token);
+            icon = Shape.face(launcher.getShortcutIconDrawable(info, getResources().getDisplayMetrics().densityDpi),
+                mine[0], mine[1]);
         } catch (RuntimeException none) {
             icon = null;
         }
@@ -2546,6 +2565,7 @@ public final class Home extends Activity {
             all.add(new Chooser.Item(makers.get(i).getIcon(dpi), makers.get(i).getLabel(), i));
         }
         groups.add(all);
+        choosingFace = false;
         chooser.show(new String[] {null}, groups, Keep.number(this, Keep.MAKERS_VIEW, Keep.LINES) == Keep.PAGES);
     }
 
@@ -2564,6 +2584,81 @@ public final class Home extends Activity {
         } catch (Exception refused) {
             refuse(screens);
         }
+    }
+
+    // ---------------------------------------------------------- one icon's face
+
+    /** An icon as its app or its maker gives it, before any outline or colour. */
+    private android.graphics.drawable.Drawable rawIcon(String token, Apps.Door door) {
+        if (door != null) {
+            return door.plain();
+        }
+        if (Keep.OWN_THING.equals(token)) {
+            return getDrawable(R.mipmap.door);
+        }
+        if (token.startsWith(Keep.SHORTCUT_THING)) {
+            android.content.pm.ShortcutInfo info = pinnedInfo(token);
+            if (info != null) {
+                try {
+                    return launcher.getShortcutIconDrawable(info, getResources().getDisplayMetrics().densityDpi);
+                } catch (RuntimeException none) {
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * One icon's own face, chosen on the whole screen of choices: the icon
+     * itself drawn in every outline, and then in its own colours or in the
+     * accent; "as all the others" hands it back to what every icon wears.
+     */
+    private void chooseFace(String token, Apps.Door door) {
+        android.graphics.drawable.Drawable raw = rawIcon(token, door);
+        if (raw == null) {
+            refuse(screens);
+            return;
+        }
+        int[] mine = Style.faceOf(token);
+        List<List<Chooser.Item>> groups = new ArrayList<>();
+        List<Chooser.Item> shapes = new ArrayList<>();
+        shapes.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1]), AS_OTHERS, 999));
+        for (int s = 0; s < Shape.COUNT; s++) {
+            shapes.add(new Chooser.Item(Shape.face(rawIcon(token, door), s, mine[1]), Shape.NAMES[s], 1000 + s));
+        }
+        groups.add(shapes);
+        List<Chooser.Item> colours = new ArrayList<>();
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], -1), AS_OTHERS, 1999));
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.OWN), THEIR_OWN, 2000));
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.ALL), IN_ACCENT, 2001));
+        groups.add(colours);
+        choosingFace = true;
+        faceToken = token;
+        chooser.show(new String[] {"Shape", "Colour"}, groups, true);
+    }
+
+    private static final String AS_OTHERS = "As all the others";
+    private static final String THEIR_OWN = "Its own colours";
+    private static final String IN_ACCENT = "In the accent";
+
+    /** The face chosen for the one icon is kept, and the screens set out again. */
+    private void face(int key) {
+        if (faceToken == null) {
+            return;
+        }
+        int[] mine = Style.faceOf(faceToken);
+        int shape = mine[0];
+        int tint = mine[1];
+        if (key >= 999 && key < 1999) {
+            shape = key - 1000;
+        } else if (key >= 1999) {
+            tint = key - 2000;
+        }
+        Keep.saveFace(this, faceToken, shape, tint);
+        Style.read(this);
+        stamp = Keep.stamp(this);
+        fill();
     }
 
     // --------------------------------------------------- folders of one's own

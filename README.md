@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.29.3
+  sh build.sh ellipse-1.30.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -143,7 +143,10 @@ one of the phone's own families. The window at the head follows each
 slider while it moves. Icons can keep their own colours, or be laid in the
 accent: an app's own one-colour picture where it drew one, on a deep
 ground of the same hue — or, for every icon, one made from its picture;
-on the paper tile the ink is the accent darkened, on white. Icons
+on the paper tile the ink is the accent darkened, on white. A photograph,
+a face, keeps its own colours. Any one icon can be given its own outline
+and colour from its menu (Change icon): a whole screen shows that icon in
+every outline and in each colour, and "as all the others" hands it back. Icons
 that come in layers are laid out as the platform lays them and cut by the
 outline; each outline is drawn a little smaller the more of its square it
 fills, so a grid weighs the same whatever the outline. A window at the

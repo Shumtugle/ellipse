@@ -28,6 +28,14 @@ final class Style {
     static final int OWN = 0;
     static final int ALL = 1;
     static final int ABLE = 2;
+    /** Icons given an outline or a colour of their own, by the word they are kept by. */
+    private static java.util.Map<String, int[]> faces = new java.util.HashMap<>();
+
+    /** The outline and colour one icon was given, or less than nought for each. */
+    static int[] faceOf(String token) {
+        int[] own = token == null ? null : faces.get(token);
+        return own == null ? new int[] {-1, -1} : own;
+    }
     private static Typeface face = Typeface.create(FAMILIES[0], Typeface.NORMAL);
     private static Typeface bold = Typeface.create(FAMILIES[0], Typeface.BOLD);
 
@@ -42,6 +50,7 @@ final class Style {
         nameScale = Keep.number(context, Keep.NAME_SIZE, 100) / 100f;
         font(Keep.number(context, Keep.FONT, 0));
         tint = Keep.number(context, Keep.ICON_TINT, OWN);
+        faces = Keep.faces(context);
     }
 
     /** Sets the family every word is set in. */

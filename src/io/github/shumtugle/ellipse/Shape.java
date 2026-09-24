@@ -44,6 +44,8 @@ final class Shape {
      */
     static final int PAPER = 8;
     static final int COUNT = 9;
+    static final String[] NAMES = {"The phone's own", "Circle", "Squircle", "Rounded square",
+        "Drop, lower right", "Drop, lower left", "Drop, upper left", "Drop, upper right", "Paper tile"};
 
     /** How much wider than tall the paper tile stands. */
     static final float PAPER_WIDE = 1.29f;
@@ -130,18 +132,25 @@ final class Shape {
 
     /** An icon as it is to be drawn: cut to the outline when it comes in layers. */
     static Drawable face(Drawable icon) {
-        if (icon != null && Style.tint != Style.OWN) {
-            icon = inked(icon);
+        return face(icon, -1, -1);
+    }
+
+    /**
+     * An icon in a given outline and colour, where one icon was given its
+     * own; less than nought for either keeps what every icon wears. The
+     * paper takes every icon, flat ones too: they lie on it as the old masks
+     * laid them, at seven tenths of its height.
+     */
+    static Drawable face(Drawable icon, int shape, int tint) {
+        int outline = shape >= 0 ? shape : current;
+        int colour = tint >= 0 ? tint : Style.tint;
+        if (icon != null && colour != Style.OWN) {
+            icon = inked(icon, outline, colour);
         }
-        if (icon == null || current == SYSTEM) {
+        if (icon == null || outline == SYSTEM) {
             return icon;
         }
-        if (current == PAPER) {
-            /* The paper takes every icon, flat ones too: they lie on it as
-               the old masks laid them, at seven tenths of its height. */
-            return new Cut(icon, current);
-        }
-        return new Cut(icon, current);
+        return new Cut(icon, outline);
     }
 
     /**
@@ -154,8 +163,8 @@ final class Shape {
      * is flat. On the paper the ink is the accent darkened, as ink on paper
      * is. The phone's own outline cuts the result as it cuts any icon.
      */
-    static Drawable inked(Drawable icon) {
-        boolean paper = current == PAPER;
+    static Drawable inked(Drawable icon, int outline, int colour) {
+        boolean paper = outline == PAPER;
         int ink = paper ? deep(Tone.primary()) : Tone.primary();
         int ground = paper ? PAPER_INK : Tone.primaryContainer();
         Drawable mark = null;
@@ -167,10 +176,16 @@ final class Shape {
             }
         }
         if (mark == null) {
-            if (Style.tint != Style.ALL) {
+            if (colour != Style.ALL) {
                 return icon;
             }
             mark = stencil(icon, ink);
+            if (mark == null) {
+                /* A photograph, a face: nothing in it stands apart from a
+                   ground, and a stencil of it would be a blank. It keeps its
+                   own colours. */
+                return icon;
+            }
         }
         return new AdaptiveIconDrawable(new android.graphics.drawable.ColorDrawable(ground), mark);
     }
@@ -249,6 +264,16 @@ final class Shape {
                 a = Math.round(a * Math.min(1f, far));
             }
             px[i] = (a << 24) | inkRgb;
+        }
+        /* Ink over nearly the whole square is no picture but a blank. */
+        long covered = 0;
+        for (int c : px) {
+            covered += c >>> 24;
+        }
+        int flatSide = Math.round(n * 72f / 108f * 0.8f);
+        long area = flat ? (long) flatSide * flatSide : (long) px.length;
+        if (covered > 255L * area * 0.62f) {
+            return null;
         }
         out.setPixels(px, 0, n, 0, 0, n, n);
         return new android.graphics.drawable.BitmapDrawable((android.content.res.Resources) null, out);

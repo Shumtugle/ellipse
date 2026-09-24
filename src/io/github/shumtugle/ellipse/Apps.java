@@ -57,7 +57,9 @@ final class Apps {
         /** Drawn once, when first asked for: a long list is not painted all at once. A work app wears its badge. */
         Drawable icon() {
             if (icon == null) {
-                icon = serial == 0 ? Shape.face(info.getIcon(density)) : info.getBadgedIcon(density);
+                int[] own = Style.faceOf(token());
+                icon = serial == 0 ? Shape.face(info.getIcon(density), own[0], own[1])
+                    : info.getBadgedIcon(density);
             }
             return icon;
         }

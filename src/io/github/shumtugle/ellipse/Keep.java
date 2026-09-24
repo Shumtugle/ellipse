@@ -217,6 +217,42 @@ final class Keep {
     /** Icons in their own colours, all in the accent, or in the accent only where they can be. */
     static final String ICON_TINT = "icon_tint";
 
+    private static final String FACE = "face.";
+
+    /**
+     * One icon's own outline and colour, kept by the word the thing is kept
+     * by; less than nought for either keeps what every icon wears. Nought
+     * for both forgets it.
+     */
+    static void saveFace(Context context, String token, int shape, int tint) {
+        SharedPreferences.Editor edit = store(context).edit();
+        if (shape < 0 && tint < 0) {
+            edit.remove(FACE + token);
+        } else {
+            edit.putString(FACE + token, shape + "," + tint);
+        }
+        edit.apply();
+        touch(context);
+    }
+
+    /** Every icon given its own outline or colour: word, outline, colour. */
+    static java.util.Map<String, int[]> faces(Context context) {
+        java.util.Map<String, int[]> all = new java.util.HashMap<>();
+        for (java.util.Map.Entry<String, ?> each : store(context).getAll().entrySet()) {
+            if (!each.getKey().startsWith(FACE) || !(each.getValue() instanceof String)) {
+                continue;
+            }
+            String[] part = ((String) each.getValue()).split(",");
+            try {
+                all.put(each.getKey().substring(FACE.length()),
+                    new int[] {Integer.parseInt(part[0]), Integer.parseInt(part[1])});
+            } catch (RuntimeException broken) {
+                // Forgotten.
+            }
+        }
+        return all;
+    }
+
     /** The outline every icon is cut to; the phone's own at first. */
     static int shape(Context context) {
         return store(context).getInt("icon_shape", Shape.SYSTEM);
