@@ -235,6 +235,8 @@ final class Keep {
     static final String CLOCK_EDGE = "clock_edge";
     /** How dark the outline clock's ground is, in percent: nought is clear. */
     static final String CLOCK_GROUND = "clock_ground";
+    /** Which of the widget clock's own seconds hands is drawn. */
+    static final String MENO_SECOND = "meno_second";
     /** The window cut in the icons' plate, and the tile's width to its height in percent. */
     static final String WINDOW = "icon_window";
     static final String TILE_ASPECT = "tile_aspect";

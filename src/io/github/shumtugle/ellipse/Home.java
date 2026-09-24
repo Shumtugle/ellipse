@@ -1080,12 +1080,12 @@ public final class Home extends Activity {
     /** The first clock, left as it was, or another the settings chose. */
     static final int FACE_FIRST = 0;
     static final int FACE_PLATE = 1;
-    static final int FACE_CONTOUR = 2;
-    static final String[] FACE_NAMES = {"First", "Plate", "Outline"};
+    static final int FACE_MENO = 2;
+    static final String[] FACE_NAMES = {"First", "Plate", "Meno"};
 
     static View timepiece(Context context, Almanac.Hand hand) {
-        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_CONTOUR) {
-            return new Contour(context, hand);
+        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_MENO) {
+            return new Meno(context, hand);
         }
         if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_PLATE) {
             return new Watch(context, Keep.number(context, Keep.CLOCK_PLATE, Rim.STEEL),

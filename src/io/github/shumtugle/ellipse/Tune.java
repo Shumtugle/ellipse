@@ -1002,19 +1002,17 @@ public final class Tune extends Activity {
         caption("FACE");
         int face = Keep.number(this, Keep.CLOCK_FACE, Home.FACE_FIRST);
         rows.addView(swatches(Keep.CLOCK_FACE, face,
-            new int[] {Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_CONTOUR}, Home.FACE_NAMES,
+            new int[] {Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO}, Home.FACE_NAMES,
             new Painter() {
                 public void paint(android.graphics.Canvas c, float w, float h, int value) {
                     paintFace(c, w, h, value);
                 }
             }));
-        if (face == Home.FACE_CONTOUR) {
+        if (face == Home.FACE_MENO) {
             caption("GROUND");
             groundSlider();
-            for (int part = 0; part < Contour.PARTS.length; part++) {
-                caption(Contour.PART_NAMES[part].toUpperCase(java.util.Locale.ROOT));
-                rows.addView(colours(part));
-            }
+            caption("SECOND HAND");
+            rows.addView(seconds());
         }
         if (face == Home.FACE_PLATE) {
             caption("PLATE");
@@ -1094,12 +1092,12 @@ public final class Tune extends Activity {
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         final TextView value = new TextView(this);
-        value.setText(Keep.number(this, Keep.CLOCK_GROUND, 0) + "%");
+        value.setText(Keep.number(this, Keep.CLOCK_GROUND, 10) + "%");
         value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         value.setTextColor(Tone.primary());
         top.addView(value);
         made.addView(top);
-        made.addView(new Slide(this, 0, 95, Keep.number(this, Keep.CLOCK_GROUND, 0), new Slide.Moved() {
+        made.addView(new Slide(this, 0, 95, Keep.number(this, Keep.CLOCK_GROUND, 10), new Slide.Moved() {
             public void moved(int at, boolean done) {
                 value.setText(at + "%");
                 Keep.saveNumber(Tune.this, Keep.CLOCK_GROUND, at);
@@ -1109,50 +1107,23 @@ public final class Tune extends Activity {
         rows.addView(made);
     }
 
-    /** The colours one part of the outline clock may take, as small round samples. */
-    private static final int[] PALETTE = {0xFFEFE7D6, 0xFFFFFFFF, 0xFFD9CCB4, 0xFFA0937E, 0xFF9AA3B5, 0xFF7AA7F0,
-        0xFF8FC7A0, 0xFFE3C16F, 0xFFF2A96B, 0xFFB0404A, 0xFFC3A2D6, 0xFF6E6A63};
-
-    private View colours(final int part) {
+    /** The widget clock's own seconds hands, as round samples of their colours. */
+    private View seconds() {
         android.widget.HorizontalScrollView across = new android.widget.HorizontalScrollView(this);
         across.setHorizontalScrollBarEnabled(false);
         across.setOverScrollMode(View.OVER_SCROLL_NEVER);
         LinearLayout line = new LinearLayout(this);
         line.setPadding(dp(18), 0, dp(18), dp(6));
-        final String key = "contour_" + Contour.PARTS[part];
-        final int[] chosen = {Keep.number(this, key, Contour.PART_DEFAULTS[part])};
-        java.util.List<Integer> values = new java.util.ArrayList<>();
-        values.add(Contour.ACCENT);
-        if (part == 4) {
-            values.add(Contour.OWN_RINGS);
-        }
-        for (int c : PALETTE) {
-            values.add(c);
-        }
+        final int[] chosen = {Keep.number(this, Keep.MENO_SECOND, 0)};
         final List<View> dots = new ArrayList<>();
-        for (final int value : values) {
+        for (int i = 0; i < Meno.SECONDS.length; i++) {
+            final int value = i;
             View dot = new View(this) {
                 @Override
                 protected void onDraw(android.graphics.Canvas canvas) {
                     android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-                    float r = getWidth() / 2f - dp(5);
-                    if (value == Contour.OWN_RINGS) {
-                        int[] own = {0xFFC3A2D6, 0xFF8FC7A0, 0xFF7AA7F0};
-                        for (int i = 0; i < 3; i++) {
-                            p.setColor(own[i]);
-                            canvas.drawArc(new android.graphics.RectF(getWidth() / 2f - r, getHeight() / 2f - r,
-                                getWidth() / 2f + r, getHeight() / 2f + r), -90f + 120f * i, 120f, true, p);
-                        }
-                    } else {
-                        p.setColor(value == Contour.ACCENT ? Tone.primary() : value);
-                        canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, r, p);
-                    }
-                    if (value == Contour.ACCENT) {
-                        p.setColor(Tone.onAccent());
-                        p.setTextAlign(android.graphics.Paint.Align.CENTER);
-                        p.setTextSize(r * 0.9f);
-                        canvas.drawText("A", getWidth() / 2f, getHeight() / 2f + r * 0.32f, p);
-                    }
+                    p.setColor(Meno.SECONDS[value]);
+                    canvas.drawCircle(getWidth() / 2f, getHeight() / 2f, getWidth() / 2f - dp(5), p);
                     if (chosen[0] == value) {
                         p.setStyle(android.graphics.Paint.Style.STROKE);
                         p.setStrokeWidth(dp(2.5f));
@@ -1165,7 +1136,7 @@ public final class Tune extends Activity {
             dot.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     chosen[0] = value;
-                    Keep.saveNumber(Tune.this, key, value);
+                    Keep.saveNumber(Tune.this, Keep.MENO_SECOND, value);
                     v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
                     for (View d : dots) {
                         d.invalidate();
@@ -1229,7 +1200,7 @@ public final class Tune extends Activity {
     private void paintFace(android.graphics.Canvas c, float w, float h, int value) {
         android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         float r = h * 0.28f;
-        if (value == Home.FACE_CONTOUR) {
+        if (value == Home.FACE_MENO) {
             p.setStyle(android.graphics.Paint.Style.STROKE);
             p.setStrokeWidth(Math.max(1f, h * 0.02f));
             p.setColor(Tone.onSurface());

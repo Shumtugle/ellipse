@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.44.1
+  sh build.sh ellipse-1.45.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -196,14 +196,12 @@ window, and small windows for the weather, the headphones while they are
 near, and the phone's charge. The dial and the windows may be dark, or of
 any of the materials; on a light one the words and hands turn dark.
 
-The outline clock draws nothing filled, only fine lines over the wallpaper,
-and keeps its form at any size: low, the hour and date in a long window
-with the weather and the charge under it; tall, the dial fills the height,
-the weather stands with the place it is for, and under it rings for the
-next alarm, the headphones while they are near, and the charge, each ring
-filled as far as its measure goes. Its parts — lines, hour marks, hands,
-second hand, rings, words — each take a colour of the owner's choosing,
-and its ground may be darkened evenly from clear to nearly black.
+The owner's own widget clock is drawn here as it draws itself, from its own
+pictures and to its own measures: a card of dark glass with a fine light
+edge, the dial and its hands, the hour and date in a card of their own, a
+pill with the weather, a circle with the charge, and a circle for the
+headphones while they are near. Its glass may be darkened evenly from clear
+to nearly black, and its seconds hand takes any of its own colours.
 
 Any clock may stand in one or two rows, and may run past the grid's
 margins to the screen's edges.
