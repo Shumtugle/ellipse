@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.39.0
+  sh build.sh ellipse-1.40.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -182,3 +182,13 @@ that come in layers are laid out as the platform lays them and cut by the
 outline; each outline is drawn a little smaller the more of its square it
 fills, so a grid weighs the same whatever the outline. A window at the
 head of the room shows the owner's own icons in the outline chosen.
+
+## Clock faces
+
+The home screen's first clock stays as it was. Look → Clock face offers the
+others beside it, each drawn by its own class, so the first is always one
+touch away. The plate is a slab of a material — steel, wood, the accent, a
+stamped dial, glass and the rest — with dark windows sunk in it: a round
+dial behind a metal bezel, dark or stamped, the hour and date in a long
+window, and small windows for the weather, the headphones while they are
+near, and the phone's charge.

@@ -41,6 +41,7 @@ final class Glyph extends View {
     static final int SETTINGS = 18;
     static final int BACK = 19;
     static final int ICONS = 20;
+    static final int CLOCK = 21;
 
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -68,7 +69,7 @@ final class Glyph extends View {
     /** The symbol each drawing is, by its name among the interface's symbols; none for the home screen's own. */
     private static final String[] SYMBOLS = {"search", "settings", "brush", "more_horiz", "restart_alt", "history",
         "home", "apps", "palette", "swipe", "backup", "language", "expand_more", "close", "info", "delete",
-        "open_in_full", "edit", null, "arrow_back", "category"};
+        "open_in_full", "edit", null, "arrow_back", "category", "schedule"};
     private android.graphics.drawable.Drawable drawn;
     private int drawnKind = -1;
 

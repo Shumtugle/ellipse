@@ -107,6 +107,7 @@ public final class Tune extends Activity {
     private static final int OTHER = 7;
     private static final int HIDDEN = 8;
     private static final int ICONS = 9;
+    private static final int CLOCK = 10;
 
     private static final int RESTART = 1;
     private static final int RESET = 2;
@@ -174,6 +175,7 @@ public final class Tune extends Activity {
                     deed(Glyph.DESK, "The weather's place", "Where the clock's weather is for", PLACE),
                     toggle("Clock", "The home screen's own clock across the top of the home screen",
                         Keep.CLOCK, true),
+                    door(Glyph.CLOCK, "Clock face", "The first clock, or another", CLOCK),
                     toggle("Weather on the clock", "The warmth and the sky where the phone is",
                         Keep.WEATHER, true),
                     toggle("Headphones on the clock", "Their charge, while they are near and tell it",
@@ -227,7 +229,7 @@ public final class Tune extends Activity {
                 return line.title;
             }
         }
-        return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : "";
+        return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face" : "";
     }
 
     private float density;
@@ -433,13 +435,17 @@ public final class Tune extends Activity {
 
     private void fillRoom() {
         rows.removeAllViews();
-        window.setVisibility(room() == ICONS ? View.VISIBLE : View.GONE);
+        window.setVisibility(room() == ICONS || room() == CLOCK ? View.VISIBLE : View.GONE);
         if (room() == HIDDEN) {
             fillHidden();
             return;
         }
         if (room() == ICONS) {
             fillIcons();
+            return;
+        }
+        if (room() == CLOCK) {
+            fillClock();
             return;
         }
         List<Line> lines = new ArrayList<>();
@@ -979,6 +985,96 @@ public final class Tune extends Activity {
         return chip;
     }
 
+    // ------------------------------------------------------------- the clock
+
+    /**
+     * The clock's room: the clock itself in the window at its head, as the
+     * home screen will carry it, and under it the faces to choose from —
+     * the first, left as it was, and the others — and for a plate, what it
+     * is made of and what its dial is.
+     */
+    private void fillClock() {
+        showClock();
+        caption("FACE");
+        int face = Keep.number(this, Keep.CLOCK_FACE, Home.FACE_FIRST);
+        rows.addView(swatches(Keep.CLOCK_FACE, face, new int[] {Home.FACE_FIRST, Home.FACE_PLATE}, Home.FACE_NAMES,
+            new Painter() {
+                public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                    paintFace(c, w, h, value);
+                }
+            }));
+        if (face == Home.FACE_PLATE) {
+            caption("PLATE");
+            int[] kinds = new int[Rim.NAMES.length];
+            for (int i = 0; i < kinds.length; i++) {
+                kinds[i] = i;
+            }
+            rows.addView(swatches(Keep.CLOCK_PLATE, Keep.number(this, Keep.CLOCK_PLATE, Rim.STEEL), kinds, Rim.NAMES,
+                new Painter() {
+                    public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                        paintMaterial(c, w, h, value);
+                    }
+                }));
+            caption("DIAL");
+            rows.addView(swatches(Keep.CLOCK_DIAL, Keep.number(this, Keep.CLOCK_DIAL, Watch.DIAL_DARK),
+                new int[] {Watch.DIAL_DARK, Watch.DIAL_STAMPED}, Watch.DIAL_NAMES, new Painter() {
+                    public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                        float r = Math.min(w, h) / 2f;
+                        if (value == Watch.DIAL_STAMPED) {
+                            Rim.material(p, Rim.STAMPED, w, h);
+                        } else {
+                            p.setColor(0xFF1A1817);
+                        }
+                        c.drawCircle(w / 2f, h / 2f, r, p);
+                        android.graphics.Paint bar = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                        bar.setColor(0xFFEFE7D6);
+                        bar.setStrokeWidth(r * 0.08f);
+                        bar.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                        c.drawLine(w / 2f, h / 2f, w / 2f, h / 2f - r * 0.6f, bar);
+                        c.drawLine(w / 2f, h / 2f, w / 2f + r * 0.4f, h / 2f + r * 0.2f, bar);
+                    }
+                }));
+        }
+    }
+
+    /** The clock the settings describe, standing in the window at the head of the room. */
+    private void showClock() {
+        window.removeAllViews();
+        View clock = Home.timepiece(this, new Almanac.Hand() {
+            public void pressed(String which, View from, android.graphics.RectF box) {
+            }
+        });
+        ((Timepiece) clock).weather(Keep.flag(this, Keep.WEATHER, true));
+        window.addView(clock, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(132)));
+    }
+
+    /** A clock face in small: the first as its round dial and its windows; the plate as a slab with dark windows. */
+    private void paintFace(android.graphics.Canvas c, float w, float h, int value) {
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        float r = h * 0.28f;
+        if (value == Home.FACE_PLATE) {
+            android.graphics.Path slab = Shape.outline(Shape.ROUNDED, w, h * 0.7f);
+            c.save();
+            c.translate(0f, h * 0.15f);
+            Rim.plate(c, slab, Keep.number(this, Keep.CLOCK_PLATE, Rim.STEEL), w, h * 0.7f);
+            p.setColor(0xFF1A1817);
+            c.drawCircle(w * 0.28f, h * 0.35f, r, p);
+            c.drawRoundRect(new android.graphics.RectF(w * 0.56f, h * 0.1f, w * 0.94f, h * 0.36f), h * 0.1f, h * 0.1f, p);
+            c.drawRoundRect(new android.graphics.RectF(w * 0.56f, h * 0.42f, w * 0.94f, h * 0.6f), h * 0.08f, h * 0.08f, p);
+            c.restore();
+        } else {
+            p.setColor(Tone.containerHigh());
+            c.drawCircle(w * 0.28f, h * 0.5f, r, p);
+            c.drawRoundRect(new android.graphics.RectF(w * 0.56f, h * 0.25f, w * 0.94f, h * 0.5f), h * 0.1f, h * 0.1f, p);
+            c.drawRoundRect(new android.graphics.RectF(w * 0.56f, h * 0.56f, w * 0.94f, h * 0.75f), h * 0.08f, h * 0.08f, p);
+            p.setColor(Tone.primary());
+            p.setStrokeWidth(h * 0.03f);
+            p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            c.drawLine(w * 0.28f, h * 0.5f, w * 0.28f, h * 0.5f - r * 0.7f, p);
+        }
+    }
+
     // ------------------------------------------------------------- swatches
 
     /** Draws one choice as what it looks like, in a box of the given size. */
@@ -1054,7 +1150,13 @@ public final class Tune extends Activity {
                     for (View f : faces) {
                         f.invalidate();
                     }
-                    if (sample != null) {
+                    if (room() == CLOCK) {
+                        if (Keep.CLOCK_FACE.equals(key)) {
+                            fill();
+                        } else {
+                            showClock();
+                        }
+                    } else if (sample != null) {
                         sample.show();
                     }
                     /* Glass has sliders of its own: they come and go with it. */

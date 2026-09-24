@@ -76,11 +76,11 @@ final class Glimpse extends FrameLayout {
         column.setOrientation(LinearLayout.VERTICAL);
         column.setPadding(dp(14), dp(14), dp(14), dp(10));
 
-        Almanac clock = new Almanac(sized, new Almanac.Hand() {
+        View clock = Home.timepiece(sized, new Almanac.Hand() {
             public void pressed(String window, View from, RectF box) {
             }
         });
-        clock.weather(Keep.flag(base, Keep.WEATHER, true));
+        ((Timepiece) clock).weather(Keep.flag(base, Keep.WEATHER, true));
         column.addView(clock, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(96)));
 
         float icon = dp(44);

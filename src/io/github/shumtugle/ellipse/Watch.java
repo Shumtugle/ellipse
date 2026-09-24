@@ -1,0 +1,376 @@
+package io.github.shumtugle.ellipse;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.graphics.Canvas;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RadialGradient;
+import android.graphics.RectF;
+import android.graphics.Shader;
+import android.os.BatteryManager;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.View;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.Locale;
+
+/**
+ * The clock as a plate: a slab of a material — steel, wood, the accent, a
+ * stamped dial, glass — with windows sunk in it, dark as the face of a
+ * good watch. On the left a round dial behind a metal bezel, its hands
+ * light and its hours marked in bars; on the right the hour and the date
+ * in a long window, and under it smaller windows for the weather, the
+ * headphones while they are near, and the phone's charge.
+ *
+ * It stands beside the home screen's first clock, not in its place: the
+ * first clock is left as it was, and this is one of the others to choose.
+ */
+final class Watch extends View implements Timepiece {
+
+    /** What the dial is made of: dark, or stamped in the accent's hue. */
+    static final int DIAL_DARK = 0;
+    static final int DIAL_STAMPED = 1;
+    static final String[] DIAL_NAMES = {"Dark", "Stamped"};
+
+    private static final int INK = 0xFFEFE7D6;
+    private static final int QUIET = 0xFFB9B1A2;
+
+    private final Almanac.Hand hand;
+    private final float density;
+    private final GestureDetector taps;
+    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint words = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF dialBox = new RectF();
+    private final RectF timeBox = new RectF();
+    private final RectF weatherBox = new RectF();
+    private final RectF earsBox = new RectF();
+    private final RectF chargeBox = new RectF();
+    private final int plate;
+    private final int dial;
+    private boolean showWeather = true;
+    private int ears = -1;
+    private int charge = -1;
+    private boolean seen;
+
+    private final Runnable tick = new Runnable() {
+        public void run() {
+            invalidate();
+            if (seen) {
+                long now = System.currentTimeMillis();
+                postDelayed(this, 1000L - now % 1000L);
+            }
+        }
+    };
+
+    private final BroadcastReceiver power = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            read(intent);
+        }
+    };
+
+    Watch(Context context, int plate, int dial, Almanac.Hand hand) {
+        super(context);
+        this.hand = hand;
+        this.plate = plate;
+        this.dial = dial;
+        density = context.getResources().getDisplayMetrics().density;
+        taps = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onDown(MotionEvent e) {
+                return true;
+            }
+
+            @Override
+            public boolean onSingleTapUp(MotionEvent e) {
+                press(e.getX(), e.getY());
+                return true;
+            }
+
+            @Override
+            public void onLongPress(MotionEvent e) {
+                performLongClick();
+            }
+        });
+    }
+
+    private float px(float dp) {
+        return dp * density;
+    }
+
+    public void weather(boolean shown) {
+        showWeather = shown;
+        invalidate();
+    }
+
+    public void ears(int level) {
+        ears = level;
+        invalidate();
+    }
+
+    private void read(Intent state) {
+        if (state == null) {
+            return;
+        }
+        int level = state.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        int scale = state.getIntExtra(BatteryManager.EXTRA_SCALE, 100);
+        charge = level < 0 || scale <= 0 ? -1 : Math.round(100f * level / scale);
+        invalidate();
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        read(getContext().registerReceiver(power, new IntentFilter(Intent.ACTION_BATTERY_CHANGED)));
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        try {
+            getContext().unregisterReceiver(power);
+        } catch (IllegalArgumentException never) {
+            // It was never taken on.
+        }
+        seen = false;
+        removeCallbacks(tick);
+        super.onDetachedFromWindow();
+    }
+
+    @Override
+    protected void onWindowVisibilityChanged(int visibility) {
+        super.onWindowVisibilityChanged(visibility);
+        seen = visibility == VISIBLE;
+        removeCallbacks(tick);
+        if (seen) {
+            post(tick);
+        }
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        return taps.onTouchEvent(event) || super.onTouchEvent(event);
+    }
+
+    private void press(float x, float y) {
+        String which = dialBox.contains(x, y) ? Almanac.DIAL : timeBox.contains(x, y) ? Almanac.TIME
+            : !weatherBox.isEmpty() && weatherBox.contains(x, y) ? Almanac.WEATHER
+            : !earsBox.isEmpty() && earsBox.contains(x, y) ? Almanac.EARS
+            : chargeBox.contains(x, y) ? Almanac.CHARGE : null;
+        if (which == null) {
+            return;
+        }
+        RectF box = Almanac.DIAL.equals(which) ? dialBox : Almanac.TIME.equals(which) ? timeBox
+            : Almanac.WEATHER.equals(which) ? weatherBox : Almanac.EARS.equals(which) ? earsBox : chargeBox;
+        hand.pressed(which, this, box);
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        float w = getWidth();
+        float h = getHeight();
+        float edge = px(4);
+        RectF slab = new RectF(edge, edge, w - edge, h - edge);
+        float round = Math.min(slab.height() * 0.16f, px(28));
+        Path body = new Path();
+        body.addRoundRect(slab, round, round, Path.Direction.CW);
+        canvas.save();
+        canvas.translate(slab.left, slab.top);
+        body.offset(-slab.left, -slab.top);
+        Rim.plate(canvas, body, plate, slab.width(), slab.height());
+        if (plate == Rim.GLASS) {
+            Rim.glaze(canvas, body, 0f, 0f, slab.width(), slab.height());
+        }
+        canvas.restore();
+
+        float pad = slab.height() * 0.08f;
+        float d = slab.height() - 2 * pad;
+        dialBox.set(slab.left + pad, slab.top + pad, slab.left + pad + d, slab.top + pad + d);
+        face(canvas, dialBox);
+
+        float left = dialBox.right + pad * 1.2f;
+        float right = slab.right - pad;
+        float gap = pad * 0.7f;
+        float split = slab.top + pad + (d - gap) * 0.58f;
+        timeBox.set(left, slab.top + pad, right, split);
+        float rowTop = split + gap;
+        float rowBottom = slab.bottom - pad;
+        float rowTall = rowBottom - rowTop;
+        float small = rowTall * 1.9f;
+        chargeBox.set(right - small, rowTop, right, rowBottom);
+        float x = chargeBox.left - gap;
+        if (ears >= 0) {
+            earsBox.set(x - rowTall * 1.6f, rowTop, x, rowBottom);
+            x = earsBox.left - gap;
+        } else {
+            earsBox.setEmpty();
+        }
+        if (showWeather) {
+            weatherBox.set(left, rowTop, x, rowBottom);
+        } else {
+            weatherBox.setEmpty();
+            chargeBox.left = left;
+        }
+
+        sunk(canvas, timeBox);
+        Date now = new Date();
+        String time = new SimpleDateFormat(android.text.format.DateFormat.is24HourFormat(getContext())
+            ? "H:mm" : "h:mm", Locale.getDefault()).format(now);
+        String date = new SimpleDateFormat("EE, d MMMM", Locale.getDefault()).format(now);
+        words.setTypeface(Style.family == 0 ? android.graphics.Typeface.create("sans-serif-light",
+            android.graphics.Typeface.NORMAL) : Style.face());
+        words.setTextAlign(Paint.Align.CENTER);
+        words.setColor(INK);
+        words.setTextSize(fit(time, timeBox.width() * 0.8f, timeBox.height() * 0.55f));
+        canvas.drawText(time, timeBox.centerX(), timeBox.top + timeBox.height() * 0.6f, words);
+        words.setTypeface(Style.face());
+        words.setColor(QUIET);
+        words.setTextSize(fit(date, timeBox.width() * 0.8f, timeBox.height() * 0.2f));
+        canvas.drawText(date, timeBox.centerX(), timeBox.top + timeBox.height() * 0.86f, words);
+
+        if (!weatherBox.isEmpty()) {
+            sunk(canvas, weatherBox);
+            String warmth = Sky.degrees() != Sky.MISSING ? Sky.degrees() + "\u00B0" : "\u2013";
+            pair(canvas, weatherBox, warmth, 0);
+        }
+        if (!earsBox.isEmpty()) {
+            sunk(canvas, earsBox);
+            pair(canvas, earsBox, ears + "%", 1);
+        }
+        sunk(canvas, chargeBox);
+        pair(canvas, chargeBox, charge >= 0 ? charge + "%" : "\u2013", 2);
+    }
+
+    /** A window sunk in the plate: dark, a shadow under its upper edge, a fine light line round it. */
+    private void sunk(Canvas canvas, RectF box) {
+        float r = Math.min(box.height() / 2f, px(26));
+        paint.setShader(new LinearGradient(0, box.top, 0, box.bottom, 0xFF252321, 0xFF131211,
+            Shader.TileMode.CLAMP));
+        paint.setStyle(Paint.Style.FILL);
+        canvas.drawRoundRect(box, r, r, paint);
+        paint.setShader(new LinearGradient(0, box.top, 0, box.top + box.height() * 0.25f, 0x66000000, 0x00000000,
+            Shader.TileMode.CLAMP));
+        canvas.drawRoundRect(box, r, r, paint);
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(Math.max(1f, px(0.8f)));
+        paint.setColor(0x40FFFFFF);
+        canvas.drawRoundRect(box, r, r, paint);
+        paint.setStyle(Paint.Style.FILL);
+    }
+
+    /** The dial: behind a bezel of metal, a dark or stamped face, bars for the hours, light hands. */
+    private void face(Canvas canvas, RectF box) {
+        float cx = box.centerX();
+        float cy = box.centerY();
+        float r = box.width() / 2f;
+        paint.setShader(new LinearGradient(0, box.top, 0, box.bottom, 0xFFE2E2E2, 0xFF6E6E6E,
+            Shader.TileMode.CLAMP));
+        canvas.drawCircle(cx, cy, r, paint);
+        float inner = r * 0.93f;
+        if (dial == DIAL_STAMPED) {
+            canvas.save();
+            canvas.translate(cx - inner, cy - inner);
+            Paint stamped = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+            Rim.material(stamped, Rim.STAMPED, inner * 2f, inner * 2f);
+            canvas.drawCircle(inner, inner, inner, stamped);
+            canvas.restore();
+            paint.setShader(new RadialGradient(cx, cy, inner, 0x00000000, 0x66000000, Shader.TileMode.CLAMP));
+        } else {
+            paint.setShader(new RadialGradient(cx, cy - inner * 0.2f, inner, 0xFF2E2B28, 0xFF0D0C0B,
+                Shader.TileMode.CLAMP));
+        }
+        canvas.drawCircle(cx, cy, inner, paint);
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(Math.max(1f, r * 0.012f));
+        paint.setColor(0x80000000);
+        canvas.drawCircle(cx, cy, inner, paint);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setStrokeCap(Paint.Cap.ROUND);
+        for (int i = 0; i < 12; i++) {
+            double a = Math.PI * 2 * i / 12;
+            boolean major = i % 3 == 0;
+            float from = inner * (major ? 0.70f : 0.76f);
+            float to = inner * 0.88f;
+            paint.setStrokeWidth(inner * (major ? 0.05f : 0.028f));
+            paint.setColor(major ? INK : 0xFF8F887C);
+            canvas.drawLine(cx + (float) Math.sin(a) * from, cy - (float) Math.cos(a) * from,
+                cx + (float) Math.sin(a) * to, cy - (float) Math.cos(a) * to, paint);
+        }
+        Calendar now = Calendar.getInstance();
+        float sec = now.get(Calendar.SECOND);
+        float min = now.get(Calendar.MINUTE) + sec / 60f;
+        float hour = now.get(Calendar.HOUR) + min / 60f;
+        hand(canvas, cx, cy, hour / 12f, inner * 0.5f, inner * 0.07f, INK);
+        hand(canvas, cx, cy, min / 60f, inner * 0.78f, inner * 0.05f, INK);
+        hand(canvas, cx, cy, sec / 60f, inner * 0.85f, inner * 0.015f, 0xFFD8D2C6);
+        paint.setColor(0xFFCFC9BD);
+        canvas.drawCircle(cx, cy, inner * 0.05f, paint);
+    }
+
+    private void hand(Canvas canvas, float cx, float cy, float turn, float length, float width, int colour) {
+        double a = Math.PI * 2 * turn;
+        paint.setStrokeWidth(width);
+        paint.setColor(colour);
+        canvas.drawLine(cx - (float) Math.sin(a) * length * 0.12f, cy + (float) Math.cos(a) * length * 0.12f,
+            cx + (float) Math.sin(a) * length, cy - (float) Math.cos(a) * length, paint);
+    }
+
+    /** A drawing and its words side by side in a small window: the sky, headphones, or the charge. */
+    private void pair(Canvas canvas, RectF box, String text, int what) {
+        float s = Math.min(box.height() * 0.5f, box.width() * 0.32f);
+        words.setTypeface(Style.face());
+        words.setColor(INK);
+        words.setTextAlign(Paint.Align.LEFT);
+        words.setTextSize(fit(text, box.width() * 0.5f, box.height() * 0.4f));
+        float textW = words.measureText(text);
+        float all = s + px(8) + textW;
+        float start = box.centerX() - all / 2f;
+        float mx = start + s / 2f;
+        float my = box.centerY();
+        if (what == 0) {
+            Almanac.skyMark(canvas, Sky.sky(), mx, my, s, INK);
+        } else if (what == 1) {
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            p.setColor(INK);
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(s * 0.09f);
+            canvas.drawArc(new RectF(mx - s * 0.34f, my - s * 0.36f, mx + s * 0.34f, my + s * 0.32f), 180f, 180f,
+                false, p);
+            p.setStyle(Paint.Style.FILL);
+            canvas.drawRoundRect(new RectF(mx - s * 0.4f, my, mx - s * 0.2f, my + s * 0.34f), s * 0.06f, s * 0.06f, p);
+            canvas.drawRoundRect(new RectF(mx + s * 0.2f, my, mx + s * 0.4f, my + s * 0.34f), s * 0.06f, s * 0.06f, p);
+        } else {
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            p.setColor(INK);
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(s * 0.08f);
+            RectF cell = new RectF(mx - s * 0.2f, my - s * 0.38f, mx + s * 0.2f, my + s * 0.42f);
+            canvas.drawRoundRect(cell, s * 0.06f, s * 0.06f, p);
+            p.setStyle(Paint.Style.FILL);
+            canvas.drawRect(mx - s * 0.08f, my - s * 0.48f, mx + s * 0.08f, my - s * 0.38f, p);
+            float full = charge < 0 ? 0f : charge / 100f;
+            canvas.drawRect(cell.left + s * 0.08f, cell.bottom - s * 0.08f - (cell.height() - s * 0.16f) * full,
+                cell.right - s * 0.08f, cell.bottom - s * 0.08f, p);
+        }
+        Paint.FontMetrics f = words.getFontMetrics();
+        canvas.drawText(text, start + s + px(8), box.centerY() - (f.ascent + f.descent) / 2f, words);
+    }
+
+    private float fit(String text, float width, float height) {
+        float size = height;
+        words.setTextSize(size);
+        float measured = words.measureText(text);
+        if (measured > width && measured > 0f) {
+            size = size * width / measured;
+        }
+        return size;
+    }
+}

@@ -128,7 +128,7 @@ public final class Home extends Activity {
     private final java.util.Map<Integer, android.appwidget.AppWidgetHostView> widgetViews = new java.util.HashMap<>();
     private LauncherApps launcher;
     /** The clock on the screens now, the charge its headphones tell, and whether they are listened to. */
-    private Almanac clockView;
+    private Timepiece clockView;
     private int earsLevel = -1;
     private boolean listening;
     private static final int ASK_WORLD = 31;
@@ -1037,18 +1037,32 @@ public final class Home extends Activity {
         if (!Keep.flag(this, Keep.CLOCK, true) || !page.free(0, row, columns, 1)) {
             return false;
         }
-        Almanac clock = new Almanac(this, new Almanac.Hand() {
+        View clock = timepiece(this, new Almanac.Hand() {
             public void pressed(String window, View from, android.graphics.RectF box) {
                 look(window, from, box);
             }
         });
         page.put(clock, 0, row, columns, 1);
         cells.add(clock);
-        clock.weather(Keep.flag(this, Keep.WEATHER, true));
-        clock.ears(Keep.flag(this, Keep.EARS, true) ? earsLevel : -1);
-        clockView = clock;
+        Timepiece piece = (Timepiece) clock;
+        piece.weather(Keep.flag(this, Keep.WEATHER, true));
+        piece.ears(Keep.flag(this, Keep.EARS, true) ? earsLevel : -1);
+        clockView = piece;
         stand(page, clock, Keep.CLOCK_THING);
         return true;
+    }
+
+    /** The first clock, left as it was, or another the settings chose. */
+    static final int FACE_FIRST = 0;
+    static final int FACE_PLATE = 1;
+    static final String[] FACE_NAMES = {"First", "Plate"};
+
+    static View timepiece(Context context, Almanac.Hand hand) {
+        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_PLATE) {
+            return new Watch(context, Keep.number(context, Keep.CLOCK_PLATE, Rim.STEEL),
+                Keep.number(context, Keep.CLOCK_DIAL, Watch.DIAL_DARK), hand);
+        }
+        return new Almanac(context, hand);
     }
 
     /** The door to this home screen's own settings. */

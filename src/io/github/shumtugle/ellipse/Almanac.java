@@ -33,7 +33,7 @@ import java.util.Locale;
  * from the hour's, beside it and as tall. A long press takes the clock
  * up, to be set down in another row or on another screen.
  */
-final class Almanac extends View {
+final class Almanac extends View implements Timepiece {
 
     interface Hand {
         void pressed(String window, View from, RectF box);
@@ -171,13 +171,13 @@ final class Almanac extends View {
     }
 
     /** Whether to show the weather at all; what it is comes from the sky as last asked. */
-    void weather(boolean shown) {
+    public void weather(boolean shown) {
         showWeather = shown;
         invalidate();
     }
 
     /** The charge of headphones near, or less than nought when none tell one. */
-    void ears(int level) {
+    public void ears(int level) {
         ears = level;
         invalidate();
     }
