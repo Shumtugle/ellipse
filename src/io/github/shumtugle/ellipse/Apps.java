@@ -58,7 +58,8 @@ final class Apps {
         Drawable icon() {
             if (icon == null) {
                 int[] own = Style.faceOf(token());
-                icon = serial == 0 ? Shape.face(info.getIcon(density), own[0], own[1])
+                int drawing = own[2] == 1 ? Marks.of(name.getPackageName()) : Marks.NONE;
+                icon = serial == 0 ? Shape.face(info.getIcon(density), own[0], own[1], drawing)
                     : info.getBadgedIcon(density);
             }
             return icon;
@@ -130,6 +131,7 @@ final class Apps {
         this.context = context;
         manager = context.getPackageManager();
         users = (android.os.UserManager) context.getSystemService(Context.USER_SERVICE);
+        Marks.learn(context, false);
         LauncherApps apps = (LauncherApps) context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
         UserHandle me = Process.myUserHandle();
         /* Every profile of the phone: the owner's own first, then work. */

@@ -224,12 +224,12 @@ final class Keep {
      * by; less than nought for either keeps what every icon wears. Nought
      * for both forgets it.
      */
-    static void saveFace(Context context, String token, int shape, int tint) {
+    static void saveFace(Context context, String token, int shape, int tint, int drawing) {
         SharedPreferences.Editor edit = store(context).edit();
-        if (shape < 0 && tint < 0) {
+        if (shape < 0 && tint < 0 && drawing <= 0) {
             edit.remove(FACE + token);
         } else {
-            edit.putString(FACE + token, shape + "," + tint);
+            edit.putString(FACE + token, shape + "," + tint + "," + drawing);
         }
         edit.apply();
         touch(context);
@@ -244,8 +244,8 @@ final class Keep {
             }
             String[] part = ((String) each.getValue()).split(",");
             try {
-                all.put(each.getKey().substring(FACE.length()),
-                    new int[] {Integer.parseInt(part[0]), Integer.parseInt(part[1])});
+                all.put(each.getKey().substring(FACE.length()), new int[] {Integer.parseInt(part[0]),
+                    Integer.parseInt(part[1]), part.length > 2 ? Integer.parseInt(part[2]) : 0});
             } catch (RuntimeException broken) {
                 // Forgotten.
             }

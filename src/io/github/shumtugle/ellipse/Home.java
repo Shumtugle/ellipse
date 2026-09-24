@@ -186,12 +186,14 @@ public final class Home extends Activity {
 
     private final LauncherApps.Callback watch = new LauncherApps.Callback() {
         public void onPackageRemoved(String name, UserHandle user) {
+            Marks.learn(Home.this, true);
             Keep.purge(Home.this, name, Apps.serialOf(user));
             dropDeadWidgets();
             later();
         }
 
         public void onPackageAdded(String name, UserHandle user) {
+            Marks.learn(Home.this, true);
             if (Keep.flag(Home.this, Keep.AUTO_ADD, false)) {
                 setDown(name, Apps.serialOf(user));
             }
@@ -2633,12 +2635,26 @@ public final class Home extends Activity {
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.OWN), THEIR_OWN, 2000));
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], Style.ALL), IN_ACCENT, 2001));
         groups.add(colours);
+        String[] captions = {"Shape", "Colour"};
+        int drawing = door != null ? Marks.of(door.name.getPackageName()) : Marks.NONE;
+        if (drawing != Marks.NONE) {
+            /* The phone's common apps also have a drawing of the home
+               screen's own, to stand in for a poor picture of their own. */
+            List<Chooser.Item> drawings = new ArrayList<>();
+            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], mine[1]), APPS_OWN, 3000));
+            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), mine[0], mine[1], drawing),
+                HOME_OWN, 3001));
+            groups.add(drawings);
+            captions = new String[] {"Shape", "Colour", "Drawing"};
+        }
         choosingFace = true;
         faceToken = token;
-        chooser.show(new String[] {"Shape", "Colour"}, groups, true);
+        chooser.show(captions, groups, true);
     }
 
     private static final String AS_OTHERS = "As all the others";
+    private static final String APPS_OWN = "The app's own";
+    private static final String HOME_OWN = "The home screen's";
     private static final String THEIR_OWN = "Its own colours";
     private static final String IN_ACCENT = "In the accent";
 
@@ -2650,12 +2666,15 @@ public final class Home extends Activity {
         int[] mine = Style.faceOf(faceToken);
         int shape = mine[0];
         int tint = mine[1];
+        int drawing = mine[2];
         if (key >= 999 && key < 1999) {
             shape = key - 1000;
-        } else if (key >= 1999) {
+        } else if (key >= 1999 && key < 3000) {
             tint = key - 2000;
+        } else if (key >= 3000) {
+            drawing = key - 3000;
         }
-        Keep.saveFace(this, faceToken, shape, tint);
+        Keep.saveFace(this, faceToken, shape, tint, drawing);
         Style.read(this);
         stamp = Keep.stamp(this);
         fill();

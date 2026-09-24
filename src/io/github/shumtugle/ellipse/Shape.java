@@ -142,9 +142,24 @@ final class Shape {
      * laid them, at seven tenths of its height.
      */
     static Drawable face(Drawable icon, int shape, int tint) {
+        return face(icon, shape, tint, Marks.NONE);
+    }
+
+    /**
+     * The same, with one of the home screen's own drawings standing in for
+     * the app's picture: it is laid in the accent like any one-colour
+     * picture, whatever colour every icon wears.
+     */
+    static Drawable face(Drawable icon, int shape, int tint, int drawing) {
         int outline = shape >= 0 ? shape : current;
         int colour = tint >= 0 ? tint : Style.tint;
-        if (icon != null && colour != Style.OWN) {
+        if (icon != null && drawing != Marks.NONE) {
+            boolean paper = outline == PAPER;
+            Drawable mark = Marks.picture(drawing);
+            mark.setTint(paper ? deep(Tone.primary()) : Tone.primary());
+            icon = new AdaptiveIconDrawable(new android.graphics.drawable.ColorDrawable(
+                paper ? PAPER_INK : Tone.primaryContainer()), mark);
+        } else if (icon != null && colour != Style.OWN) {
             icon = inked(icon, outline, colour);
         }
         if (icon == null || outline == SYSTEM) {

@@ -34,7 +34,7 @@ final class Style {
     /** The outline and colour one icon was given, or less than nought for each. */
     static int[] faceOf(String token) {
         int[] own = token == null ? null : faces.get(token);
-        return own == null ? new int[] {-1, -1} : own;
+        return own == null ? new int[] {-1, -1, 0} : own;
     }
     private static Typeface face = Typeface.create(FAMILIES[0], Typeface.NORMAL);
     private static Typeface bold = Typeface.create(FAMILIES[0], Typeface.BOLD);
