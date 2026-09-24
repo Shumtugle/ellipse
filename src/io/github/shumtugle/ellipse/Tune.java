@@ -115,7 +115,7 @@ public final class Tune extends Activity {
     private static final String RESTART_LINE = "Restart launcher";
     private static final String AGAIN = "Tap again to reset everything";
     private static final String LATER = "Coming in a later version";
-    private static final String ALREADY = "Ellipse is the home screen now";
+    private static final String ALREADY = "Done: the Home button opens Ellipse";
 
     private static final String[] GRIDS = {"3 \u00D7 4", "4 \u00D7 5", "4 \u00D7 6", "5 \u00D7 5", "5 \u00D7 6", "6 \u00D7 7"};
     private static final int[] GRID_VALUES = {34, 45, 46, 55, 56, 67};
@@ -193,8 +193,8 @@ public final class Tune extends Activity {
                 };
             case OTHER:
                 return new Line[] {
-                    deed(Glyph.DESK, "Make default home screen",
-                        "Ask Android to open Ellipse for Home, from now on", DEFAULT),
+                    deed(Glyph.DESK, "Set as default home app",
+                        "Make the phone's Home button open Ellipse", DEFAULT),
                     deed(Glyph.RESTART, "Restart launcher", "Close the home screen and open it again",
                         RESTART),
                     deed(Glyph.RESET, "Reset launcher",
