@@ -77,7 +77,7 @@ screen's menu; open, the marks become a cross, and the cross leads home. Desktop
 page points, and new apps set down by themselves. All apps: lines or
 pages, the grid of a page, endless scrolling, and apps left out of the
 list. Look: the clock (icon styles are to come). Gestures: what a swipe up,
-a swipe down, Back and Home do on bare screens; a swipe down may lower the
+a swipe down, a double tap (lock the phone), Back and Home do on bare screens; a swipe down may lower the
 notifications or the quick settings. Backup and restore, and languages,
 are to come. Other: restart the launcher, or reset it to how it was on
 first start (asked twice).
@@ -91,6 +91,7 @@ There are no folders of one's own yet, and what is set down cannot yet be moved 
 one at a time.
 
 - Android 8.0 or newer
+- Services the owner turns on, or not: an accessibility service that only locks the phone on a double tap and reads nothing; a notification listener that only knows which apps have a notification, for the dots
 - Permissions: to lower the phone's own shade on a swipe down; to ask for an app to be uninstalled; for the clock, the phone's rough place and the network (the weather) and nearby devices (the headphones' charge) — each asked for once, and the clock does without what is refused
 - No dependencies: platform APIs only, built without Gradle
 
@@ -98,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.20.1
+  sh build.sh ellipse-1.21.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

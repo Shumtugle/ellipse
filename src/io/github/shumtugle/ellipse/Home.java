@@ -81,6 +81,8 @@ public final class Home extends Activity {
     private boolean wideLift;
     /** What each thing on the screens is kept as, and the set-out as it stands, for its first move. */
     private final java.util.Map<View, String> things = new java.util.HashMap<>();
+    /** What each folder on the screens and in the dock holds, for its dot. */
+    private final java.util.Map<View, List<Apps.Door>> insides = new java.util.HashMap<>();
     private final List<Keep.Spot> standing = new ArrayList<>();
     private int[] landing;
     /** Where the finger is, and how far the icon has grown out of its line toward it. */
@@ -243,6 +245,12 @@ public final class Home extends Activity {
             tint();
         }
         listen();
+        Notices.tell(new Runnable() {
+            public void run() {
+                dots();
+            }
+        });
+        dots();
         /* What other applications asked to set on the home screen meanwhile. */
         List<String> asked = Keep.takeQueue(this);
         stamp = Keep.stamp(this);
@@ -465,8 +473,10 @@ public final class Home extends Activity {
                     return;
                 }
                 WallpaperManager paper = WallpaperManager.getInstance(Home.this);
-                paper.setWallpaperOffsetSteps(0f, 0f);
-                paper.setWallpaperOffsets(frame.getWindowToken(), 0.5f, 0.5f);
+                boolean moves = Keep.flag(Home.this, Keep.WALL_MOVES, true) && pages.size() > 1;
+                paper.setWallpaperOffsetSteps(moves ? 1f / (pages.size() - 1) : 0f, 0f);
+                float at = moves ? screens.page() / (float) (pages.size() - 1) : 0.5f;
+                paper.setWallpaperOffsets(frame.getWindowToken(), at, 0.5f);
             }
         });
     }
@@ -506,6 +516,21 @@ public final class Home extends Activity {
         frame.cut(stage);
 
         screens = new Pager(this);
+        /* The wallpaper goes along with the screens, a little, as through a window. */
+        screens.across(new Pager.Across() {
+            public void across(float fraction) {
+                if (frame == null || frame.getWindowToken() == null
+                    || !Keep.flag(Home.this, Keep.WALL_MOVES, true) || pages.size() < 2) {
+                    return;
+                }
+                try {
+                    WallpaperManager.getInstance(Home.this)
+                        .setWallpaperOffsets(frame.getWindowToken(), fraction, 0.5f);
+                } catch (RuntimeException none) {
+                    // The wallpaper stays where it was.
+                }
+            }
+        });
         stage.addView(screens, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
@@ -698,6 +723,7 @@ public final class Home extends Activity {
         dock.removeAllViews();
         cells.clear();
         things.clear();
+        insides.clear();
         standing.clear();
         Apps found = new Apps(this);
         Set<String> taken = new HashSet<>();
@@ -712,6 +738,20 @@ public final class Home extends Activity {
             Grid page = new Grid(this, columns, rows);
             page.setPadding(dp(8), dp(16), dp(8), 0);
             page.shape(iconSize, Cell.below(this));
+            final android.view.GestureDetector twice = new android.view.GestureDetector(this,
+                new android.view.GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onDoubleTap(android.view.MotionEvent e) {
+                        doubleTap();
+                        return true;
+                    }
+                });
+            page.setOnTouchListener(new View.OnTouchListener() {
+                public boolean onTouch(View v, android.view.MotionEvent event) {
+                    twice.onTouchEvent(event);
+                    return false;
+                }
+            });
             page.setOnLongClickListener(new View.OnLongClickListener() {
                 public boolean onLongClick(View v) {
                     ask(v);
@@ -896,6 +936,55 @@ public final class Home extends Activity {
         drawer.fill(listed);
         screens.home(Keep.home(this));
         screens.show(showing, false);
+        dots();
+    }
+
+    /** Puts a point on every icon whose app has a notification standing, and on its folder. */
+    private void dots() {
+        boolean on = Keep.flag(this, Keep.DOTS_ON, false) && Notices.on();
+        Set<String> marked = on ? Notices.marked() : new HashSet<String>();
+        for (View view : cells) {
+            if (!(view instanceof Cell)) {
+                continue;
+            }
+            Cell cell = (Cell) view;
+            boolean lit = false;
+            if (cell.door != null) {
+                lit = marked.contains(Notices.mark(cell.door.name.getPackageName(), cell.door.serial));
+            } else if (insides.containsKey(cell)) {
+                for (Apps.Door door : insides.get(cell)) {
+                    if (marked.contains(Notices.mark(door.name.getPackageName(), door.serial))) {
+                        lit = true;
+                        break;
+                    }
+                }
+            }
+            cell.dot(lit);
+        }
+    }
+
+    private static final String LOCK_CAPTION = "Lock on double tap";
+    private static final String LOCK_TEXT = "To lock the phone, Ellipse has to be turned on among the phone's "
+        + "accessibility services. It reads nothing on the screen.";
+    private static final String OPEN_SETTINGS = "Open settings";
+
+    /** A double tap on the empty home screen: the phone is locked, if the settings ask for it. */
+    private void doubleTap() {
+        if (Keep.number(this, Keep.ON_DOUBLE, Keep.DO_LOCK) != Keep.DO_LOCK) {
+            return;
+        }
+        if (Latch.lock()) {
+            return;
+        }
+        Ask.tell(root, LOCK_CAPTION, LOCK_TEXT, OPEN_SETTINGS, new Runnable() {
+            public void run() {
+                try {
+                    startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                } catch (RuntimeException none) {
+                    refuse(screens);
+                }
+            }
+        });
     }
 
     /**
@@ -1004,6 +1093,7 @@ public final class Home extends Activity {
             return;
         }
         final Cell cell = new Cell(this, new Stack(doors), name, iconSize);
+        insides.put(cell, doors);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 int[] at = new int[2];
@@ -1212,6 +1302,7 @@ public final class Home extends Activity {
         final List<Apps.Door> doors = folderDoors(token, found, taken);
         final String name = folderName(token, doors);
         final Cell cell = new Cell(this, new Stack(doors), name, iconSize, false);
+        insides.put(cell, doors);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 int[] at = new int[2];

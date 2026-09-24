@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Ellipse</string>
+    <string name="latch_name">Ellipse: lock on double tap</string>
+    <string name="latch_about">Lets the home screen lock the phone when the empty home screen is tapped twice. It reads nothing on the screen and sees nothing you do.</string>
+    <string name="notices_name">Ellipse: notification dots</string>
 </resources>

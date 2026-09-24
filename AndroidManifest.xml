@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="12001"
-    android:versionName="1.20.1">
+    android:versionCode="12100"
+    android:versionName="1.21.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -116,6 +116,31 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Locks the phone on a double tap of the empty home screen, once the
+             owner turns it on among the phone's accessibility services. -->
+        <service
+            android:name=".Latch"
+            android:label="@string/latch_name"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/latch" />
+        </service>
+        <!-- Knows which apps have notifications, for the dots on their icons,
+             once the owner gives it that access. -->
+        <service
+            android:name=".Notices"
+            android:label="@string/notices_name"
+            android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
         <!-- Where other applications ask to put a shortcut or a widget on
              the home screen. -->
         <activity

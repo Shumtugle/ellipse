@@ -123,7 +123,7 @@ public final class Tune extends Activity {
     private static final Line[] ROOMS = {
         door(Glyph.DESK, "Desktop", "Dock, grid, scrolling, page points, new apps", DESK),
         door(Glyph.LIST, "All apps", "Grid, lines or pages, hidden apps", LIST),
-        door(Glyph.LOOK, "Look", "Icon style, the clock, weather, headphones", LOOK),
+        door(Glyph.LOOK, "Look", "Icon style, the clock, notification dots", LOOK),
         door(Glyph.HANDS, "Gestures", "Up, down, Back and Home on the home screen", HANDS),
         door(Glyph.BACKUP, "Backup and restore", "Keep the set-out, bring it back, bring one in", BACKUP),
         door(Glyph.LANGUAGE, "Languages", "Language modules for the words of the home screen", LANGUAGE),
@@ -142,6 +142,8 @@ public final class Tune extends Activity {
                         Keep.DESK_ENDLESS, false),
                     toggle("Page indicator", "Points under the screens, the home one ringed",
                         Keep.DOTS, true),
+                    toggle("Moving wallpaper", "The wallpaper goes a little way along with the screens",
+                        Keep.WALL_MOVES, true),
                     toggle("Add new apps", "An app put on the phone is set down on a free place",
                         Keep.AUTO_ADD, false),
                     choice("Widget shelf", "How the widgets to add are laid out", Keep.SHELF_VIEW,
@@ -169,7 +171,9 @@ public final class Tune extends Activity {
                     toggle("Weather on the clock", "The warmth and the sky where the phone is",
                         Keep.WEATHER, true),
                     toggle("Headphones on the clock", "Their charge, while they are near and tell it",
-                        Keep.EARS, true)
+                        Keep.EARS, true),
+                    toggle("Notification dots", "A point on the icon of an app with something to say",
+                        Keep.DOTS_ON, false)
                 };
             case HANDS:
                 return new Line[] {
@@ -181,6 +185,8 @@ public final class Tune extends Activity {
                     choice("Back", "On bare screens", Keep.ON_BACK, Keep.DO_FRESH,
                         new String[] {"Recent and new", "All apps", "Nothing"},
                         new int[] {Keep.DO_FRESH, Keep.DO_LIST, Keep.DO_NOTHING}),
+                    choice("Double tap", "On the empty home screen", Keep.ON_DOUBLE, Keep.DO_LOCK,
+                        new String[] {"Lock the phone", "Nothing"}, new int[] {Keep.DO_LOCK, Keep.DO_NOTHING}),
                     choice("Home button", "On bare screens", Keep.ON_HOME, Keep.DO_HOME,
                         new String[] {"Home screen", "All apps", "Nothing"},
                         new int[] {Keep.DO_HOME, Keep.DO_LIST, Keep.DO_NOTHING})
@@ -460,6 +466,10 @@ public final class Tune extends Activity {
                 public void onClick(View v) {
                     toggle.set(!toggle.on());
                     Keep.saveFlag(Tune.this, line.key, toggle.on());
+                    /* Dots need the phone's leave to know of notifications. */
+                    if (Keep.DOTS_ON.equals(line.key) && toggle.on() && !Notices.on()) {
+                        openSafely(new Intent(android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+                    }
                 }
             });
         } else if (line.kind == CHOICE) {
@@ -526,6 +536,10 @@ public final class Tune extends Activity {
         }
         menu.choose(0, value);
         Keep.saveNumber(this, asking.key, value);
+        /* The lock needs the phone's leave, as an accessibility service. */
+        if (Keep.ON_DOUBLE.equals(asking.key) && value == Keep.DO_LOCK && !Latch.ready()) {
+            openSafely(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        }
         askingValue.setText(valueOf(asking));
         host.postDelayed(new Runnable() {
             public void run() {
@@ -619,6 +633,14 @@ public final class Tune extends Activity {
             startActivity(new Intent(android.provider.Settings.ACTION_HOME_SETTINGS));
         } catch (RuntimeException none) {
             startActivity(new Intent(android.provider.Settings.ACTION_SETTINGS));
+        }
+    }
+
+    private void openSafely(Intent open) {
+        try {
+            startActivity(open);
+        } catch (RuntimeException none) {
+            // The page is not there on this phone.
         }
     }
 

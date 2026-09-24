@@ -155,6 +155,81 @@ final class Ask {
         }, Pace.ARRIVE / 2);
     }
 
+    /**
+     * A thing said, with a way on: a card of the same make with a small
+     * caption, a few words, and two words at the foot, the second of which
+     * does what it says.
+     */
+    static void tell(final FrameLayout host, String caption, String text, String go, final Runnable action) {
+        final Context context = host.getContext();
+        final float density = context.getResources().getDisplayMetrics().density;
+        float scaled = context.getResources().getDisplayMetrics().scaledDensity;
+        final FrameLayout veil = new FrameLayout(context);
+        veil.setBackgroundColor(0x66000000);
+        veil.setClickable(true);
+        LinearLayout card = new LinearLayout(context);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setBackground(Tone.box(Tone.containerHigh(), 28 * density, 0.5f * density));
+        int pad = Math.round(22 * density);
+        card.setPadding(pad, Math.round(20 * density), pad, Math.round(10 * density));
+        card.setElevation(6 * density);
+        card.setClickable(true);
+        TextView title = new TextView(context);
+        title.setText(caption.toUpperCase(Locale.getDefault()));
+        title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+        title.setLetterSpacing(0.12f);
+        title.setTextColor(Tone.faint());
+        card.addView(title);
+        TextView said = new TextView(context);
+        said.setText(text);
+        said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scaled);
+        said.setTextColor(Tone.onSurface());
+        said.setPadding(0, Math.round(12 * density), 0, Math.round(4 * density));
+        card.addView(said);
+        LinearLayout foot = new LinearLayout(context);
+        foot.setGravity(Gravity.END);
+        TextView cancel = word(context, CANCEL, Tone.onSurface(), scaled, density);
+        TextView yes = word(context, go, Tone.primary(), scaled, density);
+        foot.addView(cancel);
+        foot.addView(yes);
+        card.addView(foot, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+        FrameLayout.LayoutParams cardParams = new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER);
+        int side = Math.round(24 * density);
+        cardParams.setMargins(side, 0, side, 0);
+        veil.addView(card, cardParams);
+        host.addView(veil, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        final Runnable close = new Runnable() {
+            public void run() {
+                veil.animate().alpha(0f).setDuration(Pace.ARRIVE / 2).withEndAction(new Runnable() {
+                    public void run() {
+                        host.removeView(veil);
+                    }
+                }).start();
+            }
+        };
+        View.OnClickListener away = new View.OnClickListener() {
+            public void onClick(View v) {
+                close.run();
+            }
+        };
+        veil.setOnClickListener(away);
+        cancel.setOnClickListener(away);
+        yes.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                close.run();
+                action.run();
+            }
+        });
+        veil.setAlpha(0f);
+        veil.animate().alpha(1f).setDuration(Pace.ARRIVE / 2).start();
+        card.setScaleX(0.9f);
+        card.setScaleY(0.9f);
+        card.animate().scaleX(1f).scaleY(1f).setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
+    }
+
     private static TextView word(Context context, String text, int colour, float scaled, float density) {
         TextView made = new TextView(context);
         made.setText(text);

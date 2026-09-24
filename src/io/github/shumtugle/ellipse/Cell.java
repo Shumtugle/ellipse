@@ -23,6 +23,9 @@ final class Cell extends View {
     private final float iconSize;
     private final float gap;
     private CharSequence shown = "";
+    /** Whether the app has a notification standing: a small point of the accent at the icon's shoulder. */
+    private boolean dot;
+    private final Paint point = new Paint(Paint.ANTI_ALIAS_FLAG);
     /** A quiet second line under the name, when there is one. */
     private String note;
     private final TextPaint small = new TextPaint(Paint.ANTI_ALIAS_FLAG);
@@ -66,6 +69,13 @@ final class Cell extends View {
         small.setColor(Tone.primary());
         setClickable(true);
         setContentDescription(this.label);
+    }
+
+    void dot(boolean on) {
+        if (on != dot) {
+            dot = on;
+            invalidate();
+        }
     }
 
     /** Sets a quiet line under the name, in the accent: a word about the application. */
@@ -156,6 +166,16 @@ final class Cell extends View {
             icon.setBounds(Math.round(x), Math.round(y),
                 Math.round(x + iconSize), Math.round(y + iconSize));
             icon.draw(canvas);
+        }
+        if (dot) {
+            float r = iconSize * 0.12f;
+            float px = x + iconSize * 0.86f;
+            float py = y + iconSize * 0.14f;
+            point.setStyle(Paint.Style.FILL);
+            point.setColor(0xFF15120E);
+            canvas.drawCircle(px, py, r * 1.28f, point);
+            point.setColor(Tone.primary());
+            canvas.drawCircle(px, py, r, point);
         }
         if (named) {
             float base = y + iconSize + gap - words.ascent();

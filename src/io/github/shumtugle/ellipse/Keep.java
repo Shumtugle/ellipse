@@ -99,6 +99,10 @@ final class Keep {
     static final String ON_UP = "on_up";
     static final String ON_DOWN = "on_down";
     static final String ON_HOME = "on_home";
+    static final String ON_DOUBLE = "on_double";
+    /** Points on icons of apps with notifications, and the wallpaper following the screens. */
+    static final String DOTS_ON = "notice_dots";
+    static final String WALL_MOVES = "wall_moves";
     private static final String HIDDEN = "hidden";
     private static final String STAMP = "stamp";
 
@@ -109,6 +113,7 @@ final class Keep {
     static final int DO_NOTICES = 3;
     static final int DO_QUICK = 4;
     static final int DO_HOME = 5;
+    static final int DO_LOCK = 6;
 
     static boolean flag(Context context, String key, boolean fallback) {
         return store(context).getBoolean(key, fallback);

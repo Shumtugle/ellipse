@@ -22,6 +22,27 @@ final class Pager extends ViewGroup {
         void turned(int page);
     }
 
+    /** Told how far across the pages are, from nought at the first to one at the last. */
+    interface Across {
+        void across(float fraction);
+    }
+
+    private Across across;
+
+    void across(Across listener) {
+        across = listener;
+    }
+
+    @Override
+    protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+        super.onScrollChanged(l, t, oldl, oldt);
+        if (across != null && getWidth() > 0) {
+            int last = Math.max(1, getChildCount() - 1);
+            float f = l / (float) (getWidth() * last);
+            across.across(Math.max(0f, Math.min(1f, f)));
+        }
+    }
+
     private final OverScroller scroller;
     private final int slop;
     private final int fling;
