@@ -91,6 +91,10 @@ final class Keep {
     static final String SHELF_VIEW = "shelf_view";
     static final String MAKERS_VIEW = "makers_view";
     static final String CLOCK = "clock";
+    /** What the clock shows beside the hour and the charge, and whether leave for them was once asked. */
+    static final String WEATHER = "clock_weather";
+    static final String EARS = "clock_ears";
+    static final String ASKED_WORLD = "asked_world";
     static final String ON_BACK = "on_back";
     static final String ON_UP = "on_up";
     static final String ON_DOWN = "on_down";

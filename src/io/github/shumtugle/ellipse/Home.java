@@ -124,6 +124,13 @@ public final class Home extends Activity {
     /** Widgets already made, kept across settings-out so they do not blink. */
     private final java.util.Map<Integer, android.appwidget.AppWidgetHostView> widgetViews = new java.util.HashMap<>();
     private LauncherApps launcher;
+    /** The clock on the screens now, the charge its headphones tell, and whether they are listened to. */
+    private Almanac clockView;
+    private int earsLevel = -1;
+    private boolean listening;
+    private static final int ASK_WORLD = 31;
+    private static final int KEY_SOURCE = 6;
+    private static final String SOURCE = "Weather source";
     private static final int ASK_SHORTCUT = 13;
     private static final int KEY_INFO = 1;
     private static final int KEY_UNINSTALL = 2;
@@ -235,6 +242,7 @@ public final class Home extends Activity {
         } else if (Tone.read(this)) {
             tint();
         }
+        listen();
         /* What other applications asked to set on the home screen meanwhile. */
         List<String> asked = Keep.takeQueue(this);
         stamp = Keep.stamp(this);
@@ -269,6 +277,7 @@ public final class Home extends Activity {
     @Override
     protected void onStop() {
         super.onStop();
+        unlisten();
         try {
             host.stopListening();
         } catch (RuntimeException busy) {
@@ -917,6 +926,9 @@ public final class Home extends Activity {
         });
         page.put(clock, 0, row, columns, 1);
         cells.add(clock);
+        clock.weather(Sky.now(this), Keep.flag(this, Keep.WEATHER, true));
+        clock.ears(Keep.flag(this, Keep.EARS, true) ? earsLevel : -1);
+        clockView = clock;
         stand(page, clock, Keep.CLOCK_THING);
         return true;
     }
@@ -1018,11 +1030,23 @@ public final class Home extends Activity {
 
     /** A window of the clock was pressed: what it shows about is opened out of it. */
     private void look(String window, View from, android.graphics.RectF box) {
+        if (Almanac.WEATHER.equals(window)) {
+            /* The weather's own page is to come; for now a press asks for
+               the place if it was not allowed, and for fresh weather if it was. */
+            if (!Sky.mayLocate(this)) {
+                requestPermissions(new String[] {android.Manifest.permission.ACCESS_COARSE_LOCATION}, ASK_WORLD);
+            } else {
+                Sky.freshen(this, weatherCame);
+            }
+            return;
+        }
         Intent open;
         if (Almanac.DIAL.equals(window)) {
             open = new Intent(AlarmClock.ACTION_SHOW_ALARMS);
         } else if (Almanac.TIME.equals(window)) {
             open = category(Intent.CATEGORY_APP_CALENDAR);
+        } else if (Almanac.EARS.equals(window)) {
+            open = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);
         } else {
             open = new Intent(Intent.ACTION_POWER_USAGE_SUMMARY);
         }
@@ -2037,6 +2061,11 @@ public final class Home extends Activity {
             keys.add(KEY_RESIZE);
             glyphs.add(Glyph.RESIZE);
         }
+        if (Keep.CLOCK_THING.equals(token) && Keep.flag(this, Keep.WEATHER, true)) {
+            lines.add(SOURCE);
+            keys.add(KEY_SOURCE);
+            glyphs.add(Glyph.INFO);
+        }
         if (!lines.isEmpty()) {
             ours.add(pictured(lines, keys, glyphs));
         }
@@ -2211,6 +2240,8 @@ public final class Home extends Activity {
                 reshapeAt(offerToken, offerWhence[0], offerWhence[1], offerWhence[2]);
             } else if (key == KEY_RENAME) {
                 rename(folderId(offerToken));
+            } else if (key == KEY_SOURCE) {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(Sky.WEATHER_SOURCE)));
             }
         } catch (RuntimeException refused) {
             refuse(screens);
@@ -2491,6 +2522,123 @@ public final class Home extends Activity {
             } catch (RuntimeException broken) {
                 // Left as it is.
             }
+        }
+    }
+
+    // ------------------------------------------------------ weather, headphones
+
+    private final Runnable weatherCame = new Runnable() {
+        public void run() {
+            if (clockView != null) {
+                clockView.weather(Sky.now(Home.this), Keep.flag(Home.this, Keep.WEATHER, true));
+            }
+        }
+    };
+
+    private static final String EARS_CHANGED = "android.bluetooth.device.action.BATTERY_LEVEL_CHANGED";
+    private static final String EARS_LEVEL = "android.bluetooth.device.extra.BATTERY_LEVEL";
+
+    /** Headphones tell their charge when they change it; gone, they tell nothing. */
+    private final android.content.BroadcastReceiver ears = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(android.content.Context context, Intent intent) {
+            earsLevel = EARS_CHANGED.equals(intent.getAction()) ? intent.getIntExtra(EARS_LEVEL, -1) : -1;
+            if (clockView != null) {
+                clockView.ears(Keep.flag(Home.this, Keep.EARS, true) ? earsLevel : -1);
+            }
+        }
+    };
+
+    /** Whether this home screen may hear headphones: from Android 12 only with the owner's leave. */
+    private boolean hearsEars() {
+        return Build.VERSION.SDK_INT < 31
+            || checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /**
+     * While the screens are in front: headphones are listened to, and the
+     * weather is asked for when what is known is old. The first time the
+     * clock is shown, leave is asked for both, once.
+     */
+    private void listen() {
+        if (Keep.flag(this, Keep.CLOCK, true) && !Keep.flag(this, Keep.ASKED_WORLD, false)) {
+            Keep.saveFlag(this, Keep.ASKED_WORLD, true);
+            stamp = Keep.stamp(this);
+            List<String> asks = new ArrayList<>();
+            if (Keep.flag(this, Keep.WEATHER, true) && !Sky.mayLocate(this)) {
+                asks.add(android.Manifest.permission.ACCESS_COARSE_LOCATION);
+            }
+            if (Keep.flag(this, Keep.EARS, true) && !hearsEars()) {
+                asks.add(android.Manifest.permission.BLUETOOTH_CONNECT);
+            }
+            if (!asks.isEmpty()) {
+                requestPermissions(asks.toArray(new String[0]), ASK_WORLD);
+            }
+        }
+        if (!listening && hearsEars()) {
+            android.content.IntentFilter heard = new android.content.IntentFilter(EARS_CHANGED);
+            heard.addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED);
+            try {
+                registerReceiver(ears, heard);
+                listening = true;
+                earsLevel = earsNow();
+            } catch (RuntimeException refused) {
+                earsLevel = -1;
+            }
+            if (clockView != null) {
+                clockView.ears(Keep.flag(this, Keep.EARS, true) ? earsLevel : -1);
+            }
+        }
+        if (Keep.flag(this, Keep.WEATHER, true)) {
+            Sky.freshen(this, weatherCame);
+        }
+    }
+
+    private void unlisten() {
+        if (!listening) {
+            return;
+        }
+        listening = false;
+        try {
+            unregisterReceiver(ears);
+        } catch (RuntimeException already) {
+            // Not registered.
+        }
+    }
+
+    /**
+     * The charge of headphones already near. The system tells it only to
+     * those who ask by a name it does not publish, so it is asked for
+     * carefully, and a refusal means nothing is shown.
+     */
+    @SuppressWarnings("deprecation")
+    private int earsNow() {
+        try {
+            android.bluetooth.BluetoothAdapter adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+            if (adapter == null) {
+                return -1;
+            }
+            for (android.bluetooth.BluetoothDevice device : adapter.getBondedDevices()) {
+                Object near = device.getClass().getMethod("isConnected").invoke(device);
+                if (Boolean.TRUE.equals(near)) {
+                    Object level = device.getClass().getMethod("getBatteryLevel").invoke(device);
+                    if (level instanceof Integer && (Integer) level >= 0) {
+                        return (Integer) level;
+                    }
+                }
+            }
+        } catch (Exception refused) {
+            return -1;
+        }
+        return -1;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int asked, String[] what, int[] answers) {
+        super.onRequestPermissionsResult(asked, what, answers);
+        if (asked == ASK_WORLD) {
+            listen();
         }
     }
 

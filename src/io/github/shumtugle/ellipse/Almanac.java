@@ -41,12 +41,20 @@ final class Almanac extends View {
     static final String DIAL = "dial";
     static final String TIME = "time";
     static final String CHARGE = "charge";
+    static final String WEATHER = "weather";
+    static final String EARS = "ears";
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint words = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF dialBox = new RectF();
     private final RectF timeBox = new RectF();
     private final RectF chargeBox = new RectF();
+    private final RectF weatherBox = new RectF();
+    private final RectF earsBox = new RectF();
+    /** The weather last known, whether it is shown at all, and the charge of headphones near, or none. */
+    private Sky.Now weather;
+    private boolean showWeather = true;
+    private int ears = -1;
     private final float density;
     private final GestureDetector taps;
     private final Hand hand;
@@ -151,12 +159,28 @@ final class Almanac extends View {
 
     private void press(float x, float y) {
         RectF box = dialBox.contains(x, y) ? dialBox : timeBox.contains(x, y) ? timeBox
-            : chargeBox.contains(x, y) ? chargeBox : null;
+            : chargeBox.contains(x, y) ? chargeBox
+            : !weatherBox.isEmpty() && weatherBox.contains(x, y) ? weatherBox
+            : !earsBox.isEmpty() && earsBox.contains(x, y) ? earsBox : null;
         if (box == null) {
             return;
         }
-        String which = box == dialBox ? DIAL : box == timeBox ? TIME : CHARGE;
+        String which = box == dialBox ? DIAL : box == timeBox ? TIME : box == chargeBox ? CHARGE
+            : box == weatherBox ? WEATHER : EARS;
         hand.pressed(which, this, box);
+    }
+
+    /** The weather to show, and whether to show it at all. */
+    void weather(Sky.Now now, boolean shown) {
+        weather = now;
+        showWeather = shown;
+        invalidate();
+    }
+
+    /** The charge of headphones near, or less than nought when none tell one. */
+    void ears(int level) {
+        ears = level;
+        invalidate();
     }
 
     @Override
@@ -180,19 +204,38 @@ final class Almanac extends View {
         float right = w - inset - pad;
         float top = inset + pad;
         float bottom = h - inset - pad;
+        /* The face on the left; on the right, the hour and the date above,
+           and under them a row of small windows: the weather, the charge,
+           and the headphones' charge while they tell one. */
+        float from;
         if (line) {
             float side = column;
             dialBox.set(left, top, left + side, bottom);
-            float chargeWide = column * 0.9f;
-            chargeBox.set(right - chargeWide, top, right, bottom);
-            timeBox.set(dialBox.right + gap, top, chargeBox.left - gap, bottom);
+            from = dialBox.right + gap;
         } else {
             float side = Math.min(column, (w - 2f * (inset + pad)) * 0.44f);
             dialBox.set(left, (h - side) / 2f, left + side, (h + side) / 2f);
-            float from = dialBox.right + gap * 1.4f;
-            float split = top + (column - gap) * 0.62f;
-            timeBox.set(from, top, right, split);
-            chargeBox.set(from, split + gap, right, bottom);
+            from = dialBox.right + gap * 1.4f;
+        }
+        float split = top + (column - gap) * (line ? 0.58f : 0.6f);
+        timeBox.set(from, top, right, split);
+        float rowTop = split + gap;
+        float rowTall = bottom - rowTop;
+        float small = rowTall * 1.9f;
+        float x = right;
+        if (ears >= 0) {
+            earsBox.set(x - small, rowTop, x, bottom);
+            x -= small + gap;
+        } else {
+            earsBox.setEmpty();
+        }
+        chargeBox.set(x - small, rowTop, x, bottom);
+        x -= small + gap;
+        if (showWeather) {
+            weatherBox.set(from, rowTop, x, bottom);
+        } else {
+            weatherBox.setEmpty();
+            chargeBox.left = from;
         }
         float side = dialBox.width();
 
@@ -218,15 +261,60 @@ final class Almanac extends View {
         words.setTextSize(fit(day, timeBox.width() * 0.84f, timeBox.height() * 0.17f));
         canvas.drawText(day, timeBox.centerX(), timeBox.top + timeBox.height() * 0.84f, words);
 
-        float rc = Math.min(Math.min(chargeBox.width(), chargeBox.height()) / 2f, px(24f));
-        paint.setColor(Tone.tertiaryContainer());
-        canvas.drawRoundRect(chargeBox, rc, rc, paint);
+        int quiet = Tone.onTertiaryContainer();
         String level = charge >= 0 ? charge + "%" : "\u2013";
-        if (line) {
-            stacked(canvas, chargeBox, level, Tone.onTertiaryContainer());
-        } else {
-            pill(canvas, chargeBox, level, Tone.onTertiaryContainer());
+        window(canvas, chargeBox);
+        pill(canvas, chargeBox, level, quiet);
+        if (!weatherBox.isEmpty()) {
+            window(canvas, weatherBox);
+            String warmth = weather != null ? weather.said() : "\u2013";
+            mark(canvas, weatherBox, warmth, quiet, true);
         }
+        if (!earsBox.isEmpty()) {
+            window(canvas, earsBox);
+            mark(canvas, earsBox, ears + "%", quiet, false);
+        }
+    }
+
+    private void window(Canvas canvas, RectF box) {
+        float r = Math.min(box.height() / 2f, px(24f));
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(Tone.tertiaryContainer());
+        canvas.drawRoundRect(box, r, r, paint);
+    }
+
+    /** A drawing and its words side by side in a small window: the sky, or headphones. */
+    private void mark(Canvas canvas, RectF box, String text, int ink, boolean sky) {
+        float s = Math.min(box.height() * 0.62f, box.width() * 0.34f);
+        words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+        words.setColor(ink);
+        words.setTextAlign(Paint.Align.LEFT);
+        words.setTextSize(fit(text, box.width() * 0.52f, box.height() * 0.4f));
+        float textW = words.measureText(text);
+        float all = s + px(8f) + textW;
+        float start = box.centerX() - all / 2f;
+        if (sky) {
+            Sky.draw(canvas, weather, start + s / 2f, box.centerY(), s, ink);
+        } else {
+            headphones(canvas, start + s / 2f, box.centerY(), s, ink);
+        }
+        Paint.FontMetrics f = words.getFontMetrics();
+        canvas.drawText(text, start + s + px(8f), box.centerY() - (f.ascent + f.descent) / 2f, words);
+    }
+
+    private void headphones(Canvas canvas, float cx, float cy, float s, int colour) {
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setColor(colour);
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(s * 0.08f);
+        p.setStrokeCap(Paint.Cap.ROUND);
+        RectF arc = new RectF(cx - s * 0.34f, cy - s * 0.36f, cx + s * 0.34f, cy + s * 0.32f);
+        canvas.drawArc(arc, 180f, 180f, false, p);
+        p.setStyle(Paint.Style.FILL);
+        canvas.drawRoundRect(new RectF(cx - s * 0.4f, cy - s * 0.02f, cx - s * 0.2f, cy + s * 0.34f),
+            s * 0.06f, s * 0.06f, p);
+        canvas.drawRoundRect(new RectF(cx + s * 0.2f, cy - s * 0.02f, cx + s * 0.4f, cy + s * 0.34f),
+            s * 0.06f, s * 0.06f, p);
     }
 
     /** A round face with shallow scallops at its edge, like a biscuit. */

@@ -20,7 +20,7 @@ updated first, and the settings are a touch away. Lines or pages (of four
 by five icons with their names) are chosen in the settings.
 
 Three screens stand side by side from the start, the middle one home.
-The home screen carries the home screen's own clock across its top row, drawn
+The home screen carries the home screen's own clock across its top row, with the weather where the phone is and the charge of headphones near, drawn
 the design system's way — a scalloped dial, the hour and the date, the
 phone's charge — and four everyday applications at its foot. The screen
 before it holds a folder of the applications signed by the same hand as
@@ -91,14 +91,14 @@ There are no folders of one's own yet, and what is set down cannot yet be moved 
 one at a time.
 
 - Android 8.0 or newer
-- Two permissions: to lower the phone's own shade on a swipe down, and to ask for an app to be uninstalled
+- Permissions: to lower the phone's own shade on a swipe down; to ask for an app to be uninstalled; for the clock, the phone's rough place and the network (the weather) and nearby devices (the headphones' charge) — each asked for once, and the clock does without what is refused
 - No dependencies: platform APIs only, built without Gradle
 
 ## Build
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.19.6
+  sh build.sh ellipse-1.20.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.

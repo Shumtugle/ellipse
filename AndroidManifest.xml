@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="11906"
-    android:versionName="1.19.6">
+    android:versionCode="12000"
+    android:versionName="1.20.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -12,6 +12,13 @@
     <!-- Uninstall, from an app's own menu on the home screen, is asked of
          the phone, which then asks the owner. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <!-- The clock's weather: the phone's rough place, asked once, and the
+         network to ask the weather of it. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!-- The clock's headphones: their charge, while they are near. -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
     <!-- Since Android 11 an application sees only the others it names here.
          A home screen names every application with a front door, and the
