@@ -212,7 +212,9 @@ final class Almanac extends View implements Timepiece {
             dialBox.set(left, top, left + side, bottom);
             from = dialBox.right + gap;
         } else {
-            float side = Math.min(column, (w - 2f * (inset + pad)) * 0.44f);
+            /* Never more than its share of the width, so a taller clock
+               keeps the windows beside it as wide as a low one does. */
+            float side = Math.min(column, (w - 2f * (inset + pad)) * 0.38f);
             dialBox.set(left, (h - side) / 2f, left + side, (h + side) / 2f);
             from = dialBox.right + gap * 1.4f;
         }
@@ -220,8 +222,11 @@ final class Almanac extends View implements Timepiece {
         /* Headphones near take their window from the hour's, beside it and
            as tall, so the row under it keeps its two roomy windows. */
         float timeRight = right;
+        float room = right - from;
         if (ears >= 0) {
-            float earsWide = (split - top) * 0.92f;
+            /* Nearly square, but never more than a quarter of the windows'
+               width: the hour and the date keep the rest. */
+            float earsWide = Math.min((split - top) * 0.92f, room * 0.25f);
             earsBox.set(right - earsWide, top, right, split);
             timeRight = earsBox.left - gap;
         } else {
@@ -230,7 +235,9 @@ final class Almanac extends View implements Timepiece {
         timeBox.set(from, top, timeRight, split);
         float rowTop = split + gap;
         float rowTall = bottom - rowTop;
-        float small = rowTall * 1.9f;
+        /* The charge a pill of its own proportion, but never wider than
+           three eighths of the row: the weather keeps the rest. */
+        float small = Math.min(rowTall * 1.9f, room * 0.37f);
         float x = right;
         chargeBox.set(x - small, rowTop, x, bottom);
         x -= small + gap;

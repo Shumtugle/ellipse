@@ -228,17 +228,20 @@ final class Watch extends View implements Timepiece {
         float rowBottom = top + band;
         float rowTall = rowBottom - rowTop;
         float room = right - left;
-        float small = Math.min(rowTall * 1.9f, room * 0.34f);
+        /* Shares of the row, so the weather always keeps its window: the
+           charge and the headphones at their own proportions where the row
+           is long, and at no more than their shares where it is short. */
+        float small = Math.min(rowTall * 1.9f, room * (ears >= 0 && showWeather ? 0.3f : 0.4f));
         chargeBox.set(right - small, rowTop, right, rowBottom);
         float x = chargeBox.left - gap;
         if (ears >= 0) {
-            float earsWide = Math.min(rowTall * 1.6f, room * 0.28f);
+            float earsWide = Math.min(rowTall * 1.6f, room * (showWeather ? 0.28f : 0.4f));
             earsBox.set(x - earsWide, rowTop, x, rowBottom);
             x = earsBox.left - gap;
         } else {
             earsBox.setEmpty();
         }
-        if (showWeather && x - left >= rowTall * 1.2f) {
+        if (showWeather && x - left >= room * 0.2f) {
             weatherBox.set(left, rowTop, x, rowBottom);
         } else {
             weatherBox.setEmpty();

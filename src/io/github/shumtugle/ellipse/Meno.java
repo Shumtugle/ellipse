@@ -404,12 +404,13 @@ final class Meno extends View implements Timepiece {
         words.setTextAlign(Paint.Align.LEFT);
         words.setColor(INK);
         words.setTextSize(fit(text, box.width() * 0.5f, 16f));
-        float icon = 26f;
-        float all = icon + 7f + words.measureText(text);
-        if (all > box.width() - 12f) {
+        /* The sky's drawing shrinks before it goes: only where not even a
+        half-size one fits beside the warmth is it left out. */
+        float icon = Math.min(26f, box.width() - 24f - 7f - words.measureText(text));
+        if (icon < 13f) {
             icon = 0f;
-            all = words.measureText(text);
         }
+        float all = icon > 0f ? icon + 7f + words.measureText(text) : words.measureText(text);
         float start = box.centerX() - all / 2f;
         Bitmap picture = icon > 0f ? sky(Sky.sky()) : null;
         if (picture != null) {
