@@ -767,6 +767,19 @@ public final class Tune extends Activity {
         }
         tints.addView(tintChips);
         rows.addView(tints);
+        caption("FOLDERS");
+        android.widget.HorizontalScrollView folders = new android.widget.HorizontalScrollView(this);
+        folders.setHorizontalScrollBarEnabled(false);
+        folders.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout folderChips = new LinearLayout(this);
+        folderChips.setPadding(dp(18), 0, dp(18), dp(8));
+        for (int i = 0; i < Stack.NAMES.length; i++) {
+            folderChips.addView(chip(Stack.NAMES[i], Stack.layout == i, Keep.FOLDER_FACE, i));
+        }
+        folders.addView(folderChips);
+        rows.addView(folders);
+        rows.addView(row(toggle("Folder ground", "A container behind the small icons of a folder",
+            Keep.FOLDER_GROUND, true)));
         caption("TYPEFACE");
         android.widget.HorizontalScrollView faces = new android.widget.HorizontalScrollView(this);
         faces.setHorizontalScrollBarEnabled(false);

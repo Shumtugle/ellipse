@@ -216,6 +216,9 @@ final class Keep {
     static final String FONT = "font";
     /** Icons in their own colours, all in the accent, or in the accent only where they can be. */
     static final String ICON_TINT = "icon_tint";
+    /** How a folder's face lays out what it holds, and whether its container is drawn. */
+    static final String FOLDER_FACE = "folder_face";
+    static final String FOLDER_GROUND = "folder_ground";
 
     private static final String FACE = "face.";
 

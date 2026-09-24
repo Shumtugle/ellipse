@@ -10,12 +10,27 @@ import android.graphics.drawable.Drawable;
 import java.util.List;
 
 /**
- * The face of a folder: a round container of the surface's tone and in it
- * the first four icons of what the folder holds, small, two by two.
+ * The face of a folder: a container in the outline every icon wears, of
+ * the surface's tone — or none, when the owner wants the icons alone — and
+ * in it small icons of what the folder holds, laid out as the owner chose:
+ * four, two by two; nine, three by three; five in a ring; three stacked
+ * one behind another; three fanned side by side; three one above another.
  */
 final class Stack extends Drawable {
 
-    private final Paint ground = new Paint(Paint.ANTI_ALIAS_FLAG);
+    static final int FOUR = 0;
+    static final int NINE = 1;
+    static final int RING = 2;
+    static final int PILE = 3;
+    static final int FAN = 4;
+    static final int TOWER = 5;
+    static final String[] NAMES = {"Four", "Nine", "Ring", "Stack", "Fan", "Tower"};
+
+    /** The layout and whether the container is drawn, for every folder; the settings set them. */
+    static int layout = FOUR;
+    static boolean ground = true;
+
+    private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final List<Apps.Door> doors;
 
     Stack(List<Apps.Door> doors) {
@@ -28,44 +43,93 @@ final class Stack extends Drawable {
         float size = Math.min(b.width(), b.height());
         float cx = b.exactCenterX();
         float cy = b.exactCenterY();
-        ground.setColor(Tone.containerHigh());
-        /* The folder's face takes the outline every icon is cut to. */
-        if (Shape.current == Shape.SYSTEM) {
-            canvas.drawCircle(cx, cy, size / 2f, ground);
-        } else {
-            float side = Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
-                : size * Shape.weight(Shape.current);
-            canvas.save();
-            canvas.translate(cx - side / 2f, cy - side / 2f);
-            canvas.drawPath(Shape.outline(Shape.current, side), ground);
-            canvas.restore();
-        }
-        float small = size * 0.3f;
-        float step = size * 0.17f;
-        int count = Math.min(4, doors.size());
-        for (int i = 0; i < count; i++) {
-            Drawable icon = doors.get(i).icon();
-            if (icon == null) {
-                continue;
+        if (ground) {
+            paint.setColor(Tone.containerHigh());
+            /* The folder's face takes the outline every icon is cut to. */
+            if (Shape.current == Shape.SYSTEM) {
+                canvas.drawCircle(cx, cy, size / 2f, paint);
+            } else {
+                float side = Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
+                    : size * Shape.weight(Shape.current);
+                canvas.save();
+                canvas.translate(cx - side / 2f, cy - side / 2f);
+                canvas.drawPath(Shape.outline(Shape.current, side), paint);
+                canvas.restore();
             }
-            float x = cx + (i % 2 == 0 ? -step : step);
-            float y = cy + (i < 2 ? -step : step);
-            Rect was = icon.copyBounds();
-            icon.setBounds(Math.round(x - small / 2f), Math.round(y - small / 2f),
-                Math.round(x + small / 2f), Math.round(y + small / 2f));
-            icon.draw(canvas);
-            icon.setBounds(was);
         }
+        /* Without a container the icons may take more of the place. */
+        float room = ground ? 1f : 1.18f;
+        switch (layout) {
+            case NINE:
+                for (int i = 0; i < Math.min(9, doors.size()); i++) {
+                    one(canvas, i, cx + (i % 3 - 1) * size * 0.25f * room, cy + (i / 3 - 1) * size * 0.25f * room,
+                        size * 0.21f * room);
+                }
+                break;
+            case RING:
+                for (int i = 0; i < Math.min(5, doors.size()); i++) {
+                    double a = -Math.PI / 2 + 2 * Math.PI * i / 5;
+                    one(canvas, i, cx + (float) Math.cos(a) * size * 0.27f * room,
+                        cy + (float) Math.sin(a) * size * 0.27f * room, size * 0.23f * room);
+                }
+                break;
+            case PILE:
+                /* The first in front, the others behind it, up and to the left. */
+                for (int i = Math.min(3, doors.size()) - 1; i >= 0; i--) {
+                    float at = (1 - i) * size * 0.12f * room;
+                    one(canvas, i, cx + at, cy + at, size * (0.46f - 0.04f * i) * room);
+                }
+                break;
+            case FAN:
+                int[] fan = {1, 2, 0};
+                float[] across = {-0.22f, 0.22f, 0f};
+                for (int k = 0; k < 3; k++) {
+                    int i = fan[k];
+                    if (i < doors.size()) {
+                        one(canvas, i, cx + across[k] * size * room, cy, size * (i == 0 ? 0.46f : 0.36f) * room);
+                    }
+                }
+                break;
+            case TOWER:
+                int[] tower = {1, 2, 0};
+                float[] down = {-0.22f, 0.22f, 0f};
+                for (int k = 0; k < 3; k++) {
+                    int i = tower[k];
+                    if (i < doors.size()) {
+                        one(canvas, i, cx, cy + down[k] * size * room, size * (i == 0 ? 0.46f : 0.36f) * room);
+                    }
+                }
+                break;
+            default:
+                for (int i = 0; i < Math.min(4, doors.size()); i++) {
+                    one(canvas, i, cx + (i % 2 == 0 ? -1 : 1) * size * 0.17f * room,
+                        cy + (i < 2 ? -1 : 1) * size * 0.17f * room, size * 0.3f * room);
+                }
+                break;
+        }
+    }
+
+    /** One small icon about a centre. */
+    private void one(Canvas canvas, int i, float x, float y, float small) {
+        Drawable icon = doors.get(i).icon();
+        if (icon == null) {
+            return;
+        }
+        Rect was = icon.copyBounds();
+        icon.setBounds(Math.round(x - small / 2f), Math.round(y - small / 2f),
+            Math.round(x + small / 2f), Math.round(y + small / 2f));
+        icon.draw(canvas);
+        icon.setBounds(was);
     }
 
     @Override
     public void setAlpha(int alpha) {
-        ground.setAlpha(alpha);
+        paint.setAlpha(alpha);
     }
 
     @Override
     public void setColorFilter(ColorFilter filter) {
-        ground.setColorFilter(filter);
+        paint.setColorFilter(filter);
     }
 
     @Override

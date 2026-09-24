@@ -99,7 +99,7 @@ one at a time.
 
 ```sh
 KEYSTORE=/path/to/key.keystore KSPASS=... SDK=/path/to/android-33.jar \
-  sh build.sh ellipse-1.33.0
+  sh build.sh ellipse-1.34.0
 ```
 
 Needs `aapt`, `javac`, `dalvik-exchange`, `zipalign` and `apksigner`.
@@ -158,6 +158,9 @@ what stands apart from its main colour — each shown on that very icon. An
 icon's picture can also be replaced: by a picture of the owner's own from
 the phone, or by one of more than two hundred symbols, found by name. The
 outline stays one for all icons.
+
+Folder faces are laid out one of six ways — four, nine, a ring of five, a
+stack, a fan, a tower — with or without a container behind the small icons.
 
 The symbols are Material Symbols (rounded, filled), under the Apache
 License 2.0; the licence travels in the package with them. Icons

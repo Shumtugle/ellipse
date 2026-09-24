@@ -71,7 +71,12 @@ final class Sample extends LinearLayout {
             for (int c = 0; c < 3; c++) {
                 int at = 1 + r * 3 + c;
                 FrameLayout slot = new FrameLayout(getContext());
-                if (at < doors.size()) {
+                if (at == 6 && doors.size() > 4) {
+                    /* The last place shows a folder, so its face can be seen too. */
+                    slot.addView(new Cell(getContext(), new Stack(doors.subList(0, Math.min(9, doors.size()))),
+                        "Folder", dp(40) * Style.iconScale, Style.namesOnScreens), new FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+                } else if (at < doors.size()) {
                     slot.addView(named(doors.get(at), dp(40) * Style.iconScale), new FrameLayout.LayoutParams(
                         FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
                 }

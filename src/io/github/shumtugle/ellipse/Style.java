@@ -103,6 +103,8 @@ final class Style {
         font(Keep.number(context, Keep.FONT, 0));
         tint = Keep.number(context, Keep.ICON_TINT, OWN);
         faces = Keep.faces(context);
+        Stack.layout = Keep.number(context, Keep.FOLDER_FACE, Stack.FOUR);
+        Stack.ground = Keep.flag(context, Keep.FOLDER_GROUND, true);
     }
 
     /** Sets the family every word is set in. */
