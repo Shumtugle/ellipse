@@ -221,6 +221,9 @@ public final class Home extends Activity {
     @Override
     protected void onCreate(Bundle saved) {
         super.onCreate(saved);
+        /* A new version's first start: the old set-out is copied aside
+           before anything here reads or changes it. */
+        Copy.onUpdate(this);
         Tone.read(this);
         Keep.settle(this);
         widgets = android.appwidget.AppWidgetManager.getInstance(this);

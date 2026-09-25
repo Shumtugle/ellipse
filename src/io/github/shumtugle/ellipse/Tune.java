@@ -216,11 +216,7 @@ public final class Tune extends Activity {
                         new int[] {Keep.DO_HOME, Keep.DO_LIST, Keep.DO_NOTHING})
                 };
             case BACKUP:
-                return new Line[] {
-                    soon("Back up", "The whole set-out and the settings, into one file"),
-                    soon("Restore", "From a file made here"),
-                    soon("Bring in", "The set-out of another home screen, from its backup")
-                };
+                return new Line[0];
             case LANGUAGE:
                 return new Line[] {
                     soon("Language modules", "The words of the home screen in another language")
@@ -459,6 +455,10 @@ public final class Tune extends Activity {
         }
         if (room() == ICONS) {
             fillIcons();
+            return;
+        }
+        if (room() == BACKUP) {
+            fillBackup();
             return;
         }
         if (room() == CLOCK) {
@@ -1350,6 +1350,129 @@ public final class Tune extends Activity {
         rows.addView(made);
     }
 
+    private static final int WRITE_COPY = 21;
+    private static final int READ_COPY = 22;
+    /** A copy armed by a first tap, waiting for the second. */
+    private java.io.File armedCopy;
+    private long armedCopyAt;
+
+    /**
+     * Copies: into a file and back from one; the last restore undone; and
+     * the copies made by themselves when a new version first started, each
+     * brought back by two taps, the first saying what the second will do.
+     */
+    private void fillBackup() {
+        note("A copy holds every screen's set-out, the dock, the folders, the clock and every setting. "
+            + "Widgets keep their places; after installing anew they are added again.");
+        rows.addView(deed("Back up into a file", new Runnable() {
+            public void run() {
+                Intent make = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/json").putExtra(Intent.EXTRA_TITLE, Copy.name());
+                try {
+                    startActivityForResult(make, WRITE_COPY);
+                } catch (RuntimeException none) {
+                    said("The phone has no place to keep files");
+                }
+            }
+        }));
+        rows.addView(deed("Restore from a file", new Runnable() {
+            public void run() {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("*/*");
+                try {
+                    startActivityForResult(pick, READ_COPY);
+                } catch (RuntimeException none) {
+                    said("The phone has no place to keep files");
+                }
+            }
+        }));
+        if (Copy.undoable(this)) {
+            rows.addView(deed("Undo the last restore", new Runnable() {
+                public void run() {
+                    if (Copy.undo(Tune.this)) {
+                        restart();
+                    } else {
+                        said("There is nothing to undo");
+                    }
+                }
+            }));
+        }
+        java.util.List<java.io.File> kept = Copy.updates(this);
+        if (!kept.isEmpty()) {
+            caption("KEPT WHEN A NEW VERSION STARTED");
+            note("The set-out as the version before left it. Tap twice to bring one back.");
+            for (final java.io.File one : kept) {
+                String[] what = Copy.about(one);
+                final String title = "As " + what[0] + " left it" + (what[1].isEmpty() ? ""
+                    : ", " + what[1].replace('T', ' '));
+                final TextView line = (TextView) deed(title, null);
+                line.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        long now = System.currentTimeMillis();
+                        if (!one.equals(armedCopy) || now - armedCopyAt > 4000L) {
+                            armedCopy = one;
+                            armedCopyAt = now;
+                            line.setText("Tap again to bring this set-out back");
+                            v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                            v.postDelayed(new Runnable() {
+                                public void run() {
+                                    line.setText(title);
+                                }
+                            }, 4000L);
+                            return;
+                        }
+                        try {
+                            if (Copy.read(Tune.this, Copy.load(one))) {
+                                restart();
+                                return;
+                            }
+                        } catch (java.io.IOException gone) {
+                            // Said below.
+                        }
+                        said("That copy could not be read");
+                    }
+                });
+                rows.addView(line);
+            }
+        }
+        caption("FROM ANOTHER HOME SCREEN");
+        rows.addView(row(soon("Bring in", "The set-out of another home screen, from its backup")));
+    }
+
+    private void said(String words) {
+        android.widget.Toast.makeText(this, words, android.widget.Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    protected void onActivityResult(int asked, int result, Intent answer) {
+        super.onActivityResult(asked, result, answer);
+        if (result != RESULT_OK || answer == null || answer.getData() == null) {
+            return;
+        }
+        android.net.Uri where = answer.getData();
+        if (asked == WRITE_COPY) {
+            try (java.io.OutputStream out = getContentResolver().openOutputStream(where, "wt")) {
+                if (out == null) {
+                    throw new java.io.IOException();
+                }
+                Copy.put(out, Copy.write(this));
+                said("The copy is made");
+            } catch (java.io.IOException | org.json.JSONException | RuntimeException failed) {
+                said("The copy could not be written");
+            }
+        } else if (asked == READ_COPY) {
+            try (java.io.InputStream in = getContentResolver().openInputStream(where)) {
+                if (in != null && Copy.read(this, Copy.words(in))) {
+                    restart();
+                    return;
+                }
+                said("That file is not a copy made here");
+            } catch (java.io.IOException | RuntimeException failed) {
+                said("That file could not be read");
+            }
+        }
+    }
+
     /** A line of words in the accent that does something when touched. */
     private View deed(String said, final Runnable does) {
         TextView made = new TextView(this);
@@ -1358,12 +1481,14 @@ public final class Tune extends Activity {
         made.setTextColor(Tone.primary());
         made.setPadding(dp(24), dp(12), dp(24), dp(12));
         made.setBackground(Tone.touch(null, dp(16)));
-        made.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
-                does.run();
-            }
-        });
+        if (does != null) {
+            made.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    does.run();
+                }
+            });
+        }
         return made;
     }
 
