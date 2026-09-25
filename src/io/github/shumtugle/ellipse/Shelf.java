@@ -40,6 +40,8 @@ import java.util.Map;
  */
 final class Shelf extends FrameLayout {
 
+    private Glow glow;
+
     interface Hand {
         /** How many places across and down a widget will take. */
         int[] span(AppWidgetProviderInfo info);
@@ -224,7 +226,9 @@ final class Shelf extends FrameLayout {
     }
 
     private void tint() {
-        setBackgroundColor(Tone.surface());
+        /* The soft ground of the settings, drifting while the list is shown. */
+        glow = new Glow();
+        setBackground(glow);
         foot.tint();
     }
 
@@ -567,5 +571,25 @@ final class Shelf extends FrameLayout {
             one.animate().alpha(1f).translationY(0f).setStartDelay(Pace.STEP * i)
                 .setDuration(Pace.ARRIVE).setInterpolator(Pace.EMPHASIS).start();
         }
+    }
+
+    @Override
+    protected void onVisibilityChanged(View changed, int visibility) {
+        super.onVisibilityChanged(changed, visibility);
+        if (glow != null) {
+            if (isShown()) {
+                glow.start(null);
+            } else {
+                glow.stop();
+            }
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        if (glow != null) {
+            glow.stop();
+        }
+        super.onDetachedFromWindow();
     }
 }

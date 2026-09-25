@@ -29,6 +29,8 @@ import java.util.Locale;
  */
 final class Chooser extends FrameLayout {
 
+    private Glow glow;
+
     interface Hand {
         void chosen(int key);
 
@@ -135,7 +137,9 @@ final class Chooser extends FrameLayout {
         this.grid = grid;
         this.captions = captions;
         this.items = items;
-        setBackgroundColor(Tone.surface());
+        /* The soft ground of the settings, drifting while the list is shown. */
+        glow = new Glow();
+        setBackground(glow);
         foot.tint();
         field.setText("");
         build();
@@ -259,5 +263,25 @@ final class Chooser extends FrameLayout {
             }
             count++;
         }
+    }
+
+    @Override
+    protected void onVisibilityChanged(View changed, int visibility) {
+        super.onVisibilityChanged(changed, visibility);
+        if (glow != null) {
+            if (isShown()) {
+                glow.start(null);
+            } else {
+                glow.stop();
+            }
+        }
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        if (glow != null) {
+            glow.stop();
+        }
+        super.onDetachedFromWindow();
     }
 }

@@ -317,6 +317,8 @@ public final class Tune extends Activity {
 
     /** The window onto the wallpaper, if a room keeps one open; the rest of the settings is the surface. */
     private View throughTo;
+    /** The soft ground of the settings, as the pages wear it. */
+    private final Glow glow = new Glow();
 
     private void build() {
         /* The settings paint their own ground, all but a window the icons'
@@ -341,10 +343,12 @@ public final class Tune extends Activity {
                         top + through.getHeight()), dp(30), dp(30), android.graphics.Path.Direction.CW);
                     canvas.save();
                     canvas.clipOutPath(hole);
-                    canvas.drawColor(Tone.surface());
+                    glow.setBounds(0, 0, getWidth(), getHeight());
+                    glow.draw(canvas);
                     canvas.restore();
                 } else {
-                    canvas.drawColor(Tone.surface());
+                    glow.setBounds(0, 0, getWidth(), getHeight());
+                    glow.draw(canvas);
                 }
             }
         };
@@ -851,7 +855,14 @@ public final class Tune extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        glow.stop();
+    }
+
+    @Override
     protected void onResume() {
+        glow.start(host);
         super.onResume();
         if (Tone.read(this)) {
             recreate();
