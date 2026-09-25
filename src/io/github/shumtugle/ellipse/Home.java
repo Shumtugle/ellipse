@@ -148,6 +148,15 @@ public final class Home extends Activity {
     private static final int KEY_FRONT = 9;
     private static final int KEY_BEHIND = 10;
     private static final int KEY_FRAME = 11;
+    private static final int KEY_KIND = 12;
+    private static final int KEY_KIND_PICK = 9000;
+    private static final String KIND = "Category";
+    private static final String NEW_KIND = "New category\u2026";
+    /** Where the last menu of a thing stood, for a second one to stand in its place. */
+    private float menuX;
+    private float menuY;
+    private float menuGap;
+    private List<String> kindChoices = new ArrayList<>();
     private static final String FRAME_ON = "Frame";
     private static final String FRAME_OFF = "No frame";
     private static final String FRONT = "Bring to front";
@@ -2464,6 +2473,11 @@ public final class Home extends Activity {
             keys.add(KEY_FACE);
             glyphs.add(Glyph.ICONS);
         }
+        if (door != null && Kinds.mode(this) != Kinds.NONE) {
+            lines.add(KIND + ": " + Kinds.of(this, door));
+            keys.add(KEY_KIND);
+            glyphs.add(Glyph.LIST);
+        }
         if (door != null && !systemApp(door)) {
             lines.add(UNINSTALL);
             keys.add(KEY_UNINSTALL);
@@ -2537,6 +2551,9 @@ public final class Home extends Activity {
             gap = thing.getHeight() / 2f + dp(8);
         }
         thing.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        menuX = x;
+        menuY = y;
+        menuGap = gap;
         menu.showFaces(name, own.toArray(new Menu.Section[0]), Glyph.SETTINGS,
             ours.toArray(new Menu.Section[0]), door != null ? Glyph.INFO : -1, x, y, gap);
         if (whence != null && whence[0] != -2) {
@@ -2670,6 +2687,38 @@ public final class Home extends Activity {
                     fill();
                 }
                 reshapeAt(offerToken, offerWhence[0], offerWhence[1], offerWhence[2]);
+            } else if (key == KEY_KIND && offerDoor != null) {
+                /* A second menu in the first's place: every kind, and a new one. */
+                kindChoices = Kinds.choices(this);
+                final List<String> shown = new ArrayList<>(kindChoices);
+                shown.add(NEW_KIND);
+                final int[] picks = new int[shown.size()];
+                for (int i = 0; i < picks.length; i++) {
+                    picks[i] = KEY_KIND_PICK + i;
+                }
+                root.postDelayed(new Runnable() {
+                    public void run() {
+                        menu.show(new Menu.Section[] {new Menu.Section(KIND, shown.toArray(new String[0]), picks)},
+                            menuX, menuY, menuGap);
+                    }
+                }, Pace.PRESS);
+            } else if (key >= KEY_KIND_PICK && key < KEY_KIND_PICK + 100 && offerDoor != null) {
+                final Apps.Door door = offerDoor;
+                int which = key - KEY_KIND_PICK;
+                if (which < kindChoices.size()) {
+                    Kinds.put(this, door, kindChoices.get(which));
+                    fill();
+                } else {
+                    Ask.show(root, NEW_KIND.replace("\u2026", ""), "", new Ask.Answer() {
+                        public void answered(String text) {
+                            String name = text == null ? "" : text.trim();
+                            if (!name.isEmpty()) {
+                                Kinds.put(Home.this, door, name);
+                                fill();
+                            }
+                        }
+                    });
+                }
             } else if (key == KEY_FRAME) {
                 String off = Keep.FRAME_OFF + widgetId(offerToken);
                 Keep.saveFlag(this, off, !Keep.flag(this, off, false));

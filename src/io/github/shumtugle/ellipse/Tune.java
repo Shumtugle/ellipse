@@ -186,6 +186,10 @@ public final class Tune extends Activity {
                         Keep.LINES, new String[] {"Lines", "Pages"}, new int[] {Keep.LINES, Keep.PAGES}),
                     door(Glyph.LOOK, "Background", "The list's ground: the theme's, or a colour of your own",
                         LISTGROUND),
+                    choice("Categories", "Tabs across the list: none; kinds you name and fill by hand; or "
+                        + "the kinds apps say they are", Keep.KINDS, Kinds.NONE,
+                        new String[] {"None", "By hand", "Automatic"},
+                        new int[] {Kinds.NONE, Kinds.BY_HAND, Kinds.BY_THEMSELVES}),
                     choice("Page grid", "Columns and rows of a page", Keep.LIST_GRID, 45,
                         GRIDS, GRID_VALUES),
                     toggle("Endless scrolling", "Past the last page comes the first again",

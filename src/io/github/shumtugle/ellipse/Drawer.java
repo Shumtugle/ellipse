@@ -85,6 +85,12 @@ final class Drawer extends FrameLayout {
     private final float iconSize;
     private final float density;
     private List<Apps.Door> every = new ArrayList<>();
+    /* The kinds the list is sorted into, as tabs across its head, and the one shown. */
+    private android.widget.HorizontalScrollView tabScroll;
+    private LinearLayout tabRow;
+    private String tab = Kinds.ALL;
+    private int insetTop;
+    private float scaledText;
     private List<Apps.Door> doors = new ArrayList<>();
     private boolean shown;
     /** The list's menu, grown out of the round button. */
@@ -148,6 +154,15 @@ final class Drawer extends FrameLayout {
             public void onScroll(android.widget.AbsListView view, int first, int count, int total) {
             }
         });
+        scaledText = scaled;
+        tabScroll = new android.widget.HorizontalScrollView(context);
+        tabScroll.setHorizontalScrollBarEnabled(false);
+        tabScroll.setOverScrollMode(OVER_SCROLL_NEVER);
+        tabScroll.setVisibility(GONE);
+        tabRow = new LinearLayout(context);
+        tabScroll.addView(tabRow);
+        column.addView(tabScroll, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         FrameLayout content = new FrameLayout(context);
         column.addView(content, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
@@ -352,8 +367,11 @@ final class Drawer extends FrameLayout {
      * navigation and, when it is up, the keyboard.
      */
     void inset(int top, int bottom) {
-        list.setPadding(0, top + dp(12), 0, dp(8));
-        pager.setPadding(0, top + dp(12), 0, 0);
+        insetTop = top;
+        boolean tabbed = tabScroll.getVisibility() == VISIBLE;
+        tabScroll.setPadding(dp(8), top + dp(4), dp(8), 0);
+        list.setPadding(0, tabbed ? dp(4) : top + dp(12), 0, dp(8));
+        pager.setPadding(0, tabbed ? dp(4) : top + dp(12), 0, 0);
         LinearLayout.LayoutParams barParams = (LinearLayout.LayoutParams) bar.getLayoutParams();
         barParams.bottomMargin = bottom + dp(10);
         bar.setLayoutParams(barParams);
@@ -361,7 +379,54 @@ final class Drawer extends FrameLayout {
 
     void fill(List<Apps.Door> doors) {
         this.every = doors;
+        tabs();
         narrow(field.getText().toString());
+    }
+
+    /**
+     * The tabs across the head: none if the list is not sorted into kinds;
+     * else All and every kind with an app in it, the one last left on
+     * chosen, if it is still there.
+     */
+    private void tabs() {
+        tabRow.removeAllViews();
+        boolean shown = Kinds.mode(getContext()) != Kinds.NONE;
+        tabScroll.setVisibility(shown ? VISIBLE : GONE);
+        inset(insetTop, ((LinearLayout.LayoutParams) bar.getLayoutParams()).bottomMargin - dp(10));
+        if (!shown) {
+            tab = Kinds.ALL;
+            return;
+        }
+        final List<String> names = Kinds.tabs(getContext(), every);
+        String kept = Keep.word(getContext(), Keep.KIND_TAB);
+        tab = kept != null && names.contains(kept) ? kept : Kinds.ALL;
+        for (final String name : names) {
+            final TextView one = Tabs.tab(getContext(), name, 14f * scaledText, Tone.listInk(), Tone.listFaint(),
+                name.equals(tab));
+            one.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    tab = name;
+                    Keep.saveWord(getContext(), Keep.KIND_TAB, name);
+                    for (int i = 0; i < tabRow.getChildCount(); i++) {
+                        Tabs.mark((TextView) tabRow.getChildAt(i), names.get(i).equals(tab), Tone.listInk(),
+                            Tone.listFaint());
+                    }
+                    narrow(field.getText().toString());
+                    enter(view == Keep.PAGES ? pager : list);
+                }
+            });
+            tabRow.addView(one);
+        }
+        final int at = names.indexOf(tab);
+        tabScroll.post(new Runnable() {
+            public void run() {
+                View chosen = tabRow.getChildAt(Math.max(0, at));
+                if (chosen != null) {
+                    tabScroll.scrollTo(Math.max(0, chosen.getLeft() - dp(24)), 0);
+                }
+            }
+        });
     }
 
     /** The same list in another order: the lines are let in again from the top. */
@@ -381,13 +446,23 @@ final class Drawer extends FrameLayout {
     /** The list, narrowed to what the field holds: names that start with it first. */
     private void narrow(String typed) {
         String key = Match.norm(typed);
+        /* A tab narrows first; a word searches within it. */
+        List<Apps.Door> base = every;
+        if (!Kinds.ALL.equals(tab) && Kinds.mode(getContext()) != Kinds.NONE) {
+            base = new ArrayList<>();
+            for (Apps.Door door : every) {
+                if (tab.equals(Kinds.of(getContext(), door))) {
+                    base.add(door);
+                }
+            }
+        }
         if (key.length() == 0) {
-            doors = every;
+            doors = base;
         } else {
             List<Apps.Door> start = new ArrayList<>();
             List<Apps.Door> word = new ArrayList<>();
             List<Apps.Door> inside = new ArrayList<>();
-            for (Apps.Door door : every) {
+            for (Apps.Door door : base) {
                 int rank = Match.rank(Match.norm(door.label.toString()), key);
                 if (rank == Match.START) {
                     start.add(door);

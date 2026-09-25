@@ -149,15 +149,12 @@ final class Fresh extends FrameLayout {
         int tab = Keep.number(getContext(), Keep.FRESH_TAB, 2);
         final LinearLayout tabs = new LinearLayout(getContext());
         String[] names = {MOST, RECENT, NEW};
+        /* The words made smaller together, if need be, so all three fit whole. */
+        float width = getResources().getDisplayMetrics().widthPixels - dp(16);
+        float size = Tabs.fit(getContext(), names, 14f * scaled, width);
         for (int i = 0; i < names.length; i++) {
             final int which = i;
-            TextView one = new TextView(getContext());
-            one.setText(names[i].toUpperCase(Locale.ROOT));
-            one.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
-            one.setLetterSpacing(0.08f);
-            one.setGravity(Gravity.CENTER);
-            one.setSingleLine(true);
-            one.setPadding(dp(4), dp(12), dp(4), dp(12));
+            TextView one = Tabs.tab(getContext(), names[i], size, Tone.onSurface(), Tone.faint(), false);
             one.setOnClickListener(new OnClickListener() {
                 public void onClick(View v) {
                     v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
@@ -165,7 +162,7 @@ final class Fresh extends FrameLayout {
                     choose(tabs, which);
                 }
             });
-            tabs.addView(one, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            tabs.addView(one, Tabs.share(one));
         }
         sheet.addView(tabs);
         body = new LinearLayout(getContext());
@@ -178,20 +175,7 @@ final class Fresh extends FrameLayout {
     /** A tab chosen: its word in the accent and underlined, its list below. */
     private void choose(LinearLayout tabs, int which) {
         for (int i = 0; i < tabs.getChildCount(); i++) {
-            TextView one = (TextView) tabs.getChildAt(i);
-            boolean on = i == which;
-            one.setTextColor(on ? Tone.onSurface() : Tone.faint());
-            if (on) {
-                GradientDrawable line = new GradientDrawable();
-                line.setColor(Tone.primary());
-                android.graphics.drawable.LayerDrawable under = new android.graphics.drawable.LayerDrawable(
-                    new android.graphics.drawable.Drawable[] {line});
-                under.setLayerGravity(0, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
-                under.setLayerHeight(0, dp(3));
-                one.setBackground(under);
-            } else {
-                one.setBackground(null);
-            }
+            Tabs.mark((TextView) tabs.getChildAt(i), i == which, Tone.onSurface(), Tone.faint());
         }
         body.removeAllViews();
         List<Apps.Door> doors = which == 0 ? most : which == 1 ? recent : lately;

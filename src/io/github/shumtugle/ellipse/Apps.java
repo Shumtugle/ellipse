@@ -68,6 +68,11 @@ final class Apps {
             return Pack.icon(name, info.getIcon(density));
         }
 
+        /** The kind the app says it is, as the platform lets it say; less than nought if it says none. */
+        int kind() {
+            return info.getApplicationInfo().category;
+        }
+
         /** How it is kept: its component, and after an at sign its profile when that is not the owner's own. */
         String token() {
             return Apps.token(name, serial);

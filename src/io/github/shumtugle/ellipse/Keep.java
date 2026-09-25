@@ -500,6 +500,9 @@ final class Keep {
     static final String LIST_SAT = "list_sat";
     static final String LIST_VAL = "list_val";
     static final String LIST_ALPHA = "list_alpha";
+    /** Whether the list of every app is sorted into kinds under tabs, and how; and the tab it was left on. */
+    static final String KINDS = "kinds";
+    static final String KIND_TAB = "kind_tab";
     /** Which of its three the panel of fresh apps opens on. */
     static final String FRESH_TAB = "fresh_tab";
 
