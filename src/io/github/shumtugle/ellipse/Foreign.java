@@ -612,6 +612,8 @@ final class Foreign {
         int others;
         /** How many of the other home screen's looks were taken over: names, dock, outline. */
         int look;
+        /** Whether the owner's widget clock was stood in for by this home screen's own. */
+        boolean clock;
         /** The pack of icons the other home screen read, not on this phone; or none. */
         String packMissing;
         final List<String> unmade = new ArrayList<>();
@@ -633,6 +635,7 @@ final class Foreign {
         int rows = Math.max(3, Math.min(12, layout.rows));
         List<Keep.Spot> spots = new ArrayList<>();
         Map<String, Boolean> known = new HashMap<>();
+        boolean clocked = false;
         for (int s = 0; s < layout.screens.size(); s++) {
             for (Item item : layout.screens.get(s)) {
                 if (item.x >= columns || item.y >= rows) {
@@ -664,6 +667,15 @@ final class Foreign {
                     }
                     spots.add(new Keep.Spot(Keep.FOLDER_THING + id, s, item.x, item.y));
                     report.folders++;
+                } else if (item.kind == Item.WIDGET && !clocked && item.provider != null
+                    && item.provider.startsWith(Meno.WIDGET_PACKAGE + "/")) {
+                    /* The owner's own widget clock: this home screen's clock in its
+                       face stands in its place and size, and needs no leave. */
+                    int w = Math.min(item.w, columns - item.x);
+                    int h = Math.min(item.h, rows - item.y);
+                    spots.add(new Keep.Spot(Keep.CLOCK_THING + ":" + w + ":" + h, s, item.x, item.y));
+                    clocked = true;
+                    report.clock = true;
                 } else if (item.kind == Item.WIDGET) {
                     ComponentName provider = ComponentName.unflattenFromString(item.provider);
                     int id = provider == null ? 0 : host.allocateAppWidgetId();
@@ -743,9 +755,13 @@ final class Foreign {
             report.look++;
         }
         /* The other home screen's set-out has its own clock, if any, among
-           its widgets: this one's own clock is put away, and the shelf
-           brings it back. */
-        Keep.saveFlag(context, Keep.CLOCK, false);
+           its widgets: this one's own clock stands only where the owner's
+           widget clock stood, in that face; otherwise it is put away, and
+           the shelf brings it back. */
+        Keep.saveFlag(context, Keep.CLOCK, clocked);
+        if (clocked) {
+            Keep.saveNumber(context, Keep.CLOCK_FACE, Home.FACE_MENO);
+        }
         /* Its pack of icons, if it read one and the pack is on this phone. */
         if (layout.pack != null && !layout.pack.isEmpty()) {
             if (Pack.installed(context).containsKey(layout.pack)) {

@@ -38,6 +38,9 @@ import java.util.Locale;
  */
 final class Meno extends View implements Timepiece {
 
+    /** The owner's widget this face is the drawing of, by its package. */
+    static final String WIDGET_PACKAGE = "io.github.shumtugle.meno";
+
     /** The seconds hand in the widget's own colours, as it offers them. */
     static final int[] SECONDS = {0xFFF5F1E8, 0xFF8A8A8A, 0xFF7D8BD4, 0xFF9E2B3A, 0xFFA8C0D8, 0xFFC9A86A,
         0xFFD8C9A8};

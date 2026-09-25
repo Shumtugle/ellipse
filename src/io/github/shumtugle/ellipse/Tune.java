@@ -109,6 +109,7 @@ public final class Tune extends Activity {
     private static final int ICONS = 9;
     private static final int CLOCK = 10;
     private static final int LOOKS = 11;
+    private static final int FONTS = 12;
 
     private static final int RESTART = 1;
     private static final int RESET = 2;
@@ -193,6 +194,7 @@ public final class Tune extends Activity {
             case LOOK:
                 return new Line[] {
                     door(Glyph.LOOK, "Looks", "The whole look kept under a name, put on at a touch", LOOKS),
+                    door(Glyph.LOOK, "Typeface", "The letters of every name and every word here", FONTS),
                     choice("Theme", "Dark surfaces, light ones, or as the phone is set", Keep.THEME,
                         Keep.THEME_DARK, new String[] {"Dark", "Light", "As the phone"},
                         new int[] {Keep.THEME_DARK, Keep.THEME_LIGHT, Keep.THEME_PHONE}),
@@ -253,7 +255,7 @@ public final class Tune extends Activity {
             }
         }
         return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face"
-            : room == LOOKS ? "Looks" : "";
+            : room == LOOKS ? "Looks" : room == FONTS ? "Typeface" : "";
     }
 
     private float density;
@@ -511,6 +513,10 @@ public final class Tune extends Activity {
         }
         if (room() == LOOKS) {
             fillLooks();
+            return;
+        }
+        if (room() == FONTS) {
+            fillFonts();
             return;
         }
         if (room() == CLOCK) {
@@ -980,17 +986,6 @@ public final class Tune extends Activity {
         }));
         rows.addView(row(toggle("Folder ground", "A container behind the small icons of a folder",
             Keep.FOLDER_GROUND, true)));
-        caption("TYPEFACE");
-        android.widget.HorizontalScrollView faces = new android.widget.HorizontalScrollView(this);
-        faces.setHorizontalScrollBarEnabled(false);
-        faces.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        LinearLayout chips = new LinearLayout(this);
-        chips.setPadding(dp(18), 0, dp(18), dp(24));
-        for (int i = 0; i < Style.FAMILIES.length; i++) {
-            chips.addView(faceChip(i));
-        }
-        faces.addView(chips);
-        rows.addView(faces);
         final android.widget.HorizontalScrollView row = across;
         final LinearLayout all = tiles;
         across.post(new Runnable() {
@@ -1643,6 +1638,21 @@ public final class Tune extends Activity {
         }
     }
 
+    /** The typeface of every name and every word of the home screen and its settings. */
+    private void fillFonts() {
+        caption("TYPEFACE");
+        android.widget.HorizontalScrollView faces = new android.widget.HorizontalScrollView(this);
+        faces.setHorizontalScrollBarEnabled(false);
+        faces.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout chips = new LinearLayout(this);
+        chips.setPadding(dp(18), 0, dp(18), dp(24));
+        for (int i = 0; i < Style.FAMILIES.length; i++) {
+            chips.addView(faceChip(i));
+        }
+        faces.addView(chips);
+        rows.addView(faces);
+    }
+
     /** A look put on: the colours read again and the settings made again in them. */
     private void worn() {
         Tone.read(this);
@@ -1730,7 +1740,8 @@ public final class Tune extends Activity {
                             + "the icons' outline and pack, the screens' points, endless turning and edges, "
                             + "and the list of every app.");
                     }
-                    told.append(" This home screen's own clock is put away; the widget shelf brings it back.");
+                    told.append(done.clock ? " The widget clock stands as this home screen's own, in its face."
+                        : " This home screen's own clock is put away; the widget shelf brings it back.");
                     if (done.packMissing != null) {
                         told.append(" Its pack of icons is not on this phone: ").append(done.packMissing).append('.');
                     }
