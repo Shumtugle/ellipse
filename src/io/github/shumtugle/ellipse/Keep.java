@@ -364,6 +364,22 @@ final class Keep {
      * written in; when the steps change, it is written again in the new.
      */
     static final String HALF_STEPS = "half_steps";
+    /**
+     * The shape of a place: the screen's share (as many rows as the grid
+     * says, each as high as the screen gives), or square, wide, or tall —
+     * then as many rows as fit.
+     */
+    static final String CELL_SHAPE = "cell_shape";
+    static final int SHAPE_SCREEN = 0;
+    static final int SHAPE_SQUARE = 1;
+    static final int SHAPE_WIDE = 2;
+    static final int SHAPE_TALL = 3;
+
+    /** A place's height to its width in a shape; nought for the screen's share. */
+    static float cellRatio(int shape) {
+        return shape == SHAPE_SQUARE ? 1f : shape == SHAPE_WIDE ? 0.8f : shape == SHAPE_TALL ? 1.25f : 0f;
+    }
+
     /** Whether things may be set down over one another, the last set down on top. */
     static final String OVERLAP = "overlap";
     private static final String LAYOUT_FINE = "layout_fine";
@@ -919,6 +935,32 @@ final class Keep {
         }
         if (moved != null) {
             kept.add(moved);
+        }
+        write(context, kept);
+    }
+
+    /**
+     * A thing brought to the top of those over one another, or sent under
+     * them all: it is written last, or first, for the last written stands
+     * on top.
+     */
+    static void stack(Context context, int screen, int x, int y, boolean top) {
+        List<Spot> kept = new ArrayList<>();
+        Spot moved = null;
+        for (Spot spot : placed(context)) {
+            if (spot.screen == screen && spot.x == x && spot.y == y) {
+                moved = spot;
+            } else {
+                kept.add(spot);
+            }
+        }
+        if (moved == null) {
+            return;
+        }
+        if (top) {
+            kept.add(moved);
+        } else {
+            kept.add(0, moved);
         }
         write(context, kept);
     }

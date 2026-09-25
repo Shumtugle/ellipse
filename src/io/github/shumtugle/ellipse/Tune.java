@@ -158,6 +158,10 @@ public final class Tune extends Activity {
                         Keep.HALF_STEPS, false),
                     toggle("Overlap", "Icons and widgets may be set down over one another, the last "
                         + "set down on top; best with half steps", Keep.OVERLAP, false),
+                    choice("Place shape", "The screen's share: the grid's rows fill the screen. Square, wide "
+                        + "or tall: each place so shaped, and as many rows as fit", Keep.CELL_SHAPE,
+                        Keep.SHAPE_SCREEN, new String[] {"Screen's share", "Square", "Wide", "Tall"},
+                        new int[] {Keep.SHAPE_SCREEN, Keep.SHAPE_SQUARE, Keep.SHAPE_WIDE, Keep.SHAPE_TALL}),
                     choice("Row height", "How high each row stands: lower, the rows close up toward the top "
                         + "and the gaps between them narrow", Keep.ROW_HEIGHT, 100,
                         new String[] {"100%", "90%", "80%", "70%", "60%"}, new int[] {100, 90, 80, 70, 60}),

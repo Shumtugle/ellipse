@@ -145,6 +145,10 @@ public final class Home extends Activity {
     private static final int KEY_SHORTCUT = 100;
     private static final int KEY_FACE = 7;
     private static final int KEY_ARRANGE = 8;
+    private static final int KEY_FRONT = 9;
+    private static final int KEY_BEHIND = 10;
+    private static final String FRONT = "Bring to front";
+    private static final String BEHIND = "Send behind";
     private static final String ARRANGE = "Arrange rings";
     private static final String FACE_LINE = "Change icon";
     /** What the whole screen of choices is choosing now: a shortcut's maker, or one icon's face. */
@@ -870,12 +874,13 @@ public final class Home extends Activity {
         for (Keep.Spot spot : spots) {
             count = Math.max(count, spot.screen + 1);
         }
+        rowShare = shapeRows();
         for (int i = 0; i < count; i++) {
             Grid page = new Grid(this, columns, rows);
             page.unit(fine);
             page.overlap(Keep.flag(this, Keep.OVERLAP, false));
             page.setPadding(side(), dp(16), side(), 0);
-            page.rowShare(Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f);
+            page.rowShare(rowShare);
             page.shape(iconSize, Cell.below(this));
             final android.view.GestureDetector twice = new android.view.GestureDetector(this,
                 new android.view.GestureDetector.SimpleOnGestureListener() {
@@ -1175,6 +1180,40 @@ public final class Home extends Activity {
         });
     }
 
+    /** A row's share of its full height on the screens now. */
+    private float rowShare = 1f;
+
+    /**
+     * The rows the screens hold, and the share of the height each takes.
+     * With the screen's share, the grid's own rows, as high as the row
+     * height says. With a shape, each place as high as its width asks —
+     * square, wide or tall — and as many rows as fit; what is left over
+     * stays free at the foot.
+     */
+    private float shapeRows() {
+        int grid = Keep.number(this, Keep.DESK_GRID, 45);
+        float ratio = Keep.cellRatio(Keep.number(this, Keep.CELL_SHAPE, Keep.SHAPE_SCREEN));
+        if (ratio <= 0f) {
+            rows = Keep.rows(grid) * fine;
+            return Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f;
+        }
+        float wide;
+        float tall;
+        if (screens != null && screens.getWidth() > 0 && screens.getHeight() > 0) {
+            wide = screens.getWidth() - 2 * side();
+            tall = screens.getHeight() - dp(16);
+        } else {
+            guessed = true;
+            android.util.DisplayMetrics m = getResources().getDisplayMetrics();
+            wide = m.widthPixels - 2 * side();
+            tall = m.heightPixels * 0.72f;
+        }
+        float high = wide / Keep.columns(grid) * ratio;
+        int count = Math.max(3, Math.min(16, (int) Math.floor(tall / high + 0.02f)));
+        rows = count * fine;
+        return Math.min(1f, high * count / tall);
+    }
+
     /** A screen's margin at each side: none if the grid runs to the edges whole. */
     private int side() {
         return Keep.edgeless(this) ? 0 : dp(8);
@@ -1190,12 +1229,12 @@ public final class Home extends Activity {
     private float[] place() {
         if (screens != null && screens.getWidth() > 0 && screens.getHeight() > 0) {
             return new float[] {(screens.getWidth() - 2 * side()) / (float) columns,
-                (screens.getHeight() - dp(16)) / (float) rows * Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f};
+                (screens.getHeight() - dp(16)) / (float) rows * rowShare};
         }
         guessed = true;
         android.util.DisplayMetrics m = getResources().getDisplayMetrics();
         return new float[] {(m.widthPixels - 2 * side()) / (float) columns,
-            m.heightPixels * 0.72f / rows * Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f};
+            m.heightPixels * 0.72f / rows * rowShare};
     }
 
     /**
@@ -2437,6 +2476,14 @@ public final class Home extends Activity {
             keys.add(KEY_RESIZE);
             glyphs.add(Glyph.RESIZE);
         }
+        if (whence != null && whence[0] >= 0 && Keep.flag(this, Keep.OVERLAP, false)) {
+            lines.add(FRONT);
+            keys.add(KEY_FRONT);
+            glyphs.add(Glyph.FRONT);
+            lines.add(BEHIND);
+            keys.add(KEY_BEHIND);
+            glyphs.add(Glyph.BEHIND);
+        }
         if (thing instanceof Rings) {
             lines.add(ARRANGE);
             keys.add(KEY_ARRANGE);
@@ -2614,6 +2661,12 @@ public final class Home extends Activity {
                     fill();
                 }
                 reshapeAt(offerToken, offerWhence[0], offerWhence[1], offerWhence[2]);
+            } else if ((key == KEY_FRONT || key == KEY_BEHIND) && offerWhence != null) {
+                if (!Keep.laid(this)) {
+                    Keep.lay(this, standing);
+                }
+                Keep.stack(this, offerWhence[0], offerWhence[1], offerWhence[2], key == KEY_FRONT);
+                fill();
             } else if (key == KEY_ARRANGE && offerView instanceof Rings) {
                 arrange((Rings) offerView);
             } else if (key == KEY_RENAME) {

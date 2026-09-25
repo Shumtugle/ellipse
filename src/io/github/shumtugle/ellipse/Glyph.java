@@ -42,6 +42,9 @@ final class Glyph extends View {
     static final int BACK = 19;
     static final int ICONS = 20;
     static final int CLOCK = 21;
+    /** Two cards, one over the other: bring to the front, send behind. */
+    static final int FRONT = 22;
+    static final int BEHIND = 23;
 
     private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -371,6 +374,14 @@ final class Glyph extends View {
                 path.lineTo(12f * u, 15f * u);
                 path.lineTo(18f * u, 9f * u);
                 canvas.drawPath(path, line);
+                break;
+            case FRONT:
+                canvas.drawRoundRect(4f * u, 4f * u, 14f * u, 14f * u, 2f * u, 2f * u, line);
+                canvas.drawRoundRect(9f * u, 9f * u, 20f * u, 20f * u, 2f * u, 2f * u, fill);
+                break;
+            case BEHIND:
+                canvas.drawRoundRect(4f * u, 4f * u, 15f * u, 15f * u, 2f * u, 2f * u, fill);
+                canvas.drawRoundRect(10f * u, 10f * u, 20f * u, 20f * u, 2f * u, 2f * u, line);
                 break;
             default:
                 break;
