@@ -280,9 +280,15 @@ final class Foreign {
         if (pack.find()) {
             into.pack = pack.group(1).trim();
         }
+        /* The other shape keeps its pack as its name, its kind, its package, and a flag, by colons. */
         Matcher theme = Pattern.compile("name=\"theme_icon_pack\">([^<]+)<").matcher(said);
         if (theme.find() && into.pack == null) {
-            into.pack = theme.group(1).trim();
+            for (String part : theme.group(1).split(":")) {
+                String one = part.trim();
+                if (one.contains(".") && !one.contains(" ")) {
+                    into.pack = one;
+                }
+            }
         }
         Matcher shape = Pattern.compile("name=\"homeIconAppearanceKey\">[^<]*?path:([^;<]+)").matcher(said);
         if (shape.find()) {

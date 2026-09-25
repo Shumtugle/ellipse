@@ -55,7 +55,22 @@ final class Pack {
     private static String mask;
     private static String gloss;
     private static float scale = 1f;
-    private static final Map<String, Drawable> made = new HashMap<>();
+    /* The icons made, kept while they fit in a measure of memory; and the
+       pack's ground, mask and gloss, drawn once at the size icons are made. */
+    private static final android.util.LruCache<String, Drawable> made =
+        new android.util.LruCache<String, Drawable>(24 * 1024 * 1024) {
+            @Override
+            protected int sizeOf(String key, Drawable icon) {
+                return icon instanceof BitmapDrawable && ((BitmapDrawable) icon).getBitmap() != null
+                    ? ((BitmapDrawable) icon).getBitmap().getByteCount() : 1024;
+            }
+        };
+    private static final List<Bitmap> groundDrawn = new ArrayList<>();
+    private static Bitmap maskDrawn;
+    private static Bitmap glossDrawn;
+    private static boolean drawn;
+    /** The side of an icon the pack makes, in pixels: enough for the largest icon drawn, and no more. */
+    private static final int SIDE = 192;
 
     private Pack() {
     }
@@ -103,7 +118,11 @@ final class Pack {
         mask = null;
         gloss = null;
         scale = 1f;
-        made.clear();
+        made.evictAll();
+        groundDrawn.clear();
+        maskDrawn = null;
+        glossDrawn = null;
+        drawn = false;
         if (now.isEmpty()) {
             return;
         }
@@ -202,7 +221,7 @@ final class Pack {
         String picture = pictures.get(key);
         Drawable given = picture == null ? null : picture(picture);
         if (given != null) {
-            done = new Given(res, bitmap(given, 0));
+            done = new Given(res, bitmap(given, SIDE));
         } else if (!grounds.isEmpty() || mask != null || gloss != null) {
             done = masked(key, own);
         } else {
@@ -221,15 +240,16 @@ final class Pack {
             return null;
         }
         try {
-            return res.getDrawableForDensity(id, android.util.DisplayMetrics.DENSITY_XXXHIGH, null);
+            /* A density near the size icons are made: a large picture is not decoded only to be shrunk. */
+            return res.getDrawableForDensity(id, android.util.DisplayMetrics.DENSITY_XXHIGH, null);
         } catch (RuntimeException gone) {
             return null;
         }
     }
 
     private static Bitmap bitmap(Drawable drawable, int side) {
-        int w = side > 0 ? side : Math.max(1, Math.min(512, drawable.getIntrinsicWidth()));
-        int h = side > 0 ? side : Math.max(1, Math.min(512, drawable.getIntrinsicHeight()));
+        int w = side > 0 ? side : Math.max(1, Math.min(SIDE, drawable.getIntrinsicWidth()));
+        int h = side > 0 ? side : Math.max(1, Math.min(SIDE, drawable.getIntrinsicHeight()));
         if (w <= 1 || h <= 1) {
             w = 192;
             h = 192;
@@ -241,37 +261,49 @@ final class Pack {
         return out;
     }
 
+    /** The pack's ground, mask and gloss drawn once, at the side icons are made. */
+    private static void draw() {
+        if (drawn) {
+            return;
+        }
+        drawn = true;
+        for (String one : grounds) {
+            Drawable ground = picture(one);
+            if (ground != null) {
+                groundDrawn.add(bitmap(ground, SIDE));
+            }
+        }
+        Drawable cut = mask == null ? null : picture(mask);
+        maskDrawn = cut == null ? null : bitmap(cut, SIDE);
+        Drawable over = gloss == null ? null : picture(gloss);
+        glossDrawn = over == null ? null : bitmap(over, SIDE);
+    }
+
     /** An icon laid on the pack's ground, cut by its mask and glossed over, as the pack draws its own. */
     private static Drawable masked(String key, Drawable own) {
-        Drawable ground = grounds.isEmpty() ? null
-            : picture(grounds.get(Math.abs(key.hashCode()) % grounds.size()));
-        Drawable cut = mask == null ? null : picture(mask);
-        Drawable over = gloss == null ? null : picture(gloss);
-        int side = 192;
-        if (ground != null && ground.getIntrinsicWidth() > 1) {
-            side = Math.min(512, ground.getIntrinsicWidth());
-        }
+        draw();
+        int side = SIDE;
         Bitmap out = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(out);
-        if (ground != null) {
-            ground.setBounds(0, 0, side, side);
-            ground.draw(canvas);
+        Paint smooth = new Paint(Paint.FILTER_BITMAP_FLAG);
+        if (!groundDrawn.isEmpty()) {
+            canvas.drawBitmap(groundDrawn.get(Math.abs(key.hashCode()) % groundDrawn.size()), 0f, 0f, smooth);
         }
         Bitmap picture = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
         Canvas into = new Canvas(picture);
         int inset = Math.round(side * (1f - scale) / 2f);
         own.setBounds(inset, inset, side - inset, side - inset);
         own.draw(into);
-        if (cut != null) {
+        if (maskDrawn != null) {
             /* The mask's solid parts take the picture away, as packs mean it. */
             Paint away = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
             away.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_OUT));
-            into.drawBitmap(bitmap(cut, side), 0f, 0f, away);
+            into.drawBitmap(maskDrawn, 0f, 0f, away);
         }
-        canvas.drawBitmap(picture, 0f, 0f, new Paint(Paint.FILTER_BITMAP_FLAG));
-        if (over != null) {
-            over.setBounds(0, 0, side, side);
-            over.draw(canvas);
+        canvas.drawBitmap(picture, 0f, 0f, smooth);
+        picture.recycle();
+        if (glossDrawn != null) {
+            canvas.drawBitmap(glossDrawn, 0f, 0f, smooth);
         }
         return new Given(res, out);
     }
