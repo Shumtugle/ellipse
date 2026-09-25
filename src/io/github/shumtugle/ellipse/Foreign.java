@@ -79,6 +79,16 @@ final class Foreign {
         Float tile;
         /** The pack of icons it read, by its package; none if it read none. */
         String pack;
+        /* The screens' points, their endless turning, no margins at all; and
+           the list of every app: pages or lines, its grid, endless, names. */
+        Boolean dots;
+        Boolean endless;
+        Boolean edgeless;
+        Boolean listPages;
+        Integer listColumns;
+        Integer listRows;
+        Boolean listEndless;
+        Boolean listNames;
         final List<List<Item>> screens = new ArrayList<>();
 
         int count(int kind) {
@@ -178,6 +188,14 @@ final class Foreign {
                         found.home = seen.home;
                     }
                     found.pack = seen.pack;
+                    found.dots = seen.dots;
+                    found.endless = seen.endless;
+                    found.edgeless = seen.edgeless;
+                    found.listPages = seen.listPages;
+                    found.listColumns = seen.listColumns;
+                    found.listRows = seen.listRows;
+                    found.listEndless = seen.listEndless;
+                    found.listNames = seen.listNames;
                     found.names = seen.names;
                     found.dock = seen.dock;
                     found.tile = seen.tile;
@@ -219,6 +237,45 @@ final class Foreign {
         if (shown.find() && into.dock == null) {
             into.dock = Boolean.valueOf(shown.group(1));
         }
+        /* The screens, and the list of every app, as the settings of either shape keep them. */
+        into.dots = flag(said, plain, into.dots, "name=\"showIndicator\" value=\"(true|false)\"", false);
+        Matcher indicator = Pattern.compile("name=\"desktop_scroll_indicator\">([A-Z_]+)<").matcher(said);
+        if (indicator.find() && into.dots == null) {
+            into.dots = !"NONE".equals(indicator.group(1));
+        }
+        into.endless = flag(said, plain, into.endless, "name=\"homeInfiniteScroll\" value=\"(true|false)\"", false);
+        into.endless = flag(said, plain, into.endless, "name=\"desktop_infinite_scroll\" value=\"(true|false)\"",
+            false);
+        Matcher margin = Pattern.compile("name=\"desktop_width_margin\">([A-Z_]+)<").matcher(said);
+        if (margin.find()) {
+            into.edgeless = "NONE".equals(margin.group(1));
+        }
+        Matcher style = Pattern.compile("name=\"drawer_style\">([A-Z_]+)<").matcher(said);
+        if (style.find()) {
+            into.listPages = style.group(1).startsWith("HORIZONTAL");
+        }
+        Matcher across = Pattern.compile("name=\"drawer_app_grid_cols\" value=\"(\\d+)\"").matcher(said);
+        if (across.find()) {
+            into.listColumns = Integer.parseInt(across.group(1));
+        }
+        Matcher down = Pattern.compile("name=\"drawer_app_grid_rows\" value=\"(\\d+)\"").matcher(said);
+        if (down.find()) {
+            into.listRows = Integer.parseInt(down.group(1));
+        }
+        Matcher portrait = Pattern.compile("\"drawerSettings\":\\{\"portraitColumns\":(\\d+)").matcher(plain);
+        if (portrait.find() && into.listColumns == null) {
+            into.listColumns = Integer.parseInt(portrait.group(1));
+        }
+        into.listEndless = flag(said, plain, into.listEndless,
+            "name=\"drawer_infinite_scroll\" value=\"(true|false)\"", false);
+        Matcher listed = Pattern.compile("name=\"drawer_cellspecs\">[^:<]*:(true|false)").matcher(said);
+        if (listed.find()) {
+            into.listNames = Boolean.valueOf(listed.group(1));
+        }
+        Matcher drawn = Pattern.compile("\"drawerSettings\":\\{[^}]*?\"hasLabel\":(true|false)").matcher(plain);
+        if (drawn.find() && into.listNames == null) {
+            into.listNames = Boolean.valueOf(drawn.group(1));
+        }
         Matcher pack = Pattern.compile("name=\"homeIconAppearanceKey\">[^<]*?icPk:([^;<]+)").matcher(said);
         if (pack.find()) {
             into.pack = pack.group(1).trim();
@@ -246,6 +303,15 @@ final class Foreign {
                 into.tile = (right - left) / (bottom - top);
             }
         }
+    }
+
+    /** A yes or no from the settings' words, if found and not known yet. */
+    private static Boolean flag(String said, String plain, Boolean was, String pattern, boolean fromPlain) {
+        if (was != null) {
+            return was;
+        }
+        Matcher found = Pattern.compile(pattern).matcher(fromPlain ? plain : said);
+        return found.find() ? Boolean.valueOf(found.group(1)) : null;
     }
 
     // ------------------------------------------------------------ words
@@ -639,6 +705,41 @@ final class Foreign {
             Keep.saveNumber(context, Keep.TILE_ASPECT, Math.max(70, Math.min(135, Math.round(layout.tile * 100f))));
             report.look++;
         }
+        if (layout.dots != null) {
+            Keep.saveFlag(context, Keep.DOTS, layout.dots);
+            report.look++;
+        }
+        if (layout.endless != null) {
+            Keep.saveFlag(context, Keep.DESK_ENDLESS, layout.endless);
+            report.look++;
+        }
+        if (layout.edgeless != null) {
+            Keep.saveNumber(context, Keep.EDGES, layout.edgeless ? Keep.EDGES_ALL : Keep.EDGES_MARGINS);
+            report.look++;
+        }
+        if (layout.listPages != null) {
+            Keep.saveView(context, layout.listPages ? Keep.PAGES : Keep.LINES);
+            report.look++;
+        }
+        if (layout.listColumns != null || layout.listRows != null) {
+            int was = Keep.number(context, Keep.LIST_GRID, 45);
+            int c = Math.max(3, Math.min(7, layout.listColumns != null ? layout.listColumns : Keep.columns(was)));
+            int r = Math.max(3, Math.min(12, layout.listRows != null ? layout.listRows : Keep.rows(was)));
+            Keep.saveNumber(context, Keep.LIST_GRID, r >= 10 ? c * 100 + r : c * 10 + r);
+            report.look++;
+        }
+        if (layout.listEndless != null) {
+            Keep.saveFlag(context, Keep.LIST_ENDLESS, layout.listEndless);
+            report.look++;
+        }
+        if (layout.listNames != null) {
+            Keep.saveFlag(context, Keep.NAMES_LIST, layout.listNames);
+            report.look++;
+        }
+        /* The other home screen's set-out has its own clock, if any, among
+           its widgets: this one's own clock is put away, and the shelf
+           brings it back. */
+        Keep.saveFlag(context, Keep.CLOCK, false);
         /* Its pack of icons, if it read one and the pack is on this phone. */
         if (layout.pack != null && !layout.pack.isEmpty()) {
             if (Pack.installed(context).containsKey(layout.pack)) {

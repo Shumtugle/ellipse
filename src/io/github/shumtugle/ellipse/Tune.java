@@ -1726,9 +1726,11 @@ public final class Tune extends Activity {
                     told.append(done.apps).append(" apps, ").append(done.folders).append(" folders and ")
                         .append(done.widgets).append(" widgets are in their places.");
                     if (done.look > 0) {
-                        told.append(" Taken over too, as it looked there: the names under the icons, the dock, "
-                            + "the icons' outline and their pack, where its settings told.");
+                        told.append(" Taken over too, as it looked there, where its settings told: names, dock, "
+                            + "the icons' outline and pack, the screens' points, endless turning and edges, "
+                            + "and the list of every app.");
                     }
+                    told.append(" This home screen's own clock is put away; the widget shelf brings it back.");
                     if (done.packMissing != null) {
                         told.append(" Its pack of icons is not on this phone: ").append(done.packMissing).append('.');
                     }
