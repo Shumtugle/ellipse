@@ -28,8 +28,9 @@ import java.util.Locale;
  *
  * It is drawn in lines, not pictures, on a canvas of its own measured in
  * dp, and brought to the size of its box by one multiplier, so its form is
- * the same on any grid. A wide box gets the widget's own arrangement, the
- * dial on the left; a narrow one stands the dial above the rest. The dial
+ * the same on any grid. It keeps the widget's own arrangement in any box,
+ * the dial on the left and the windows beside it: height to spare goes to
+ * the card's margins and the dial, never to a new order. The dial
  * keeps the widget's geometry, a square of six hundred units: the ring,
  * bars at the quarters, dots between, and hands of the widget's widths.
  * No line is ever thinner on the screen than a dp and a half, and every
@@ -41,13 +42,9 @@ final class Meno extends View implements Timepiece {
     static final int[] SECONDS = {0xFFF5F1E8, 0xFF8A8A8A, 0xFF7D8BD4, 0xFF9E2B3A, 0xFFA8C0D8, 0xFFC9A86A,
         0xFFD8C9A8};
 
-    /** The canvases, in dp: wide, the widget's own; narrow, the dial above the rest. */
+    /** The canvas, in dp: the widget's own. */
     static final float WIDE_W = 360f;
     static final float WIDE_H = 160f;
-    static final float TALL_W = 200f;
-    static final float TALL_H = 300f;
-    /** A box's width to its height from which the wide canvas is taken. */
-    static final float WIDE_FROM = 1.7f;
     /** The smallest multiplier the clock is drawn at; a box that small takes more places. */
     static final float LEAST = 0.65f;
 
@@ -220,42 +217,28 @@ final class Meno extends View implements Timepiece {
      * canvas's own and the other has room to spare.
      */
     private void lay(float w, float h) {
-        boolean wide = w >= h * WIDE_FROM;
-        float w0 = wide ? WIDE_W : TALL_W;
-        float h0 = wide ? WIDE_H : TALL_H;
-        k = Math.min(w / (w0 * density), h / (h0 * density));
+        k = Math.min(w / (WIDE_W * density), h / (WIDE_H * density));
         scale = k * density;
         float vw = w / scale;
         float vh = h / scale;
         card.set(BORDER, BORDER, vw - BORDER, vh - BORDER);
-        float pad = wide ? 10f : 12f;
+        float pad = 10f;
         float left = BORDER + pad;
         float top = BORDER + pad;
         float right = vw - BORDER - pad;
         float bottom = vh - BORDER - pad;
         float timeH = TIME_PAD * 2f + (TIME_SIZE + DATE_SIZE) * LINE;
         float stack = timeH + UNDER + ROW;
-        float from;
         float rowTop;
-        if (wide) {
-            /* The dial in a slot of the widget's own share, never much wider
-               than it is high, so a long box gives its length to the words. */
-            float high = bottom - top;
-            float slot = Math.min((right - left - GAP) / 2.1f, high * 1.12f);
-            float d = Math.min(slot, high);
-            dialBox.set(left + (slot - d) / 2f, top + (high - d) / 2f, left + (slot + d) / 2f, top + (high + d) / 2f);
-            from = left + slot + GAP;
-            float at = top + (high - stack) / 2f;
-            timeBox.set(from, at, right, at + timeH);
-        } else {
-            float across = right - left;
-            float d = Math.max(0f, Math.min(across, bottom - top - stack - 12f));
-            float used = d + 12f + stack;
-            float at = top + (bottom - top - used) / 2f;
-            dialBox.set(left + (across - d) / 2f, at, left + (across + d) / 2f, at + d);
-            from = left;
-            timeBox.set(left, at + d + 12f, right, at + d + 12f + timeH);
-        }
+        /* The dial in a slot of the widget's own share, never much wider
+           than it is high, so a long box gives its length to the words. */
+        float high = bottom - top;
+        float slot = Math.min((right - left - GAP) / 2.1f, high * 1.12f);
+        float d = Math.min(slot, high);
+        dialBox.set(left + (slot - d) / 2f, top + (high - d) / 2f, left + (slot + d) / 2f, top + (high + d) / 2f);
+        float from = left + slot + GAP;
+        float at = top + (high - stack) / 2f;
+        timeBox.set(from, at, right, at + timeH);
         rowTop = timeBox.bottom + UNDER;
         chargeBox.set(right - ROW, rowTop, right, rowTop + ROW);
         float x = chargeBox.left - GAP;
