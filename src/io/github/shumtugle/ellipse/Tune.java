@@ -1696,6 +1696,10 @@ public final class Tune extends Activity {
                     StringBuilder told = new StringBuilder();
                     told.append(done.apps).append(" apps, ").append(done.folders).append(" folders and ")
                         .append(done.widgets).append(" widgets are in their places.");
+                    if (done.look > 0) {
+                        told.append(" Taken over too, as it looked there: the names under the icons, the dock "
+                            + "and the icons' outline, where its settings told.");
+                    }
                     if (done.missing > 0) {
                         told.append(" Not on this phone: ").append(done.missing).append('.');
                     }

@@ -66,11 +66,17 @@ final class Foreign {
         }
     }
 
-    /** The other set-out: its grid, its screens and which is home. */
+    /** The other set-out: its grid, its screens and which is home, and how it looked, where it said. */
     static final class Layout {
         int columns = 1;
         int rows = 1;
         int home = -1;
+        /* How the other home screen looked, where its settings tell: names
+           under the icons on the screens, its dock shown, the outline of its
+           icons as a width to a height; null where they do not tell. */
+        Boolean names;
+        Boolean dock;
+        Float tile;
         final List<List<Item>> screens = new ArrayList<>();
 
         int count(int kind) {
@@ -114,6 +120,7 @@ final class Foreign {
         }
         List<File> bases = new ArrayList<>();
         int home = -1;
+        Layout seen = new Layout();
         ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(file));
         try {
             ZipEntry entry;
@@ -125,17 +132,18 @@ final class Foreign {
                     continue;
                 }
                 if (base.endsWith(".xml")) {
-                    /* The settings kept beside the set-out may name the home page. */
+                    /* The settings kept beside the set-out may name the home page, and tell how it looked. */
                     java.io.ByteArrayOutputStream kept = new java.io.ByteArrayOutputStream();
                     int n;
                     while ((n = in.read(buffer)) > 0) {
                         kept.write(buffer, 0, n);
                     }
-                    Matcher page = Pattern.compile("name=\"desktop_default_page\" value=\"(\\d+)\"")
-                        .matcher(new String(kept.toByteArray(), StandardCharsets.UTF_8));
+                    String said = new String(kept.toByteArray(), StandardCharsets.UTF_8);
+                    Matcher page = Pattern.compile("name=\"desktop_default_page\" value=\"(\\d+)\"").matcher(said);
                     if (page.find()) {
                         home = Integer.parseInt(page.group(1));
                     }
+                    look(said, seen);
                     continue;
                 }
                 boolean keeps = base.endsWith(".db") || base.endsWith("-wal") || base.endsWith("-shm")
@@ -164,12 +172,68 @@ final class Foreign {
                     if (home >= 0 && home < found.screens.size()) {
                         found.home = home;
                     }
+                    if (seen.home >= 0 && found.home < 0 && seen.home < found.screens.size()) {
+                        found.home = seen.home;
+                    }
+                    found.names = seen.names;
+                    found.dock = seen.dock;
+                    found.tile = seen.tile;
                     return found;
                 }
             }
             return null;
         } finally {
             wipe(dir);
+        }
+    }
+
+    /**
+     * How the other home screen looked, from the words of its settings:
+     * whether names stood under the icons, whether its dock was shown, its
+     * home page, and the outline of its icons, where drawn as a path — a
+     * width to a height, for a tile.
+     */
+    private static void look(String said, Layout into) {
+        String plain = said.replace("&quot;", "\"");
+        Matcher label = Pattern.compile("\"gridUserSettings\":\\{[^}]*?\"hasLabel\":(true|false)").matcher(plain);
+        if (label.find()) {
+            into.names = Boolean.valueOf(label.group(1));
+        }
+        Matcher dock = Pattern.compile("\"dockSettings\":\\{\"show\":(true|false)").matcher(plain);
+        if (dock.find()) {
+            into.dock = Boolean.valueOf(dock.group(1));
+        }
+        Matcher page = Pattern.compile("\"defaultHomePage\":(\\d+)").matcher(plain);
+        if (page.find()) {
+            into.home = Integer.parseInt(page.group(1));
+        }
+        /* The other shape keeps its cells as a scale, then whether names are shown. */
+        Matcher cells = Pattern.compile("name=\"desktop_cellspecs\">[^:<]*:(true|false)").matcher(said);
+        if (cells.find() && into.names == null) {
+            into.names = Boolean.valueOf(cells.group(1));
+        }
+        Matcher shown = Pattern.compile("name=\"dock_enable\" value=\"(true|false)\"").matcher(said);
+        if (shown.find() && into.dock == null) {
+            into.dock = Boolean.valueOf(shown.group(1));
+        }
+        Matcher shape = Pattern.compile("name=\"homeIconAppearanceKey\">[^<]*?path:([^;<]+)").matcher(said);
+        if (shape.find()) {
+            float left = Float.MAX_VALUE;
+            float right = -Float.MAX_VALUE;
+            float top = Float.MAX_VALUE;
+            float bottom = -Float.MAX_VALUE;
+            Matcher point = Pattern.compile("(-?\\d+(?:\\.\\d+)?),(-?\\d+(?:\\.\\d+)?)").matcher(shape.group(1));
+            while (point.find()) {
+                float x = Float.parseFloat(point.group(1));
+                float y = Float.parseFloat(point.group(2));
+                left = Math.min(left, x);
+                right = Math.max(right, x);
+                top = Math.min(top, y);
+                bottom = Math.max(bottom, y);
+            }
+            if (right > left && bottom > top) {
+                into.tile = (right - left) / (bottom - top);
+            }
         }
     }
 
@@ -463,6 +527,8 @@ final class Foreign {
         int widgets;
         int missing;
         int others;
+        /** How many of the other home screen's looks were taken over: names, dock, outline. */
+        int look;
         final List<String> unmade = new ArrayList<>();
     }
 
@@ -545,6 +611,21 @@ final class Foreign {
         int count = Math.max(1, layout.screens.size());
         Keep.saveScreens(context, count);
         Keep.saveHome(context, layout.home >= 0 && layout.home < count ? layout.home : Math.min(1, count - 1));
+        /* How it looked, where the other home screen said. */
+        if (layout.names != null) {
+            Keep.saveFlag(context, Keep.NAMES_SCREENS, layout.names);
+            report.look++;
+        }
+        if (layout.dock != null) {
+            Keep.saveFlag(context, Keep.DOCK, layout.dock);
+            report.look++;
+        }
+        if (layout.tile != null && Math.abs(layout.tile - 1f) > 0.04f) {
+            /* An outline wider or taller than square: the tile, in its proportion. */
+            Keep.saveShape(context, Shape.PAPER);
+            Keep.saveNumber(context, Keep.TILE_ASPECT, Math.max(70, Math.min(135, Math.round(layout.tile * 100f))));
+            report.look++;
+        }
         return report;
     }
 

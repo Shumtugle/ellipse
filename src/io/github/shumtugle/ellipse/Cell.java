@@ -96,9 +96,19 @@ final class Cell extends View {
         return 6f * density - probe.ascent() + probe.descent();
     }
 
+    /**
+     * Whether the name has room under the icon: a place lower than the icon
+     * and its name leaves the name out, rather than lay it over the icon
+     * of the row below.
+     */
+    private boolean nameFits() {
+        return named && (getHeight() == 0
+            || iconSize + gap - words.ascent() + words.descent() <= getHeight() + 0.5f);
+    }
+
     private float top() {
         float tall = iconSize;
-        if (named) {
+        if (nameFits()) {
             tall += gap - words.ascent() + words.descent();
         }
         if (note != null) {
@@ -199,7 +209,7 @@ final class Cell extends View {
             point.setColor(Tone.primary());
             canvas.drawCircle(px, py, r, point);
         }
-        if (named) {
+        if (nameFits()) {
             float base = y + iconSize + gap - words.ascent();
             canvas.drawText(shown, 0, shown.length(), getWidth() / 2f, base, words);
             if (note != null) {
