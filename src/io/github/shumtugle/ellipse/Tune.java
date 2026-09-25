@@ -505,7 +505,8 @@ public final class Tune extends Activity {
 
     private void fillRoom() {
         rows.removeAllViews();
-        window.setVisibility(room() == ICONS || room() == CLOCK || room() == LISTGROUND ? View.VISIBLE : View.GONE);
+        window.setVisibility(room() == ICONS || room() == CLOCK || room() == LISTGROUND || room() == FONTS
+            ? View.VISIBLE : View.GONE);
         if (room() == HIDDEN) {
             fillHidden();
             return;
@@ -899,7 +900,6 @@ public final class Tune extends Activity {
             Keep.NAMES_SCREENS, true)));
         rows.addView(row(toggle("In the list", "Names under the icons of every app's pages",
             Keep.NAMES_LIST, true)));
-        slider("Size of names", "How large the names are drawn", Keep.NAME_SIZE, 80, 140);
         rows.addView(row(choice("Lines on the screens", "One line, or two for a long name", Keep.NAME_LINES_SCREENS, 1,
             new String[] {"One", "Two"}, new int[] {1, 2})));
         rows.addView(row(choice("Lines in the list", "One line, or two for a long name, in the list and the panels",
@@ -1115,35 +1115,6 @@ public final class Tune extends Activity {
     }
 
     /** A family of words, written in itself; the chosen one wears the accent. */
-    private View faceChip(final int which) {
-        TextView chip = new TextView(this);
-        chip.setText("Aa  " + Style.FAMILIES[which].replace("sans-serif", "sans").replace('-', ' '));
-        chip.setTypeface(android.graphics.Typeface.create(Style.FAMILIES[which], android.graphics.Typeface.NORMAL));
-        chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
-        boolean on = Style.family == which;
-        chip.setTextColor(on ? Tone.onAccent() : Tone.onSurface());
-        chip.setPadding(dp(18), dp(12), dp(18), dp(12));
-        chip.setBackground(Tone.touch(Tone.box(on ? Tone.primary() : Tone.container(), dp(24), 0f), dp(24)));
-        LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        at.rightMargin = dp(8);
-        chip.setLayoutParams(at);
-        chip.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                Keep.saveNumber(Tune.this, Keep.FONT, which);
-                Style.font(which);
-                int y = scroll.getScrollY();
-                fill();
-                scroll.post(new Runnable() {
-                    public void run() {
-                        scroll.scrollTo(0, y);
-                    }
-                });
-            }
-        });
-        return chip;
-    }
-
     // ------------------------------------------------------------- the clock
 
     /**
@@ -1737,19 +1708,71 @@ public final class Tune extends Activity {
         rows.addView(made);
     }
 
-    /** The typeface of every name and every word of the home screen and its settings. */
+    /** The typefaces by the names they are shown under. */
+    private static final String[] FONT_NAMES = {"Sans", "Sans condensed", "Sans light", "Sans medium", "Serif",
+        "Monospace"};
+
+    /**
+     * The typeface of every name and every word here: the icons on the
+     * wallpaper at the head of the room, their names in the typeface and
+     * size chosen; every typeface as a line of its own, its name and a
+     * sentence written in it; and the size of the names, seen at once.
+     */
     private void fillFonts() {
-        caption("TYPEFACE");
-        android.widget.HorizontalScrollView faces = new android.widget.HorizontalScrollView(this);
-        faces.setHorizontalScrollBarEnabled(false);
-        faces.setOverScrollMode(View.OVER_SCROLL_NEVER);
-        LinearLayout chips = new LinearLayout(this);
-        chips.setPadding(dp(18), 0, dp(18), dp(24));
+        window.removeAllViews();
+        sample = new Sample(this);
+        window.addView(sample);
+        throughTo = sample;
+        sample.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                host.invalidate();
+            }
+        });
+        caption("LETTERS");
         for (int i = 0; i < Style.FAMILIES.length; i++) {
-            chips.addView(faceChip(i));
+            rows.addView(fontLine(i));
         }
-        faces.addView(chips);
-        rows.addView(faces);
+        caption("SIZE");
+        slider("Size of names", "How large the names are drawn", Keep.NAME_SIZE, 80, 140);
+    }
+
+    /** A typeface as a line: its name in itself, and a sentence in it; the one chosen in the accent. */
+    private View fontLine(final int which) {
+        android.graphics.Typeface face = android.graphics.Typeface.create(Style.FAMILIES[which],
+            android.graphics.Typeface.NORMAL);
+        boolean on = Style.family == which;
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setPadding(dp(24), dp(12), dp(24), dp(12));
+        made.setBackground(Tone.touch(null, dp(16)));
+        TextView name = new TextView(this);
+        name.setText((on ? "\u25CF  " : "\u25CB  ") + Words.t(FONT_NAMES[Math.min(which, FONT_NAMES.length - 1)]));
+        name.setTypeface(face);
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
+        name.setTextColor(on ? Tone.primary() : Tone.onSurface());
+        made.addView(name);
+        TextView said = new TextView(this);
+        said.setText(Words.s("sample"));
+        said.setTypeface(face);
+        said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
+        said.setTextColor(Tone.faint());
+        said.setPadding(dp(28), dp(2), 0, 0);
+        made.addView(said);
+        made.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                Keep.saveNumber(Tune.this, Keep.FONT, which);
+                Style.font(which);
+                final int y = scroll.getScrollY();
+                fill();
+                scroll.post(new Runnable() {
+                    public void run() {
+                        scroll.scrollTo(0, y);
+                    }
+                });
+            }
+        });
+        return made;
     }
 
     /**
