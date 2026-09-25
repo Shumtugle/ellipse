@@ -873,6 +873,7 @@ public final class Home extends Activity {
         for (int i = 0; i < count; i++) {
             Grid page = new Grid(this, columns, rows);
             page.unit(fine);
+            page.overlap(Keep.flag(this, Keep.OVERLAP, false));
             page.setPadding(side(), dp(16), side(), 0);
             page.rowShare(Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f);
             page.shape(iconSize, Cell.below(this));
@@ -914,7 +915,7 @@ public final class Home extends Activity {
             }
             Apps.Door door = found.door(spot.token);
             Grid page = pages.get(spot.screen);
-            if (door == null || !page.free(spot.x, spot.y)) {
+            if (door == null || !page.fits(spot.x, spot.y, page.unit(), page.unit())) {
                 continue;
             }
             place(page, door, spot.x, spot.y, true);
@@ -1017,6 +1018,24 @@ public final class Home extends Activity {
                 }
                 if (clock(pages.get(home), 0, 0, last)) {
                     Keep.keepOnly(this, Keep.CLOCK_THING, last, home, 0, 0);
+                }
+            }
+            /* Over one another, things stand in the order they were set
+               down, apps and widgets alike: the last on top. */
+            if (Keep.flag(this, Keep.OVERLAP, false)) {
+                for (Keep.Spot spot : Keep.placed(this)) {
+                    if (spot.screen < 0 || spot.screen >= pages.size()) {
+                        continue;
+                    }
+                    Grid page = pages.get(spot.screen);
+                    for (int i = 0; i < page.getChildCount(); i++) {
+                        View child = page.getChildAt(i);
+                        int[] at = (int[]) child.getTag();
+                        if (at[0] == spot.x && at[1] == spot.y) {
+                            child.bringToFront();
+                            break;
+                        }
+                    }
                 }
             }
             List<Apps.Door> vendor = found.vendor(taken);
@@ -1219,7 +1238,7 @@ public final class Home extends Activity {
         int across = Math.min(columns - column, Math.max(span[0], least[0]));
         int down = -1;
         for (int d = Math.max(span[1], least[1]); d >= 1; d--) {
-            if (row + d <= rows && page.free(column, row, across, d)) {
+            if (row + d <= rows && page.fits(column, row, across, d)) {
                 down = d;
                 break;
             }
@@ -1311,7 +1330,7 @@ public final class Home extends Activity {
         int[] span = folderSpan(token);
         int across = Math.min(columns - column, span[0]);
         int down = Math.min(rows - row, span[1]);
-        if (across * down > fine * fine && into.free(column, row, across, down)) {
+        if (across * down > fine * fine && into.fits(column, row, across, down)) {
             float cell = (getResources().getDisplayMetrics().widthPixels - 2 * side()) / (float) columns;
             float small = Math.min(iconSize * 0.62f, (cell / 2f - dp(8)) * 0.86f);
             final Nest nest = new Nest(this, name, doors, across, down, small, new Nest.Hand() {
@@ -1915,7 +1934,10 @@ public final class Home extends Activity {
             if (origin != null && origin[0] == -2 && origin[1] == folderId(each.getValue())) {
                 continue;
             }
-            if (over(view, x, y, 0)) {
+            /* With things over one another, only the folder's middle takes an
+               app in; its edges are for setting the app down over it. */
+            float grace = Keep.flag(this, Keep.OVERLAP, false) ? -Math.min(view.getWidth(), view.getHeight()) / 4f : 0f;
+            if (over(view, x, y, grace)) {
                 return view;
             }
         }
@@ -3564,7 +3586,7 @@ public final class Home extends Activity {
             return;
         }
         android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
-        if (info == null || !page.free(spot.x, spot.y, across, down)) {
+        if (info == null || !page.fits(spot.x, spot.y, across, down)) {
             return;
         }
         /* A block kept on another grid may be lower than the widget can

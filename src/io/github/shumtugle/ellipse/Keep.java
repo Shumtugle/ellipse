@@ -364,6 +364,8 @@ final class Keep {
      * written in; when the steps change, it is written again in the new.
      */
     static final String HALF_STEPS = "half_steps";
+    /** Whether things may be set down over one another, the last set down on top. */
+    static final String OVERLAP = "overlap";
     private static final String LAYOUT_FINE = "layout_fine";
 
     /** How many small places make one place each way: two with half steps, else one. */
@@ -905,13 +907,18 @@ final class Keep {
 
     /** Moves the thing standing in one place to another. */
     static void shift(Context context, int screen, int x, int y, int toScreen, int toX, int toY) {
+        /* The thing moved is written last: over others, it stands on top. */
         List<Spot> kept = new ArrayList<>();
+        Spot moved = null;
         for (Spot spot : placed(context)) {
             if (spot.screen == screen && spot.x == x && spot.y == y) {
-                kept.add(new Spot(spot.token, toScreen, toX, toY));
+                moved = new Spot(spot.token, toScreen, toX, toY);
             } else {
                 kept.add(spot);
             }
+        }
+        if (moved != null) {
+            kept.add(moved);
         }
         write(context, kept);
     }

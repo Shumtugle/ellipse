@@ -44,6 +44,35 @@ final class Grid extends ViewGroup {
         ring.setStyle(Paint.Style.STROKE);
     }
 
+    /** Whether things may stand over one another. */
+    private boolean overlap;
+
+    void overlap(boolean on) {
+        overlap = on;
+    }
+
+    /**
+     * Whether a thing kept here may stand here now: inside the grid and, if
+     * things may not stand over one another, on free places.
+     */
+    boolean fits(int column, int row, int across, int down) {
+        if (!overlap) {
+            return free(column, row, across, down);
+        }
+        return column >= 0 && row >= 0 && column + across <= columns && row + down <= rows;
+    }
+
+    /** Whether a thing already starts at this very place: two may not share a corner. */
+    private boolean taken(int column, int row) {
+        for (int i = 0; i < getChildCount(); i++) {
+            int[] at = (int[]) getChildAt(i).getTag();
+            if (at[0] == column && at[1] == row) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** How many small places make one place each way: two with half steps. */
     private int unit = 1;
 
@@ -209,6 +238,32 @@ final class Grid extends ViewGroup {
     int[] landing(float x, float y, int across, int down) {
         if (x < 0 || y < 0 || x > getWidth() || y > getHeight()) {
             return null;
+        }
+        if (overlap) {
+            /* Over others too: the block round the finger, or, if something
+               starts at that very place, the nearest place nothing starts at. */
+            float w = cellWidth();
+            float h = cellHeight();
+            int column = Math.max(0, Math.min(columns - across, Math.round((x - getPaddingLeft()) / w - across / 2f)));
+            int row = Math.max(0, Math.min(rows - down, Math.round((y - getPaddingTop()) / h - down / 2f)));
+            if (!taken(column, row)) {
+                return new int[] {column, row};
+            }
+            int[] best = null;
+            float nearest = Float.MAX_VALUE;
+            for (int r = 0; r + down <= rows; r++) {
+                for (int c = 0; c + across <= columns; c++) {
+                    if (taken(c, r)) {
+                        continue;
+                    }
+                    float d = (c - column) * (c - column) + (r - row) * (r - row);
+                    if (d < nearest) {
+                        nearest = d;
+                        best = new int[] {c, r};
+                    }
+                }
+            }
+            return best;
         }
         if (across == 1 && down == 1) {
             int[] under = cellAt(x, y);
