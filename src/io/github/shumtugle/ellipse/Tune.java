@@ -153,6 +153,9 @@ public final class Tune extends Activity {
                         Keep.WALL_MOVES, true),
                     toggle("Add new apps", "An app put on the phone is set down on a free place",
                         Keep.AUTO_ADD, false),
+                    toggle("Half steps", "Icons and widgets set down half a place along or down, "
+                        + "for a closer set-out; off, each goes back to the nearest whole place",
+                        Keep.HALF_STEPS, false),
                     choice("Row height", "How high each row stands: lower, the rows close up toward the top "
                         + "and the gaps between them narrow", Keep.ROW_HEIGHT, 100,
                         new String[] {"100%", "90%", "80%", "70%", "60%"}, new int[] {100, 90, 80, 70, 60}),

@@ -55,8 +55,11 @@ public final class Home extends Activity {
 
     /** The grid, after the platform's own guidance for a first screen. */
     /** The grid of the screens, as the settings have it. */
+    /* The screens' small places across and down: the grid's own, or, with
+       half steps, twice as many each way; and how many make one place. */
     private int columns = 4;
     private int rows = 5;
+    private int fine = 1;
     /** The settings as last read, so a change made in them is noticed on return. */
     private int stamp = -1;
     private static final int DOCK = 4;
@@ -573,10 +576,12 @@ public final class Home extends Activity {
         /* The icon is sized from the short side of the screen, so a turn of
            the phone does not make it grow; the platform's own range holds it. */
         int grid = Keep.number(this, Keep.DESK_GRID, 45);
-        columns = Keep.columns(grid);
-        rows = Keep.rows(grid);
+        fine = Keep.fine(this);
+        Keep.settleFine(this);
+        columns = Keep.columns(grid) * fine;
+        rows = Keep.rows(grid) * fine;
         stamp = Keep.stamp(this);
-        float column = (Math.min(wide, tall) - dp(16)) / (float) columns;
+        float column = (Math.min(wide, tall) - dp(16)) / (float) Keep.columns(grid);
         iconSize = Math.max(dp(48), Math.min(dp(64), column * 0.58f));
         /* The owner's own size, within the cell. */
         iconSize = Math.min(column * 0.86f, iconSize * Style.iconScale);
@@ -867,6 +872,7 @@ public final class Home extends Activity {
         }
         for (int i = 0; i < count; i++) {
             Grid page = new Grid(this, columns, rows);
+            page.unit(fine);
             page.setPadding(side(), dp(16), side(), 0);
             page.rowShare(Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f);
             page.shape(iconSize, Cell.below(this));
@@ -1040,32 +1046,33 @@ public final class Home extends Activity {
                 category(Intent.CATEGORY_APP_CALENDAR),
                 category(Intent.CATEGORY_APP_MAPS)
             };
-            for (int c = 0; c < Math.min(everyday.length, columns); c++) {
-                if (middle.free(c, rows - 1)) {
-                    place(middle, found.role(everyday[c], taken), c, rows - 1, true);
+            int last = rows - fine;
+            for (int c = 0; c < Math.min(everyday.length, columns / fine); c++) {
+                if (middle.free(c * fine, last)) {
+                    place(middle, found.role(everyday[c], taken), c * fine, last, true);
                 }
             }
             if (home + 1 < count) {
                 Grid after = pages.get(home + 1);
                 Apps.Door settings = found.role(new Intent(Settings.ACTION_SETTINGS), taken);
-                if (after.free(1, rows - 1)) {
-                    place(after, settings, 1, rows - 1, true);
+                if (after.free(fine, last)) {
+                    place(after, settings, fine, last, true);
                 }
-                if (after.free(2, rows - 1)) {
-                    ownDoor(after, 2, rows - 1);
+                if (after.free(2 * fine, last)) {
+                    ownDoor(after, 2 * fine, last);
                 }
             }
             List<Apps.Door> vendor = found.vendor(taken);
-            if (home - 1 >= 0 && !vendor.isEmpty() && pages.get(home - 1).free(0, rows - 1)) {
-                folder(pages.get(home - 1), Apps.vendorName(vendor), vendor, 0, rows - 1,
+            if (home - 1 >= 0 && !vendor.isEmpty() && pages.get(home - 1).free(0, last)) {
+                folder(pages.get(home - 1), Apps.vendorName(vendor), vendor, 0, last,
                     Keep.VENDOR_THING);
             }
             for (Apps.Door door : vendor) {
                 taken.add(door.name.getPackageName());
             }
             List<Apps.Door> system = found.system(taken);
-            if (home + 1 < count && !system.isEmpty() && pages.get(home + 1).free(0, rows - 1)) {
-                folder(pages.get(home + 1), SYSTEM, system, 0, rows - 1, Keep.SYSTEM_THING);
+            if (home + 1 < count && !system.isEmpty() && pages.get(home + 1).free(0, rows - fine)) {
+                folder(pages.get(home + 1), SYSTEM, system, 0, rows - fine, Keep.SYSTEM_THING);
             }
         }
 
@@ -1292,12 +1299,8 @@ public final class Home extends Activity {
 
     /** Whether a block of places on a grid is all free. */
     private static boolean free(Grid grid, int x, int y, int across, int down) {
-        for (int c = x; c < x + across; c++) {
-            for (int r = y; r < y + down; r++) {
-                if (!grid.free(c, r)) {
-                    return false;
-                }
-            }
+        if (!grid.free(x, y, across, down)) {
+            return false;
         }
         return true;
     }
@@ -1308,7 +1311,7 @@ public final class Home extends Activity {
         int[] span = folderSpan(token);
         int across = Math.min(columns - column, span[0]);
         int down = Math.min(rows - row, span[1]);
-        if (across * down > 1 && into.free(column, row, across, down)) {
+        if (across * down > fine * fine && into.free(column, row, across, down)) {
             float cell = (getResources().getDisplayMetrics().widthPixels - 2 * side()) / (float) columns;
             float small = Math.min(iconSize * 0.62f, (cell / 2f - dp(8)) * 0.86f);
             final Nest nest = new Nest(this, name, doors, across, down, small, new Nest.Hand() {
@@ -1751,11 +1754,17 @@ public final class Home extends Activity {
         float fromX = rowAt[0] - floorAt[0] + icon[0] + icon[2] / 2f;
         float fromY = rowAt[1] - floorAt[1] + icon[1] + icon[3] / 2f;
 
+        /* A thing of one place, from the dock or a list, takes a whole
+           place on the screens: with half steps, two by two small ones. */
+        if (across <= 1 && down <= 1) {
+            across = fine;
+            down = fine;
+        }
         carried = token;
         carriedAcross = across;
         carriedDown = down;
         origin = whence;
-        wideLift = across * down > 1;
+        wideLift = across * down > fine * fine;
         grid = pages.get(screens.page());
         lift = wideLift ? new Lift(this, face, icon[2], icon[3])
             : new Lift(this, face, Math.round(iconSize));
@@ -1826,7 +1835,7 @@ public final class Home extends Activity {
             lift.at(cx, cy);
         }
         boolean app = Apps.nameOf(carried) != null;
-        boolean small = carriedAcross == 1 && carriedDown == 1;
+        boolean small = carriedAcross == fine && carriedDown == fine;
         boolean dockable = app || Keep.OWN_THING.equals(carried) || carried.startsWith(Keep.SHORTCUT_THING)
             || (small && isFolder(carried)) || (small && carried.startsWith(WIDGET));
         /* Over the bin, nothing else is offered: the thing is about to go. */
@@ -2238,8 +2247,8 @@ public final class Home extends Activity {
         }
         int[] at = (int[]) thing.getTag();
         int[] block = {at[0], at[1], at.length > 2 ? at[2] : 1, at.length > 3 ? at[3] : 1};
-        int minA = 1;
-        int minD = 1;
+        int minA = fine;
+        int minD = fine;
         int maxA = columns;
         int maxD = rows;
         boolean wide = true;
@@ -2290,7 +2299,7 @@ public final class Home extends Activity {
                 if (WIDGET.equals(word)) {
                     kept = WIDGET + token.substring(WIDGET.length()).split(":")[0] + ":" + a + ":" + d;
                 } else {
-                    kept = a == 1 && d == 1 ? word : word + ":" + a + ":" + d;
+                    kept = a == fine && d == fine ? word : word + ":" + a + ":" + d;
                 }
                 Keep.reshape(Home.this, screen, column, row, kept, c, r);
                 fill();
@@ -2752,8 +2761,9 @@ public final class Home extends Activity {
         }
         for (int screen : order) {
             Grid page = pages.get(screen);
-            for (int r = rows - 1; r >= 0; r--) {
-                for (int c = 0; c < columns; c++) {
+            /* Set down by itself, a thing takes whole places, never half ones. */
+            for (int r = rows - fine; r >= 0; r -= fine) {
+                for (int c = 0; c < columns; c += fine) {
                     if (page.free(c, r)) {
                         if (!Keep.laid(this)) {
                             Keep.lay(this, standing);
@@ -3275,7 +3285,7 @@ public final class Home extends Activity {
                as the height that many common places give, seventy dp each
                less thirty, and counted in this grid's rows, which on a grid
                of many rows are far lower. */
-            across = Math.max(across, info.targetCellWidth);
+            across = Math.max(across, info.targetCellWidth * fine);
             down = Math.max(down, (int) Math.ceil(dp(70f * info.targetCellHeight - 30f) / tall - 0.05f));
         }
         return new int[] {Math.max(1, Math.min(columns, across)), Math.max(1, Math.min(rows, down))};
@@ -3391,8 +3401,8 @@ public final class Home extends Activity {
         }
         for (int screen : order) {
             Grid page = pages.get(screen);
-            for (int r = 0; r + span[1] <= rows; r++) {
-                for (int c = 0; c + span[0] <= columns; c++) {
+            for (int r = 0; r + span[1] <= rows; r += fine) {
+                for (int c = 0; c + span[0] <= columns; c += fine) {
                     if (page.free(c, r, span[0], span[1])) {
                         if (!Keep.laid(this)) {
                             Keep.lay(this, standing);
@@ -3437,7 +3447,7 @@ public final class Home extends Activity {
         }
         for (int screen : order) {
             Grid page = pages.get(screen);
-            for (int r = 0; r + least[1] <= rows; r++) {
+            for (int r = 0; r + least[1] <= rows; r += fine) {
                 if (page.free(0, r, columns, least[1])) {
                     if (!Keep.laid(this)) {
                         Keep.lay(this, standing);
@@ -3645,8 +3655,8 @@ public final class Home extends Activity {
         }
         for (int screen : order) {
             Grid page = pages.get(screen);
-            for (int r = 0; r < rows; r++) {
-                for (int c = 0; c < columns; c++) {
+            for (int r = 0; r < rows; r += fine) {
+                for (int c = 0; c < columns; c += fine) {
                     if (page.free(c, r)) {
                         Keep.place(this, door.token(), screen, c, r);
                         return;

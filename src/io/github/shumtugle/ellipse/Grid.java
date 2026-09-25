@@ -44,8 +44,20 @@ final class Grid extends ViewGroup {
         ring.setStyle(Paint.Style.STROKE);
     }
 
+    /** How many small places make one place each way: two with half steps. */
+    private int unit = 1;
+
+    void unit(int small) {
+        unit = Math.max(1, small);
+    }
+
+    int unit() {
+        return unit;
+    }
+
+    /** One thing of one place: with half steps, a block of small places. */
     void put(View child, int column, int row) {
-        put(child, column, row, 1, 1);
+        put(child, column, row, unit, unit);
     }
 
     void put(View child, int column, int row, int across, int down) {
@@ -98,12 +110,12 @@ final class Grid extends ViewGroup {
         return (getMeasuredHeight() - getPaddingTop() - getPaddingBottom()) / (float) rows * rowShare;
     }
 
-    /** The centre of the icon in a place, in the grid's own coordinates. */
+    /** The centre of the icon of a place starting here, in the grid's own coordinates. */
     float[] centre(int column, int row) {
-        float w = cellWidth();
-        float h = cellHeight();
-        float x = getPaddingLeft() + (column + 0.5f) * w;
-        float y = getPaddingTop() + row * h + (h - iconSize - below) / 2f + iconSize / 2f;
+        float w = cellWidth() * unit;
+        float h = cellHeight() * unit;
+        float x = getPaddingLeft() + column * cellWidth() + 0.5f * w;
+        float y = getPaddingTop() + row * cellHeight() + (h - iconSize - below) / 2f + iconSize / 2f;
         return new float[] {x, y};
     }
 
@@ -120,8 +132,9 @@ final class Grid extends ViewGroup {
         return new int[] {column, row};
     }
 
+    /** Whether one thing of one place could stand here: with half steps, a free block. */
     boolean free(int column, int row) {
-        return free(column, row, (View) null);
+        return unit == 1 ? free(column, row, (View) null) : free(column, row, unit, unit, null);
     }
 
     /** Whether a place is free, not counting one thing that may stand on it. */
@@ -347,10 +360,15 @@ final class Grid extends ViewGroup {
                 if (!free(column, row)) {
                     continue;
                 }
+                /* With half steps, a point for every whole place only: the
+                   ring shows where the half steps land. */
+                if (column % unit != 0 || row % unit != 0) {
+                    continue;
+                }
                 float[] c = centre(column, row);
                 boolean inside = targetX >= 0 && column >= targetX && column < targetX + targetAcross
                     && row >= targetY && row < targetY + targetDown;
-                if (column == targetX && row == targetY && targetAcross == 1 && targetDown == 1) {
+                if (column == targetX && row == targetY && targetAcross == unit && targetDown == unit) {
                     float r = iconSize / 2f;
                     canvas.drawCircle(c[0], c[1], r, wash);
                     canvas.drawCircle(c[0], c[1], r, ring);
@@ -359,7 +377,14 @@ final class Grid extends ViewGroup {
                 }
             }
         }
-        if (targetX >= 0 && (targetAcross > 1 || targetDown > 1)) {
+        if (targetX >= 0 && targetAcross == unit && targetDown == unit && unit > 1
+            && (targetX % unit != 0 || targetY % unit != 0)) {
+            float[] c = centre(targetX, targetY);
+            float r = iconSize / 2f;
+            canvas.drawCircle(c[0], c[1], r, wash);
+            canvas.drawCircle(c[0], c[1], r, ring);
+        }
+        if (targetX >= 0 && (targetAcross > unit || targetDown > unit)) {
             /* A wide thing lands on a block: the block is washed and ringed whole. */
             float w = cellWidth();
             float h = cellHeight();

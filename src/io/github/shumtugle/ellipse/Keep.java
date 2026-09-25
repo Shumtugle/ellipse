@@ -357,6 +357,73 @@ final class Keep {
         touch(context);
     }
 
+    /**
+     * Half steps: every place of the screens split in two each way, so a
+     * thing may stand half a place along or down. An icon then takes two
+     * by two of the small places. The set-out is kept in the places it was
+     * written in; when the steps change, it is written again in the new.
+     */
+    static final String HALF_STEPS = "half_steps";
+    private static final String LAYOUT_FINE = "layout_fine";
+
+    /** How many small places make one place each way: two with half steps, else one. */
+    static int fine(Context context) {
+        return flag(context, HALF_STEPS, false) ? 2 : 1;
+    }
+
+    /**
+     * The set-out brought to the steps now chosen: each place and each
+     * block's size multiplied by two, or halved, rounding a half place
+     * down and a half block up. Done once, when the steps change.
+     */
+    static void settleFine(Context context) {
+        SharedPreferences kept = store(context);
+        int now = fine(context);
+        int was = kept.getInt(LAYOUT_FINE, 1);
+        if (was == now) {
+            return;
+        }
+        if (laid(context)) {
+            List<Spot> spots = placed(context);
+            List<Spot> moved = new ArrayList<>();
+            for (Spot spot : spots) {
+                moved.add(new Spot(rescaled(spot.token, was, now), spot.screen, spot.x * now / was,
+                    spot.y * now / was));
+            }
+            write(context, moved);
+        }
+        kept.edit().putInt(LAYOUT_FINE, now).apply();
+    }
+
+    /** A thing's word with the size of its block, if it has one, in the new steps. */
+    private static String rescaled(String token, int was, int now) {
+        String[] part = token.split(":");
+        int first;
+        if (token.startsWith(FOLDER_THING) || token.startsWith("#widget:")) {
+            first = 2;
+        } else if (token.startsWith("#")) {
+            first = 1;
+        } else {
+            return token;
+        }
+        if (part.length != first + 2) {
+            return token;
+        }
+        try {
+            int a = Integer.parseInt(part[first]);
+            int d = Integer.parseInt(part[first + 1]);
+            a = Math.max(1, (a * now + was - 1) / was);
+            d = Math.max(1, (d * now + was - 1) / was);
+            StringBuilder out = new StringBuilder();
+            for (int i = 0; i < first; i++) {
+                out.append(part[i]).append(':');
+            }
+            return out.append(a).append(':').append(d).toString();
+        } catch (NumberFormatException broken) {
+            return token;
+        }
+    }
+
     /** Dark surfaces, light ones, or as the phone is set: the ground of lists, cards and settings. */
     static final String THEME = "theme";
     static final int THEME_DARK = 0;
