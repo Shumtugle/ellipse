@@ -468,3 +468,6 @@ MINE = МОИ
 Medallion = Медальон
 Chrome = Хром
 Sticker = Наклейка
+These widgets are to be added again, for the phone asks first: = Эти виджеты нужно добавить заново — телефон сначала спрашивает разрешения:
+Allow Ellipse to make widgets always, and a restore makes them itself. = Разрешите Ellipse создавать виджеты всегда, и восстановление сделает их само.
+Restored = Восстановлено

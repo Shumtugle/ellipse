@@ -468,3 +468,6 @@ MINE = OMAT
 Medallion = Medaljonki
 Chrome = Kromi
 Sticker = Tarra
+These widgets are to be added again, for the phone asks first: = Nämä widgetit on lisättävä uudelleen, sillä puhelin kysyy ensin:
+Allow Ellipse to make widgets always, and a restore makes them itself. = Salli Ellipsen luoda widgetit aina, niin palautus tekee ne itse.
+Restored = Palautettu

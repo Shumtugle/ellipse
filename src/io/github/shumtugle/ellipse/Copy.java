@@ -92,6 +92,7 @@ final class Copy {
         copy.put("version", version(context));
         copy.put("settings", all);
         copy.put("files", files(context));
+        copy.put("widgets", widgets(context));
         return copy.toString(1);
     }
 
@@ -159,6 +160,12 @@ final class Copy {
             // The settings are back; a file that could not be is left as it was.
         }
         Words.forget();
+        try {
+            JSONObject whose = new JSONObject(words).optJSONObject("widgets");
+            remake(context, whose == null ? new JSONObject() : whose);
+        } catch (JSONException broken) {
+            // The widgets stay as the copy left them.
+        }
         return true;
     }
 
@@ -168,6 +175,108 @@ final class Copy {
             save(context, new File(dir(context), BEFORE_RESTORE), write(context));
         } catch (JSONException | IOException unsaved) {
             // What comes next cannot be undone, then.
+        }
+    }
+
+    /** The widgets the last restore could not make again, by the names of their applications. */
+    static final List<String> unmade = new ArrayList<>();
+
+    /** Whose each widget on the screens is, by its number: the application and the widget it offers. */
+    private static JSONObject widgets(Context context) throws JSONException {
+        JSONObject out = new JSONObject();
+        android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(context);
+        for (Keep.Spot spot : Keep.placed(context)) {
+            int id = widgetOf(spot.token);
+            if (id == 0) {
+                continue;
+            }
+            android.appwidget.AppWidgetProviderInfo info = manager.getAppWidgetInfo(id);
+            if (info != null && info.provider != null) {
+                out.put(String.valueOf(id), info.provider.flattenToString());
+            }
+        }
+        return out;
+    }
+
+    /** A widget's number from its word in the set-out; nought if the word is not a widget's. */
+    private static int widgetOf(String token) {
+        if (!token.startsWith("#widget:")) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(token.split(":")[1]);
+        } catch (RuntimeException broken) {
+            return 0;
+        }
+    }
+
+    /**
+     * Every widget of the set-out restored that the phone no longer holds —
+     * as after installing anew, or a copy from another phone — made again
+     * from whose it was, where the phone lets it be made without asking;
+     * its place keeps its size and frame. What cannot be made is named.
+     */
+    private static void remake(Context context, JSONObject whose) {
+        unmade.clear();
+        android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(context);
+        android.appwidget.AppWidgetHost host = new android.appwidget.AppWidgetHost(context, Home.WIDGET_HOST);
+        SharedPreferences kept = context.getSharedPreferences(STORE, Context.MODE_PRIVATE);
+        SharedPreferences.Editor edit = kept.edit();
+        List<Keep.Spot> spots = Keep.placed(context);
+        List<Keep.Spot> after = new ArrayList<>();
+        boolean changed = false;
+        for (Keep.Spot spot : spots) {
+            int id = widgetOf(spot.token);
+            if (id == 0 || manager.getAppWidgetInfo(id) != null) {
+                after.add(spot);
+                continue;
+            }
+            String said = whose.optString(String.valueOf(id), "");
+            android.content.ComponentName provider = said.isEmpty() ? null
+                : android.content.ComponentName.unflattenFromString(said);
+            int fresh = 0;
+            if (provider != null) {
+                fresh = host.allocateAppWidgetId();
+                boolean made;
+                try {
+                    made = manager.bindAppWidgetIdIfAllowed(fresh, provider);
+                } catch (RuntimeException refused) {
+                    made = false;
+                }
+                if (!made) {
+                    host.deleteAppWidgetId(fresh);
+                    fresh = 0;
+                }
+            }
+            if (fresh == 0) {
+                unmade.add(provider == null ? "?" : label(context, provider));
+                after.add(spot);
+                continue;
+            }
+            String[] part = spot.token.split(":");
+            StringBuilder token = new StringBuilder("#widget:").append(fresh);
+            for (int i = 2; i < part.length; i++) {
+                token.append(':').append(part[i]);
+            }
+            after.add(new Keep.Spot(token.toString(), spot.screen, spot.x, spot.y));
+            if (kept.contains(Keep.FRAME_OFF + id)) {
+                edit.putBoolean(Keep.FRAME_OFF + fresh, kept.getBoolean(Keep.FRAME_OFF + id, false));
+                edit.remove(Keep.FRAME_OFF + id);
+            }
+            changed = true;
+        }
+        edit.commit();
+        if (changed) {
+            Keep.lay(context, after);
+        }
+    }
+
+    private static String label(Context context, android.content.ComponentName provider) {
+        android.content.pm.PackageManager pm = context.getPackageManager();
+        try {
+            return String.valueOf(pm.getApplicationLabel(pm.getApplicationInfo(provider.getPackageName(), 0)));
+        } catch (android.content.pm.PackageManager.NameNotFoundException gone) {
+            return provider.getPackageName();
         }
     }
 

@@ -454,6 +454,9 @@ The words of the home screen in another language. A module is a file of words, o
 MODULES = MODULES
 Bring in a module from a file = Bring in a module from a file
 Save the English template = Save the English template
+These widgets are to be added again, for the phone asks first: = These widgets are to be added again, for the phone asks first:
+Allow Ellipse to make widgets always, and a restore makes them itself. = Allow Ellipse to make widgets always, and a restore makes them itself.
+Restored = Restored
 The template is saved = The template is saved
 The template could not be written = The template could not be written
 That file holds no phrases = That file holds no phrases

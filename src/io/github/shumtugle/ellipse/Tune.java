@@ -1546,7 +1546,7 @@ public final class Tune extends Activity {
                         }
                         try {
                             if (Copy.read(Tune.this, Copy.load(one))) {
-                                restart();
+                                restored();
                                 return;
                             }
                         } catch (java.io.IOException gone) {
@@ -1884,6 +1884,28 @@ public final class Tune extends Activity {
             + "another language, by hand or by an assistant, and bring the file in here.");
     }
 
+    /**
+     * A copy brought back: the home screen made again; first, if some of its
+     * widgets could not be made again without the phone asking, they are
+     * named, to be added again from the shelf.
+     */
+    private void restored() {
+        if (Copy.unmade.isEmpty()) {
+            restart();
+            return;
+        }
+        StringBuilder told = new StringBuilder(Words.t("These widgets are to be added again, for the phone asks first:"));
+        for (int i = 0; i < Copy.unmade.size(); i++) {
+            told.append(i == 0 ? " " : ", ").append(Copy.unmade.get(i));
+        }
+        told.append(". ").append(Words.t("Allow Ellipse to make widgets always, and a restore makes them itself."));
+        Ask.tell(host, "Restored", told.toString(), "Done", new Runnable() {
+            public void run() {
+                restart();
+            }
+        });
+    }
+
     /** A look put on: the colours read again and the settings made again in them. */
     private void worn() {
         Tone.read(this);
@@ -1971,7 +1993,7 @@ public final class Tune extends Activity {
             String words = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
             if (words.contains("\"" + Copy.KIND + "\"")) {
                 if (Copy.read(this, words)) {
-                    restart();
+                    restored();
                 } else {
                     said("That copy could not be read");
                 }
