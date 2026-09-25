@@ -267,6 +267,65 @@ final class Keep {
     static final String RINGS_SECOND = "rings_second";
     static final String RINGS_PLACES = "rings_places";
 
+    /** The small rings in their order, each by a number of its own, and what each holds. */
+    static final String RINGS_LIST = "rings_list";
+    static final String RING_KIND = "ring_kind.";
+    /** The most small rings there may be: seven, and the big one makes eight. */
+    static final int RINGS_MOST = 7;
+
+    /**
+     * The small rings' numbers, in order. The first time, the two the
+     * settings named before become the first two, and the headphones'
+     * place, kept then under the number three, is kept under its own word.
+     */
+    static int[] ringIds(Context context) {
+        SharedPreferences kept = store(context);
+        if (!kept.contains(RINGS_LIST)) {
+            StringBuilder places = new StringBuilder();
+            for (String line : kept.getString(RINGS_PLACES, "").split(";")) {
+                if (line.isEmpty()) {
+                    continue;
+                }
+                if (places.length() > 0) {
+                    places.append(';');
+                }
+                places.append(line.startsWith("3:") ? "e" + line.substring(1) : line);
+            }
+            kept.edit().putString(RINGS_LIST, "1,2")
+                .putInt(RING_KIND + 1, kept.getInt(RINGS_FIRST, 0))
+                .putInt(RING_KIND + 2, kept.getInt(RINGS_SECOND, 2))
+                .putString(RINGS_PLACES, places.toString()).apply();
+            return new int[] {1, 2};
+        }
+        String said = kept.getString(RINGS_LIST, "");
+        if (said.isEmpty()) {
+            return new int[0];
+        }
+        String[] part = said.split(",");
+        int[] ids = new int[part.length];
+        int n = 0;
+        for (String one : part) {
+            try {
+                ids[n++] = Integer.parseInt(one.trim());
+            } catch (NumberFormatException broken) {
+                n--;
+            }
+        }
+        return java.util.Arrays.copyOf(ids, Math.max(0, n));
+    }
+
+    static void saveRingIds(Context context, int[] ids) {
+        StringBuilder out = new StringBuilder();
+        for (int id : ids) {
+            if (out.length() > 0) {
+                out.append(',');
+            }
+            out.append(id);
+        }
+        store(context).edit().putString(RINGS_LIST, out.toString()).apply();
+        touch(context);
+    }
+
     /** Where the rings were set by hand, as the rings wrote it; empty if never. */
     static String rings(Context context) {
         return store(context).getString(RINGS_PLACES, "");
@@ -277,6 +336,9 @@ final class Keep {
         store(context).edit().putString(RINGS_PLACES, places).apply();
         touch(context);
     }
+
+    /** How high a row of the grid stands, in percent of its full share of the screen. */
+    static final String ROW_HEIGHT = "row_height";
 
     /** How strong the widget clock's fine lines are, in percent of their own. */
     static final String MENO_LINES = "meno_lines";

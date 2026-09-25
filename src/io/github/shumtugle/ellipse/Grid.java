@@ -86,8 +86,16 @@ final class Grid extends ViewGroup {
         return (getMeasuredWidth() - getPaddingLeft() - getPaddingRight()) / (float) columns;
     }
 
+    /** A row's share of its full height: under one, the rows close up toward the top. */
+    private float rowShare = 1f;
+
+    void rowShare(float share) {
+        rowShare = Math.max(0.5f, Math.min(1f, share));
+        requestLayout();
+    }
+
     float cellHeight() {
-        return (getMeasuredHeight() - getPaddingTop() - getPaddingBottom()) / (float) rows;
+        return (getMeasuredHeight() - getPaddingTop() - getPaddingBottom()) / (float) rows * rowShare;
     }
 
     /** The centre of the icon in a place, in the grid's own coordinates. */

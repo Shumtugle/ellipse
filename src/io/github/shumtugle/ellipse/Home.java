@@ -865,6 +865,7 @@ public final class Home extends Activity {
         for (int i = 0; i < count; i++) {
             Grid page = new Grid(this, columns, rows);
             page.setPadding(side(), dp(16), side(), 0);
+            page.rowShare(Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f);
             page.shape(iconSize, Cell.below(this));
             final android.view.GestureDetector twice = new android.view.GestureDetector(this,
                 new android.view.GestureDetector.SimpleOnGestureListener() {
@@ -1160,11 +1161,12 @@ public final class Home extends Activity {
     private float[] place() {
         if (screens != null && screens.getWidth() > 0 && screens.getHeight() > 0) {
             return new float[] {(screens.getWidth() - 2 * side()) / (float) columns,
-                (screens.getHeight() - dp(16)) / (float) rows};
+                (screens.getHeight() - dp(16)) / (float) rows * Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f};
         }
         guessed = true;
         android.util.DisplayMetrics m = getResources().getDisplayMetrics();
-        return new float[] {(m.widthPixels - 2 * side()) / (float) columns, m.heightPixels * 0.72f / rows};
+        return new float[] {(m.widthPixels - 2 * side()) / (float) columns,
+            m.heightPixels * 0.72f / rows * Keep.number(this, Keep.ROW_HEIGHT, 100) / 100f};
     }
 
     /**

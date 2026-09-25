@@ -27,10 +27,12 @@ import java.util.Locale;
 
 /**
  * Rings of glass with no card under them: a big one with the hour, in
- * figures or in hands, and an orange arc of the day gone; beside it small
- * ones, each holding what the settings chose — the place's warmth, the
- * calendar's day, the charge — and, while headphones are connected, one
- * more with theirs. An arc whose length is a level is drawn in the accent.
+ * figures or in hands, and an orange arc of the day gone; beside it up to
+ * seven small ones, each holding what the settings chose — the place's
+ * warmth, the calendar's day, the charge, how warm it feels, the damp, the
+ * wind, the daylight, the rain, the next alarm — and, while headphones are
+ * connected, one more with theirs. An arc whose length is a level is drawn
+ * in the accent.
  *
  * The rings stand on a canvas of their own measured in dp, brought to the
  * box by one multiplier, as the widget clock is: a wide canvas, or, in a
@@ -59,14 +61,18 @@ final class Rings extends View implements Timepiece {
     static final int CITY = 0;
     static final int CALENDAR = 1;
     static final int CHARGE = 2;
-    static final String[] SMALL_NAMES = {"Weather", "Calendar", "Charge"};
+    static final int FEELS = 3;
+    static final int DAMP = 4;
+    static final int WIND = 5;
+    static final int DAYLIGHT = 6;
+    static final int RAIN = 7;
+    static final int ALARM = 8;
+    static final String[] SMALL_NAMES = {"Weather", "Calendar", "Charge", "Feels like", "Humidity", "Wind",
+        "Daylight", "Rain", "Alarm"};
+    static final int[] SMALL_KINDS = {CITY, CALENDAR, CHARGE, FEELS, DAMP, WIND, DAYLIGHT, RAIN, ALARM};
 
-    /** The rings by their places: the big one, the two chosen, the headphones'. */
+    /** The big ring is the first; the small ones follow in order; the headphones' is the last. */
     private static final int BIG = 0;
-    private static final int FIRST = 1;
-    private static final int SECOND = 2;
-    private static final int EARS = 3;
-    private static final int COUNT = 4;
 
     private static final int INK = 0xFFF5F1E8;
     private static final int QUIET = 0xFFD8D2C6;
@@ -81,13 +87,18 @@ final class Rings extends View implements Timepiece {
     private final RectF oval = new RectF();
     private final Path path = new Path();
     private final int big;
-    private final int[] kinds = new int[COUNT];
+    /** The small rings' own numbers and what each holds, in order. */
+    private final int[] ids;
+    private final int[] kinds;
+    /** The headphones' ring's place among all. */
+    private final int earsRing;
+    private final int count;
     private final int ground;
     private final int accent;
     /** Where each ring was set by hand: a share across, a share down, a radius in dp; or none. */
-    private final float[][] placed = new float[COUNT][];
+    private final float[][] placed;
     /** Where each ring stands as last drawn, in the canvas's dp: x, y, radius; or none. */
-    private final float[][] stands = new float[COUNT][];
+    private final float[][] stands;
     private float scale = 1f;
     private float k = 1f;
     private float vw;
@@ -127,8 +138,15 @@ final class Rings extends View implements Timepiece {
         this.hand = hand;
         density = context.getResources().getDisplayMetrics().density;
         big = Keep.number(context, Keep.RINGS_BIG, FIGURES) == HANDS ? HANDS : FIGURES;
-        kinds[FIRST] = Math.max(0, Math.min(CHARGE, Keep.number(context, Keep.RINGS_FIRST, CITY)));
-        kinds[SECOND] = Math.max(0, Math.min(CHARGE, Keep.number(context, Keep.RINGS_SECOND, CHARGE)));
+        ids = Keep.ringIds(context);
+        count = ids.length + 2;
+        earsRing = count - 1;
+        kinds = new int[count];
+        for (int i = 0; i < ids.length; i++) {
+            kinds[i + 1] = Math.max(CITY, Math.min(ALARM, Keep.number(context, Keep.RING_KIND + ids[i], CITY)));
+        }
+        placed = new float[count][];
+        stands = new float[count][];
         ground = Math.round(255f * Math.max(0, Math.min(95, Keep.number(context, Keep.CLOCK_GROUND, 30))) / 100f);
         accent = Tone.primary();
         read(Keep.rings(context));
@@ -197,33 +215,53 @@ final class Rings extends View implements Timepiece {
         return arranging;
     }
 
-    /** Places as written: one ring a line, its number, its share across, its share down, its radius. */
+    /** A ring's word in what is kept: the big one's, a small one's own number, the headphones'. */
+    private String word(int ring) {
+        return ring == BIG ? "0" : ring == earsRing ? "e" : String.valueOf(ids[ring - 1]);
+    }
+
+    /**
+     * Places as written: one ring a line, its word, its share across, its
+     * share down, its radius. A ring no longer there keeps its line, so it
+     * comes back to its place if it is added again.
+     */
+    private String others = "";
+
     private void read(String text) {
+        StringBuilder rest = new StringBuilder();
         for (String line : text.split(";")) {
             String[] part = line.split(":");
             if (part.length != 4) {
                 continue;
             }
+            int ring = -1;
+            for (int r = 0; r < count; r++) {
+                if (word(r).equals(part[0])) {
+                    ring = r;
+                }
+            }
             try {
-                int ring = Integer.parseInt(part[0]);
-                if (ring >= 0 && ring < COUNT) {
-                    placed[ring] = new float[] {Float.parseFloat(part[1]), Float.parseFloat(part[2]),
-                        Float.parseFloat(part[3])};
+                float[] at = {Float.parseFloat(part[1]), Float.parseFloat(part[2]), Float.parseFloat(part[3])};
+                if (ring >= 0) {
+                    placed[ring] = at;
+                } else {
+                    rest.append(rest.length() > 0 ? ";" : "").append(line);
                 }
             } catch (NumberFormatException broken) {
                 // That ring stands in the chain, then.
             }
         }
+        others = rest.toString();
     }
 
     private String write() {
-        StringBuilder out = new StringBuilder();
-        for (int ring = 0; ring < COUNT; ring++) {
+        StringBuilder out = new StringBuilder(others);
+        for (int ring = 0; ring < count; ring++) {
             if (placed[ring] != null) {
                 if (out.length() > 0) {
                     out.append(';');
                 }
-                out.append(ring).append(':').append(placed[ring][0]).append(':').append(placed[ring][1])
+                out.append(word(ring)).append(':').append(placed[ring][0]).append(':').append(placed[ring][1])
                     .append(':').append(placed[ring][2]);
             }
         }
@@ -280,8 +318,8 @@ final class Rings extends View implements Timepiece {
         vw = w / scale;
         vh = h / scale;
         float[][] chain = chain(wide);
-        for (int ring = 0; ring < COUNT; ring++) {
-            if (ring == EARS && ears < 0) {
+        for (int ring = 0; ring < count; ring++) {
+            if (ring == earsRing && ears < 0) {
                 stands[ring] = null;
                 continue;
             }
@@ -300,20 +338,57 @@ final class Rings extends View implements Timepiece {
     /**
      * The rings in the chain: the big one, then the small ones zig-zag
      * beside it, each over the one before; beside it in a wide box, under
-     * it in a narrow one. Three small ones stand closer and a little less.
+     * it in a narrow one. The more there are, the closer and smaller they
+     * stand, so the chain keeps within the box.
      */
     private float[][] chain(boolean wide) {
-        int n = ears >= 0 ? 3 : 2;
-        float[][] at = new float[COUNT][];
-        int[] order = {FIRST, SECOND, EARS};
-        if (wide) {
+        int n = count - 2 + (ears >= 0 ? 1 : 0);
+        float[][] at = new float[count][];
+        int[] order = new int[n];
+        for (int i = 0; i < n; i++) {
+            order[i] = i + 1 < earsRing ? i + 1 : earsRing;
+        }
+        if (n >= 4) {
+            /* Many: the small ones in two rows, each over its neighbours,
+               the second row half a step along, like cells of a comb. */
+            int columns = (n + 1) / 2;
+            if (wide) {
+                float bigD = 160f;
+                float room = vw - 8f - bigD * 0.9f;
+                float d = Math.min(86f, Math.min(vh * 0.56f, room / (0.72f * columns + 0.64f)));
+                float step = d * 0.72f;
+                float span = bigD * 0.9f + step * columns + d * 0.64f;
+                float x = Math.max(bigD / 2f, (vw - span) / 2f + bigD / 2f);
+                float cy = vh / 2f;
+                at[BIG] = new float[] {x, cy, bigD / 2f};
+                float start = x + bigD * 0.4f + d / 2f;
+                for (int i = 0; i < n; i++) {
+                    boolean upper = i % 2 == 0;
+                    at[order[i]] = new float[] {start + (i / 2) * step + (upper ? 0f : step / 2f),
+                        cy + (upper ? -d * 0.38f : d * 0.38f), d / 2f};
+                }
+            } else {
+                float bigD = 170f;
+                float d = Math.min(74f, (vw - 8f) / (0.72f * columns + 0.64f));
+                float step = d * 0.72f;
+                float span = step * columns + d * 0.64f;
+                float top = (vh - (bigD + d * 1.6f - 18f)) / 2f;
+                at[BIG] = new float[] {vw / 2f, top + bigD / 2f, bigD / 2f};
+                float start = (vw - span) / 2f + d / 2f;
+                for (int i = 0; i < n; i++) {
+                    boolean upper = i % 2 == 0;
+                    at[order[i]] = new float[] {start + (i / 2) * step + (upper ? 0f : step / 2f),
+                        top + bigD - 18f + d / 2f + (upper ? 0f : d * 0.6f), d / 2f};
+                }
+            }
+        } else if (wide) {
             float bigD = 160f;
             float d = n <= 2 ? 100f : 86f;
             float lap = n <= 2 ? 24f : 20f;
-            float step = d - (n <= 2 ? 14f : 24f);
+            float step = n <= 2 ? d - 14f : d - 24f;
             float rise = n <= 2 ? 26f : 22f;
             float span = bigD + (d - lap) + step * (n - 1);
-            float x = (vw - span) / 2f + bigD / 2f;
+            float x = Math.max(bigD / 2f, (vw - span) / 2f + bigD / 2f);
             float cy = vh / 2f;
             at[BIG] = new float[] {x, cy, bigD / 2f};
             float cx = x + bigD / 2f + d / 2f - lap;
@@ -324,7 +399,7 @@ final class Rings extends View implements Timepiece {
         } else {
             float bigD = 170f;
             float d = n <= 2 ? 96f : 74f;
-            float step = d - (n <= 2 ? 20f : 12f);
+            float step = n <= 2 ? d - 20f : d - 12f;
             float span = d + step * (n - 1);
             float top = (vh - (bigD + d - 18f)) / 2f;
             at[BIG] = new float[] {vw / 2f, top + bigD / 2f, bigD / 2f};
@@ -334,8 +409,10 @@ final class Rings extends View implements Timepiece {
                 cx += step;
             }
         }
-        if (at[EARS] == null) {
-            at[EARS] = new float[] {vw / 2f, vh / 2f, 40f};
+        for (int ring = 0; ring < count; ring++) {
+            if (at[ring] == null) {
+                at[ring] = new float[] {vw / 2f, vh / 2f, 40f};
+            }
         }
         return at;
     }
@@ -354,15 +431,15 @@ final class Rings extends View implements Timepiece {
 
     /** The rings bottom to top: the one held last of all. */
     private int[] drawOrder() {
-        int[] order = {BIG, FIRST, SECOND, EARS};
-        if (held >= 0) {
-            int at = 0;
-            for (int ring : new int[] {BIG, FIRST, SECOND, EARS}) {
-                if (ring != held) {
-                    order[at++] = ring;
-                }
+        int[] order = new int[count];
+        int at = 0;
+        for (int ring = 0; ring < count; ring++) {
+            if (ring != held) {
+                order[at++] = ring;
             }
-            order[COUNT - 1] = held;
+        }
+        if (held >= 0) {
+            order[count - 1] = held;
         }
         return order;
     }
@@ -450,14 +527,14 @@ final class Rings extends View implements Timepiece {
         String window;
         if (ring == BIG) {
             window = big == HANDS ? Almanac.DIAL : Almanac.TIME;
-        } else if (ring == EARS) {
+        } else if (ring == earsRing) {
             window = Almanac.EARS;
-        } else if (kinds[ring] == CITY) {
-            window = Almanac.WEATHER;
-        } else if (kinds[ring] == CALENDAR) {
+        } else if (kinds[ring] == CALENDAR || kinds[ring] == ALARM) {
             window = Almanac.TIME;
-        } else {
+        } else if (kinds[ring] == CHARGE) {
             window = Almanac.CHARGE;
+        } else {
+            window = Almanac.WEATHER;
         }
         float[] at = stands[ring];
         hand.pressed(window, this, new RectF((at[0] - at[2]) * scale, (at[1] - at[2]) * scale,
@@ -498,7 +575,7 @@ final class Rings extends View implements Timepiece {
                 } else {
                     figures(canvas, at);
                 }
-            } else if (ring == EARS) {
+            } else if (ring == earsRing) {
                 arc(canvas, at, ears / 100f, accent, 5f, 3.5f);
                 phones(canvas, at[0], at[1] - at[2] * 0.38f, at[2] * 0.34f);
                 text(canvas, ears + "%", at[0], at[1] + at[2] * 0.34f, at[2] * 0.32f, INK, at[2] * 1.5f);
@@ -683,9 +760,114 @@ final class Rings extends View implements Timepiece {
                 r * 0.24f, ORANGE, room);
             text(canvas, new SimpleDateFormat("d", Locale.getDefault()).format(now), x, y + r * 0.36f,
                 r * 0.5f, INK, room);
-        } else {
+        } else if (kind == CHARGE) {
             arc(canvas, at, charge < 0 ? 0f : charge / 100f, accent, 5f, 3.5f);
             text(canvas, charge >= 0 ? charge + "%" : "\u2026", x, y + r * 0.13f, r * 0.36f, INK, room);
+        } else if (kind == FEELS) {
+            text(canvas, Words.s("feels like"), x, y - r * 0.12f, r * 0.2f, QUIET, room);
+            text(canvas, Sky.feels() != Sky.MISSING ? Sky.feels() + "\u00B0" : "\u2026", x, y + r * 0.34f,
+                r * 0.42f, INK, room);
+        } else if (kind == DAMP) {
+            int damp = Sky.wet();
+            arc(canvas, at, damp == Sky.MISSING ? 0f : damp / 100f, accent, 5f, 3.5f);
+            text(canvas, Words.s("humidity"), x, y - r * 0.12f, r * 0.2f, QUIET, room);
+            text(canvas, damp != Sky.MISSING ? damp + "%" : "\u2026", x, y + r * 0.3f, r * 0.34f, INK, room);
+        } else if (kind == WIND) {
+            if (Sky.whence() != Sky.MISSING) {
+                /* An arrow the way the wind goes: it comes from its degrees. */
+                arrow(canvas, x, y - r * 0.3f, r * 0.26f, Sky.whence() + 180f);
+            }
+            text(canvas, Sky.wind() != Sky.MISSING ? Sky.wind() + " " + Words.s("m/s") : "\u2026", x,
+                y + r * 0.42f, r * 0.28f, INK, room);
+        } else if (kind == DAYLIGHT) {
+            daylight(canvas, at);
+        } else if (kind == RAIN) {
+            int chance = Sky.rain(0);
+            arc(canvas, at, chance == Sky.MISSING ? 0f : chance / 100f, accent, 5f, 3.5f);
+            text(canvas, Words.s("rain"), x, y - r * 0.12f, r * 0.2f, QUIET, room);
+            text(canvas, chance != Sky.MISSING ? chance + "%" : "\u2026", x, y + r * 0.3f, r * 0.34f, INK, room);
+        } else {
+            long next = nextAlarm();
+            if (next <= 0L) {
+                bell(canvas, x, y - r * 0.2f, r * 0.3f);
+                text(canvas, "\u2014", x, y + r * 0.42f, r * 0.3f, QUIET, room);
+            } else {
+                long left = Math.max(0L, next - System.currentTimeMillis());
+                arc(canvas, at, Math.min(1f, left / 86400000f), accent, 5f, 3.5f);
+                bell(canvas, x, y - r * 0.28f, r * 0.26f);
+                long minutes = left / 60000L;
+                String said = minutes >= 60 ? (minutes / 60) + " " + Words.s("h") + " " + (minutes % 60) + " "
+                    + Words.s("min") : minutes + " " + Words.s("min");
+                text(canvas, said, x, y + r * 0.3f, r * 0.24f, INK, room);
+            }
+        }
+    }
+
+    /** An arrow of the wind, pointing the way it blows. */
+    private void arrow(Canvas canvas, float x, float y, float size, float degrees) {
+        canvas.save();
+        canvas.rotate(degrees, x, y);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(QUIET);
+        path.reset();
+        path.moveTo(x, y - size);
+        path.lineTo(x + size * 0.55f, y + size * 0.7f);
+        path.lineTo(x, y + size * 0.35f);
+        path.lineTo(x - size * 0.55f, y + size * 0.7f);
+        path.close();
+        canvas.drawPath(path, paint);
+        canvas.restore();
+    }
+
+    /**
+     * Daylight: the ring as the whole day from the top at midnight, the
+     * sun's hours an orange arc from dawn to dusk, a dot where now is; the
+     * dawn and the dusk in words inside.
+     */
+    private void daylight(Canvas canvas, float[] at) {
+        float x = at[0];
+        float y = at[1];
+        float r = at[2];
+        float from = minutes(Sky.dawn());
+        float to = minutes(Sky.dusk());
+        float ri = r - 5f;
+        oval.set(x - ri, y - ri, x + ri, y + ri);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(Math.max(3.5f, 1.5f / k));
+        paint.setColor(0x1FFFFFFF);
+        canvas.drawCircle(x, y, ri, paint);
+        if (from >= 0f && to > from) {
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setColor(ORANGE);
+            canvas.drawArc(oval, -90f + 360f * from / 1440f, 360f * (to - from) / 1440f, false, paint);
+            paint.setStrokeCap(Paint.Cap.BUTT);
+        }
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(INK);
+        double now = Math.toRadians(360f * dayGone());
+        canvas.drawCircle(x + ri * (float) Math.sin(now), y - ri * (float) Math.cos(now), Math.max(3f, 2.5f / k),
+            paint);
+        float room = r * 1.5f;
+        text(canvas, Sky.dawn().isEmpty() ? "\u2026" : "\u2191 " + Sky.dawn(), x, y - r * 0.06f, r * 0.24f, INK,
+            room);
+        text(canvas, Sky.dusk().isEmpty() ? "\u2026" : "\u2193 " + Sky.dusk(), x, y + r * 0.34f, r * 0.24f, QUIET,
+            room);
+    }
+
+    /** "HH:mm" as minutes from midnight; or less than none if it is not a time. */
+    private static float minutes(String time) {
+        if (time == null) {
+            return -1f;
+        }
+        int cut = time.indexOf(':');
+        if (cut < 1) {
+            return -1f;
+        }
+        try {
+            return Integer.parseInt(time.substring(0, cut).trim()) * 60f
+                + Integer.parseInt(time.substring(cut + 1).trim());
+        } catch (NumberFormatException broken) {
+            return -1f;
         }
     }
 

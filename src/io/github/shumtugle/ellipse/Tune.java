@@ -153,6 +153,9 @@ public final class Tune extends Activity {
                         Keep.WALL_MOVES, true),
                     toggle("Add new apps", "An app put on the phone is set down on a free place",
                         Keep.AUTO_ADD, false),
+                    choice("Row height", "How high each row stands: lower, the rows close up toward the top "
+                        + "and the gaps between them narrow", Keep.ROW_HEIGHT, 100,
+                        new String[] {"100%", "90%", "80%", "70%", "60%"}, new int[] {100, 90, 80, 70, 60}),
                     choice("Edges", "How the grid meets the screen's edges: within its margins; widgets and "
                         + "the clock past them; or no margins at all, screen against screen", Keep.EDGES,
                         Keep.EDGES_MARGINS, EDGE_NAMES, EDGE_VALUES),
@@ -621,6 +624,9 @@ public final class Tune extends Activity {
             openSafely(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS));
         }
         askingValue.setText(valueOf(asking));
+        if (room() == CLOCK) {
+            showClock();
+        }
         host.postDelayed(new Runnable() {
             public void run() {
                 menu.hide(true);
@@ -1026,21 +1032,35 @@ public final class Tune extends Activity {
                         paintRing(c, w, h, value == Rings.HANDS ? -1 : -2);
                     }
                 }));
-            int[] smalls = {Rings.CITY, Rings.CALENDAR, Rings.CHARGE};
-            caption("FIRST SMALL RING");
-            rows.addView(swatches(Keep.RINGS_FIRST, Keep.number(this, Keep.RINGS_FIRST, Rings.CITY), smalls,
-                Rings.SMALL_NAMES, new Painter() {
-                    public void paint(android.graphics.Canvas c, float w, float h, int value) {
-                        paintRing(c, w, h, value);
+            caption("SMALL RINGS");
+            final int[] ids = Keep.ringIds(this);
+            for (int i = 0; i < ids.length; i++) {
+                rows.addView(row(choice("Ring " + (i + 1), "What it holds", Keep.RING_KIND + ids[i], Rings.CITY,
+                    Rings.SMALL_NAMES, Rings.SMALL_KINDS)));
+            }
+            if (ids.length < Keep.RINGS_MOST) {
+                rows.addView(deed("Add a ring", new Runnable() {
+                    public void run() {
+                        int next = 1;
+                        for (int id : ids) {
+                            next = Math.max(next, id + 1);
+                        }
+                        int[] more = java.util.Arrays.copyOf(ids, ids.length + 1);
+                        more[ids.length] = next;
+                        Keep.saveNumber(Tune.this, Keep.RING_KIND + next, Rings.FEELS);
+                        Keep.saveRingIds(Tune.this, more);
+                        fill();
                     }
                 }));
-            caption("SECOND SMALL RING");
-            rows.addView(swatches(Keep.RINGS_SECOND, Keep.number(this, Keep.RINGS_SECOND, Rings.CHARGE), smalls,
-                Rings.SMALL_NAMES, new Painter() {
-                    public void paint(android.graphics.Canvas c, float w, float h, int value) {
-                        paintRing(c, w, h, value);
+            }
+            if (ids.length > 0) {
+                rows.addView(deed("Take away the last ring", new Runnable() {
+                    public void run() {
+                        Keep.saveRingIds(Tune.this, java.util.Arrays.copyOf(ids, ids.length - 1));
+                        fill();
                     }
                 }));
+            }
             caption("GROUND");
             groundSlider(30);
             caption("PLACES");
@@ -1230,6 +1250,23 @@ public final class Tune extends Activity {
             }
         }));
         rows.addView(made);
+    }
+
+    /** A line of words in the accent that does something when touched. */
+    private View deed(String said, final Runnable does) {
+        TextView made = new TextView(this);
+        made.setText(said);
+        made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
+        made.setTextColor(Tone.primary());
+        made.setPadding(dp(24), dp(12), dp(24), dp(12));
+        made.setBackground(Tone.touch(null, dp(16)));
+        made.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                does.run();
+            }
+        });
+        return made;
     }
 
     /** A quiet line of words under a caption, saying how something is done. */
