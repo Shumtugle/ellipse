@@ -1023,6 +1023,16 @@ public final class Tune extends Activity {
                     paintFace(c, w, h, value);
                 }
             }));
+        if (face == Home.FACE_FIRST) {
+            touches(Hues.FIRST, new String[] {Hues.DIAL, Hues.HOUR, Hues.WINDOWS, Hues.SECONDS},
+                new String[] {"DIAL", "HOUR WINDOW", "SMALL WINDOWS", "SECOND HAND"});
+        }
+        if (face == Home.FACE_PLATE) {
+            touches(Hues.PLATE, new String[] {Hues.HANDS, Hues.SECONDS}, new String[] {"HANDS", "SECOND HAND"});
+        }
+        if (face == Home.FACE_MENO) {
+            touches(Hues.MENO, new String[] {Hues.HANDS, Hues.MARKS}, new String[] {"HANDS", "MARKS"});
+        }
         if (face == Home.FACE_RINGS) {
             note("To set the rings by hand, hold the clock on the home screen and choose Arrange rings.");
             caption("BIG RING");
@@ -1270,6 +1280,62 @@ public final class Tune extends Activity {
         rows.addView(made);
     }
 
+    /**
+     * The owner's touches to a face: its windows' sizes, seen at once in the
+     * window above, the colours of its parts, and a way back to the face as
+     * it was drawn, whatever was chosen.
+     */
+    private void touches(final String face, String[] parts, String[] captions) {
+        caption("WINDOWS");
+        sizeSlider("Dial", Hues.sizeKey(face, Hues.DIAL));
+        sizeSlider("Hour and date", Hues.sizeKey(face, Hues.HOUR));
+        sizeSlider("Row of small windows", Hues.sizeKey(face, Hues.ROW));
+        Painter hue = new Painter() {
+            public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                paintHue(c, w, h, value);
+            }
+        };
+        for (int i = 0; i < parts.length; i++) {
+            caption(captions[i]);
+            String key = Hues.hueKey(face, parts[i]);
+            rows.addView(swatches(key, Keep.number(this, key, Hues.ORIGINAL), Hues.VALUES, Hues.NAMES, hue));
+        }
+        caption("AS IT WAS");
+        rows.addView(deed("Put this face back as it was drawn", new Runnable() {
+            public void run() {
+                Hues.forget(Tune.this, face);
+                fill();
+            }
+        }));
+    }
+
+    /** A window's size in percent of its own, seen at once in the clock above. */
+    private void sizeSlider(String title, final String key) {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setPadding(dp(24), dp(6), dp(24), dp(6));
+        LinearLayout top = new LinearLayout(this);
+        TextView name = new TextView(this);
+        name.setText(title);
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        name.setTextColor(Tone.onSurface());
+        top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView value = new TextView(this);
+        value.setText(Keep.number(this, key, 100) + "%");
+        value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        value.setTextColor(Tone.primary());
+        top.addView(value);
+        made.addView(top);
+        made.addView(new Slide(this, 60, 140, Keep.number(this, key, 100), new Slide.Moved() {
+            public void moved(int at, boolean done) {
+                value.setText(at + "%");
+                Keep.saveNumber(Tune.this, key, at);
+                showClock();
+            }
+        }));
+        rows.addView(made);
+    }
+
     /** A line of words in the accent that does something when touched. */
     private View deed(String said, final Runnable does) {
         TextView made = new TextView(this);
@@ -1426,7 +1492,10 @@ public final class Tune extends Activity {
         c.drawCircle(w / 2f, h / 2f, r, p);
         p.setStrokeWidth(Math.max(2f, h * 0.07f));
         p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
-        p.setColor(Rings.colour(which));
+        p.setColor(which == Hues.ORIGINAL ? Tone.onVariant() : Rings.colour(which));
+        if (which == Hues.ORIGINAL) {
+            p.setPathEffect(new android.graphics.DashPathEffect(new float[] {h * 0.06f, h * 0.06f}, 0f));
+        }
         c.drawArc(new android.graphics.RectF(w / 2f - r, h / 2f - r, w / 2f + r, h / 2f + r), -90f, 250f, false, p);
     }
 

@@ -82,6 +82,16 @@ final class Meno extends View implements Timepiece {
     private final int second;
     private final int cardAlpha;
     private final float strength;
+    /* The owner's touches: the dial's and the windows' sizes, the hands'
+       and the marks' colours, the widget's own where nothing was chosen. */
+    private final float dialSize;
+    private final float hourSize;
+    private final float rowSize;
+    private final int hourColour;
+    private final int minuteColour;
+    private final int markColour;
+    /** How much the windows were drawn smaller to fit together, as last laid out. */
+    private float squeeze = 1f;
     /** The canvas's dp to the screen's pixels, as last drawn. */
     private float scale = 1f;
     private float k = 1f;
@@ -117,6 +127,13 @@ final class Meno extends View implements Timepiece {
         int dark = Keep.number(context, Keep.CLOCK_GROUND, 10);
         cardAlpha = Math.round(255f * Math.max(0, Math.min(95, dark)) / 100f);
         strength = Math.max(50, Math.min(200, Keep.number(context, Keep.MENO_LINES, 100))) / 100f;
+        dialSize = Hues.size(context, Hues.MENO, Hues.DIAL);
+        hourSize = Hues.size(context, Hues.MENO, Hues.HOUR);
+        rowSize = Hues.size(context, Hues.MENO, Hues.ROW);
+        hourColour = Hues.colour(context, Hues.MENO, Hues.HANDS, HOUR);
+        minuteColour = Hues.own(context, Hues.MENO, Hues.HANDS) ? MINUTE
+            : Hues.mix(Hues.colour(context, Hues.MENO, Hues.HANDS, MINUTE), 0xFFFFFFFF, 0.25f);
+        markColour = Hues.colour(context, Hues.MENO, Hues.MARKS, MARK);
         taps = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDown(MotionEvent e) {
@@ -227,29 +244,36 @@ final class Meno extends View implements Timepiece {
         float top = BORDER + pad;
         float right = vw - BORDER - pad;
         float bottom = vh - BORDER - pad;
-        float timeH = TIME_PAD * 2f + (TIME_SIZE + DATE_SIZE) * LINE;
-        float stack = timeH + UNDER + ROW;
+        /* The windows as sized, drawn smaller together if the two would not fit the band. */
+        squeeze = 1f;
+        float want = TIME_PAD * 2f + (TIME_SIZE + DATE_SIZE) * LINE * hourSize + UNDER + ROW * rowSize;
+        if (want > bottom - top) {
+            squeeze = (bottom - top) / want;
+        }
+        float row = ROW * rowSize * squeeze;
+        float timeH = (TIME_PAD * 2f + (TIME_SIZE + DATE_SIZE) * LINE * hourSize) * squeeze;
+        float stack = timeH + UNDER * squeeze + row;
         float rowTop;
         /* The dial in a slot of the widget's own share, never much wider
            than it is high, so a long box gives its length to the words. */
         float high = bottom - top;
-        float slot = Math.min((right - left - GAP) / 2.1f, high * 1.12f);
+        float slot = Math.min((right - left - GAP) / 2.1f, high * 1.12f) * dialSize;
         float d = Math.min(slot, high);
         dialBox.set(left + (slot - d) / 2f, top + (high - d) / 2f, left + (slot + d) / 2f, top + (high + d) / 2f);
         float from = left + slot + GAP;
         float at = top + (high - stack) / 2f;
         timeBox.set(from, at, right, at + timeH);
-        rowTop = timeBox.bottom + UNDER;
-        chargeBox.set(right - ROW, rowTop, right, rowTop + ROW);
+        rowTop = timeBox.bottom + UNDER * squeeze;
+        chargeBox.set(right - row, rowTop, right, rowTop + row);
         float x = chargeBox.left - GAP;
         if (ears >= 0) {
-            earsBox.set(x - ROW, rowTop, x, rowTop + ROW);
+            earsBox.set(x - row, rowTop, x, rowTop + row);
             x = earsBox.left - GAP;
         } else {
             earsBox.setEmpty();
         }
-        if (showWeather && x - from > ROW) {
-            weatherBox.set(from, rowTop, x, rowTop + ROW);
+        if (showWeather && x - from > row) {
+            weatherBox.set(from, rowTop, x, rowTop + row);
         } else {
             weatherBox.setEmpty();
         }
@@ -277,17 +301,17 @@ final class Meno extends View implements Timepiece {
         words.setColor(INK);
         words.setTextAlign(Paint.Align.CENTER);
         words.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
-        words.setTextSize(fit(time, timeBox.width() - 28f, TIME_SIZE));
+        words.setTextSize(fit(time, timeBox.width() - 28f, TIME_SIZE * hourSize * squeeze));
         Paint.FontMetrics f = words.getFontMetrics();
         float line1 = timeBox.top + TIME_PAD - f.ascent;
         canvas.drawText(time, timeBox.centerX(), line1, words);
         words.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        words.setTextSize(fit(date, timeBox.width() - 28f, DATE_SIZE));
+        words.setTextSize(fit(date, timeBox.width() - 28f, DATE_SIZE * hourSize * squeeze));
         Paint.FontMetrics g = words.getFontMetrics();
         canvas.drawText(date, timeBox.centerX(), line1 + f.descent - g.ascent, words);
 
         if (!weatherBox.isEmpty()) {
-            field(canvas, weatherBox, ROW / 2f, FIELD_ALPHA, edge);
+            field(canvas, weatherBox, weatherBox.height() / 2f, FIELD_ALPHA, edge);
             sky(canvas, weatherBox);
         }
         if (!earsBox.isEmpty()) {
@@ -331,7 +355,7 @@ final class Meno extends View implements Timepiece {
         paint.setColor((Math.min(255, Math.round(EDGE_ALPHA * strength)) << 24) | 0xFFFFFF);
         canvas.drawCircle(cx, cy, 268.5f * u, paint);
 
-        paint.setColor(MARK);
+        paint.setColor(markColour);
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeWidth(Math.max(15f * u, thin));
         for (int i = 0; i < 12; i++) {
@@ -353,8 +377,8 @@ final class Meno extends View implements Timepiece {
         float min = now.get(Calendar.MINUTE) + sec / 60f;
         float hour = now.get(Calendar.HOUR) + min / 60f;
         paint.setStyle(Paint.Style.FILL);
-        bar(canvas, cx, cy, hour * 30f, Math.max(43f * u, thin), 150f * u, 16f * u, 21.5f * u, HOUR);
-        bar(canvas, cx, cy, min * 6f, Math.max(27f * u, thin), 215f * u, 16f * u, 10f * u, MINUTE);
+        bar(canvas, cx, cy, hour * 30f, Math.max(43f * u, thin), 150f * u, 16f * u, 21.5f * u, hourColour);
+        bar(canvas, cx, cy, min * 6f, Math.max(27f * u, thin), 215f * u, 16f * u, 10f * u, minuteColour);
 
         canvas.save();
         canvas.rotate(sec * 6f, cx, cy);
@@ -386,11 +410,12 @@ final class Meno extends View implements Timepiece {
         words.setTypeface(Typeface.DEFAULT);
         words.setTextAlign(Paint.Align.LEFT);
         words.setColor(INK);
-        words.setTextSize(fit(text, box.width() * 0.5f, 16f));
+        float grown = box.height() / ROW;
+        words.setTextSize(fit(text, box.width() * 0.5f, 16f * grown));
         /* The sky's drawing shrinks before it goes: only where not even a
         half-size one fits beside the warmth is it left out. */
-        float icon = Math.min(26f, box.width() - 24f - 7f - words.measureText(text));
-        if (icon < 13f) {
+        float icon = Math.min(26f * grown, box.width() - 24f - 7f - words.measureText(text));
+        if (icon < 13f * grown) {
             icon = 0f;
         }
         float all = icon > 0f ? icon + 7f + words.measureText(text) : words.measureText(text);
@@ -451,7 +476,7 @@ final class Meno extends View implements Timepiece {
         words.setTypeface(Typeface.DEFAULT);
         words.setTextAlign(Paint.Align.CENTER);
         words.setColor(INK);
-        words.setTextSize(fit(text, box.width() * 0.78f, 15f));
+        words.setTextSize(fit(text, box.width() * 0.78f, 15f * box.height() / ROW));
         Paint.FontMetrics f = words.getFontMetrics();
         canvas.drawText(text, box.centerX(), box.centerY() - (f.ascent + f.descent) / 2f, words);
     }

@@ -79,10 +79,31 @@ final class Almanac extends View implements Timepiece {
         }
     };
 
+    /* The owner's touches: the windows' sizes and the parts' colours, the
+       face's own where nothing was chosen (a colour of zero is its own). */
+    private final float dialSize;
+    private final float hourSize;
+    private final float rowSize;
+    private final int dialFill;
+    private final int hourFill;
+    private final int windowFill;
+    private final int secondsColour;
+
     Almanac(Context context, Hand hand) {
         super(context);
         this.hand = hand;
         density = context.getResources().getDisplayMetrics().density;
+        dialSize = Hues.size(context, Hues.FIRST, Hues.DIAL);
+        hourSize = Hues.size(context, Hues.FIRST, Hues.HOUR);
+        rowSize = Hues.size(context, Hues.FIRST, Hues.ROW);
+        dialFill = Hues.own(context, Hues.FIRST, Hues.DIAL) ? 0
+            : Hues.field(Hues.colour(context, Hues.FIRST, Hues.DIAL, 0));
+        hourFill = Hues.own(context, Hues.FIRST, Hues.HOUR) ? 0
+            : Hues.field(Hues.colour(context, Hues.FIRST, Hues.HOUR, 0));
+        windowFill = Hues.own(context, Hues.FIRST, Hues.WINDOWS) ? 0
+            : Hues.field(Hues.colour(context, Hues.FIRST, Hues.WINDOWS, 0));
+        secondsColour = Hues.own(context, Hues.FIRST, Hues.SECONDS) ? 0
+            : Hues.colour(context, Hues.FIRST, Hues.SECONDS, 0);
         taps = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDown(MotionEvent e) {
@@ -209,12 +230,17 @@ final class Almanac extends View implements Timepiece {
         float from;
         if (line) {
             float side = column;
-            dialBox.set(left, top, left + side, bottom);
+            if (dialSize < 1f) {
+                side = column * dialSize;
+                dialBox.set(left, (h - side) / 2f, left + side, (h + side) / 2f);
+            } else {
+                dialBox.set(left, top, left + side, bottom);
+            }
             from = dialBox.right + gap;
         } else {
             /* Never more than its share of the width, so a taller clock
                keeps the windows beside it as wide as a low one does. */
-            float side = Math.min(column, (w - 2f * (inset + pad)) * 0.38f);
+            float side = Math.min(column, (w - 2f * (inset + pad)) * 0.38f * dialSize);
             dialBox.set(left, (h - side) / 2f, left + side, (h + side) / 2f);
             from = dialBox.right + gap * 1.4f;
             /* The windows stand in a band as high as the face, so rows
@@ -223,7 +249,13 @@ final class Almanac extends View implements Timepiece {
             bottom = dialBox.bottom;
             column = side;
         }
-        float split = top + (column - gap) * (line ? 0.58f : 0.6f);
+        /* The hour's share of the band against the row's, each as the owner sized it. */
+        float share = line ? 0.58f : 0.6f;
+        if (hourSize != 1f || rowSize != 1f) {
+            share = share * hourSize / (share * hourSize + (1f - share) * rowSize);
+            share = Math.max(0.3f, Math.min(0.8f, share));
+        }
+        float split = top + (column - gap) * share;
         /* Headphones near take their window from the hour's, beside it and
            as tall, so the row under it keeps its two roomy windows. */
         float timeRight = right;
@@ -254,15 +286,15 @@ final class Almanac extends View implements Timepiece {
         }
         float side = dialBox.width();
 
-        paint.setColor(Tone.primaryContainer());
+        paint.setColor(dialFill != 0 ? dialFill : Tone.primaryContainer());
         canvas.drawPath(cookie(dialBox.centerX(), dialBox.centerY(), side / 2f, 12, 0.07f), paint);
-        dial(canvas, dialBox, Tone.onPrimaryContainer());
+        dial(canvas, dialBox, dialFill != 0 ? Hues.inkOn(dialFill) : Tone.onPrimaryContainer());
 
         float r = Math.min(timeBox.height() / 2f, px(24f));
-        paint.setColor(Tone.secondaryContainer());
+        paint.setColor(hourFill != 0 ? hourFill : Tone.secondaryContainer());
         canvas.drawRoundRect(timeBox, r, r, paint);
         Date now = new Date();
-        int ink = Tone.onSecondaryContainer();
+        int ink = hourFill != 0 ? Hues.inkOn(hourFill) : Tone.onSecondaryContainer();
         words.setTextAlign(Paint.Align.CENTER);
         String hour = android.text.format.DateFormat.getTimeFormat(getContext()).format(now);
         words.setTypeface(Style.family == 0 ? Typeface.create("sans-serif-light", Typeface.NORMAL) : Style.face());
@@ -276,7 +308,7 @@ final class Almanac extends View implements Timepiece {
         words.setTextSize(fit(day, timeBox.width() * 0.84f, timeBox.height() * 0.17f));
         canvas.drawText(day, timeBox.centerX(), timeBox.top + timeBox.height() * 0.84f, words);
 
-        int quiet = Tone.onTertiaryContainer();
+        int quiet = windowFill != 0 ? Hues.inkOn(windowFill) : Tone.onTertiaryContainer();
         String level = charge >= 0 ? charge + "%" : "\u2013";
         window(canvas, chargeBox);
         pill(canvas, chargeBox, level, quiet);
@@ -301,7 +333,7 @@ final class Almanac extends View implements Timepiece {
     private void window(Canvas canvas, RectF box) {
         float r = Math.min(box.height() / 2f, px(24f));
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Tone.tertiaryContainer());
+        paint.setColor(windowFill != 0 ? windowFill : Tone.tertiaryContainer());
         canvas.drawRoundRect(box, r, r, paint);
     }
 
@@ -415,9 +447,10 @@ final class Almanac extends View implements Timepiece {
         float hours = now.get(Calendar.HOUR) + minutes / 60f;
         hand(canvas, cx, cy, hours / 12f, r * 0.42f, r * 0.075f, ink);
         hand(canvas, cx, cy, minutes / 60f, r * 0.62f, r * 0.05f, ink);
-        hand(canvas, cx, cy, seconds / 60f, r * 0.7f, r * 0.018f, Tone.primary());
+        hand(canvas, cx, cy, seconds / 60f, r * 0.7f, r * 0.018f,
+            secondsColour != 0 ? secondsColour : Tone.primary());
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(Tone.primary());
+        paint.setColor(secondsColour != 0 ? secondsColour : Tone.primary());
         canvas.drawCircle(cx, cy, r * 0.045f, paint);
     }
 
@@ -444,7 +477,7 @@ final class Almanac extends View implements Timepiece {
         canvas.drawRect(body.left + s * 0.08f, body.bottom - s * 0.08f - inner * full,
             body.right - s * 0.08f, body.bottom - s * 0.08f, p);
         if (charging) {
-            p.setColor(Tone.tertiaryContainer());
+            p.setColor(windowFill != 0 ? windowFill : Tone.tertiaryContainer());
             Path bolt = new Path();
             bolt.moveTo(cx + s * 0.04f, cy - s * 0.2f);
             bolt.lineTo(cx - s * 0.08f, cy + s * 0.04f);

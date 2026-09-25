@@ -79,6 +79,14 @@ final class Watch extends View implements Timepiece {
         }
     };
 
+    /* The owner's touches: the dial's and the windows' sizes, the hands'
+       and the seconds' colours; a colour of zero is the face's own. */
+    private final float dialSize;
+    private final float hourSize;
+    private final float rowSize;
+    private final int handsColour;
+    private final int secondsColour;
+
     Watch(Context context, int plate, int dial, int fields, Almanac.Hand hand) {
         super(context);
         this.hand = hand;
@@ -86,6 +94,13 @@ final class Watch extends View implements Timepiece {
         this.dial = dial;
         this.fields = fields;
         density = context.getResources().getDisplayMetrics().density;
+        dialSize = Hues.size(context, Hues.PLATE, Hues.DIAL);
+        hourSize = Hues.size(context, Hues.PLATE, Hues.HOUR);
+        rowSize = Hues.size(context, Hues.PLATE, Hues.ROW);
+        handsColour = Hues.own(context, Hues.PLATE, Hues.HANDS) ? 0
+            : Hues.colour(context, Hues.PLATE, Hues.HANDS, 0);
+        secondsColour = Hues.own(context, Hues.PLATE, Hues.SECONDS) ? 0
+            : Hues.colour(context, Hues.PLATE, Hues.SECONDS, 0);
         taps = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onDown(MotionEvent e) {
@@ -200,14 +215,18 @@ final class Watch extends View implements Timepiece {
         float pad = Math.min(slab.height(), slab.width() / 2.6f) * 0.08f;
         float gap = pad * 0.7f;
         float right = slab.right - pad;
-        float d = Math.min(slab.height() - 2 * pad, (slab.width() - 2 * pad) * 0.42f);
+        float d = Math.min(slab.height() - 2 * pad, (slab.width() - 2 * pad) * 0.42f * dialSize);
         dialBox.set(slab.left + pad, slab.centerY() - d / 2f, slab.left + pad + d, slab.centerY() + d / 2f);
         float left = dialBox.right + pad * 1.2f;
         float top = dialBox.top;
         float band = d;
         face(canvas, dialBox);
 
-        float split = top + (band - gap) * 0.58f;
+        float share = 0.58f;
+        if (hourSize != 1f || rowSize != 1f) {
+            share = Math.max(0.3f, Math.min(0.8f, share * hourSize / (share * hourSize + (1f - share) * rowSize)));
+        }
+        float split = top + (band - gap) * share;
         timeBox.set(left, top, right, split);
         float rowTop = split + gap;
         float rowBottom = top + band;
@@ -363,11 +382,12 @@ final class Watch extends View implements Timepiece {
         float sec = now.get(Calendar.SECOND);
         float min = now.get(Calendar.MINUTE) + sec / 60f;
         float hour = now.get(Calendar.HOUR) + min / 60f;
-        hand(canvas, cx, cy, hour / 12f, inner * 0.5f, inner * 0.07f, ink(dial));
-        hand(canvas, cx, cy, min / 60f, inner * 0.78f, inner * 0.05f, ink(dial));
-        hand(canvas, cx, cy, sec / 60f, inner * 0.85f, inner * 0.015f,
-            dial != DARK && light(dial) ? 0xFF8A3A2E : 0xFFD8D2C6);
-        paint.setColor(ink(dial));
+        int hands = handsColour != 0 ? handsColour : ink(dial);
+        hand(canvas, cx, cy, hour / 12f, inner * 0.5f, inner * 0.07f, hands);
+        hand(canvas, cx, cy, min / 60f, inner * 0.78f, inner * 0.05f, hands);
+        hand(canvas, cx, cy, sec / 60f, inner * 0.85f, inner * 0.015f, secondsColour != 0 ? secondsColour
+            : dial != DARK && light(dial) ? 0xFF8A3A2E : 0xFFD8D2C6);
+        paint.setColor(hands);
         canvas.drawCircle(cx, cy, inner * 0.05f, paint);
     }
 

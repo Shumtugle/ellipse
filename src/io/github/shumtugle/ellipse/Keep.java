@@ -128,6 +128,21 @@ final class Keep {
         return store(context).getInt(key, fallback);
     }
 
+    /** Every setting whose word begins so let go of; the home screen is set out again. */
+    static void forgetStarting(Context context, String... starts) {
+        SharedPreferences kept = store(context);
+        SharedPreferences.Editor edit = kept.edit();
+        for (String key : kept.getAll().keySet()) {
+            for (String start : starts) {
+                if (key.startsWith(start)) {
+                    edit.remove(key);
+                }
+            }
+        }
+        edit.apply();
+        touch(context);
+    }
+
     /** A number noted for the settings to read, not a setting: the home screen is not set out again for it. */
     static void note(Context context, String key, int value) {
         store(context).edit().putInt(key, value).apply();
