@@ -503,6 +503,8 @@ final class Keep {
     /** Whether the list of every app is sorted into kinds under tabs, and how; and the tab it was left on. */
     static final String KINDS = "kinds";
     static final String KIND_TAB = "kind_tab";
+    /** The language module chosen, by its code; none for English. */
+    static final String LANGUAGE = "language";
     /** Which of its three the panel of fresh apps opens on. */
     static final String FRESH_TAB = "fresh_tab";
 

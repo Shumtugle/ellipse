@@ -119,6 +119,7 @@ final class Style {
         nameLinesScreens = Keep.number(context, Keep.NAME_LINES_SCREENS, 1) >= 2 ? 2 : 1;
         nameLinesList = Keep.number(context, Keep.NAME_LINES_LIST, 1) >= 2 ? 2 : 1;
         Pack.read(context);
+        Words.read(context);
         font(Keep.number(context, Keep.FONT, 0));
         tint = Keep.number(context, Keep.ICON_TINT, OWN);
         faces = Keep.faces(context);

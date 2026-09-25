@@ -2474,7 +2474,7 @@ public final class Home extends Activity {
             glyphs.add(Glyph.ICONS);
         }
         if (door != null && Kinds.mode(this) != Kinds.NONE) {
-            lines.add(KIND + ": " + Kinds.of(this, door));
+            lines.add(Words.t(KIND) + ": " + Words.t(Kinds.of(this, door)));
             keys.add(KEY_KIND);
             glyphs.add(Glyph.LIST);
         }
@@ -3652,9 +3652,9 @@ public final class Home extends Activity {
                 canvas.drawRect(0, 0, getWidth(), getHeight(), dim);
                 canvas.restore();
                 float y = clock.bottom + dp(28);
-                canvas.drawText("Drag a ring \u00B7 pinch to size it \u00B7 double-tap to put it back",
+                canvas.drawText(Words.t("Drag a ring \u00B7 pinch to size it \u00B7 double-tap to put it back"),
                     getWidth() / 2f, y, said);
-                canvas.drawText("Tap outside the clock when done", getWidth() / 2f, y + dp(22), said);
+                canvas.drawText(Words.t("Tap outside the clock when done"), getWidth() / 2f, y + dp(22), said);
             }
 
             @Override

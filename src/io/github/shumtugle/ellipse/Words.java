@@ -4,10 +4,16 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * The string table of the pages the home screen draws as pages: the colour
- * page and the weather. English lives here, keyed by a stable id; every
- * other tongue is to live outside the source, in a module, and a missing
- * key falls back to English silently.
+ * The words of the home screen in the language chosen. English is spoken
+ * by the sources themselves; another language is a module, a file of words
+ * with one phrase a line — the English as the home screen says it, " = ",
+ * and the same in the module's language. Two modules come with the home
+ * screen; one more may be brought from a file, made from the English
+ * template the settings give away. A phrase the module does not have is
+ * said in English, silently.
+ *
+ * The pages drawn as pages keep their own table below, keyed by a stable
+ * id; each of their phrases passes through the module as the rest do.
  */
 final class Words {
 
@@ -150,6 +156,16 @@ final class Words {
     };
 
     private static final Map<String, String> table = new HashMap<>();
+    /** The module read: the English phrase to the module's own. */
+    private static final Map<String, String> module = new HashMap<>();
+    private static String chosen = "";
+
+    /** The modules that come with the home screen: their code and their own name. */
+    static final String[] CODES = {"", "fi", "ru"};
+    static final String[] NAMES = {"English", "Suomi", "\u0420\u0443\u0441\u0441\u043A\u0438\u0439"};
+    /** The word a module brought from a file is chosen by. */
+    static final String BROUGHT = "file";
+    static final String BROUGHT_FILE = "lang-brought.txt";
 
     static {
         for (int i = 0; i < IDS.length; i++) {
@@ -160,9 +176,83 @@ final class Words {
     private Words() {
     }
 
-    /** The words for a key, or the key itself when there are none. */
+    /** The words for a key of the pages, in the language chosen; or the key itself when there are none. */
     static String s(String key) {
         String said = table.get(key);
-        return said == null ? key : said;
+        return t(said == null ? key : said);
+    }
+
+    /** An English phrase in the language chosen; the phrase itself when the module has none. */
+    static String t(String english) {
+        if (english == null || module.isEmpty()) {
+            return english;
+        }
+        String said = module.get(english);
+        return said == null || said.isEmpty() ? english : said;
+    }
+
+    /** The same, for words given as a sequence of characters. */
+    static CharSequence t(CharSequence english) {
+        return english == null ? null : t(english.toString());
+    }
+
+    /** The module chosen read, once, whenever the choice changes. */
+    static void read(android.content.Context context) {
+        String now = Keep.word(context, Keep.LANGUAGE);
+        now = now == null ? "" : now;
+        if (now.equals(chosen)) {
+            return;
+        }
+        chosen = now;
+        module.clear();
+        if (now.isEmpty()) {
+            return;
+        }
+        try (java.io.InputStream in = BROUGHT.equals(now)
+            ? new java.io.FileInputStream(new java.io.File(context.getFilesDir(), BROUGHT_FILE))
+            : context.getAssets().open("lang/" + now + ".txt")) {
+            parse(Copy.words(in), module);
+        } catch (java.io.IOException gone) {
+            module.clear();
+        }
+    }
+
+    /** The module read again at the next reading, even if the choice is the same: a new file was brought. */
+    static void forget() {
+        chosen = "\u0000";
+    }
+
+    /** A module's lines read into a table; its name, from its head, returned. */
+    static String parse(String text, Map<String, String> into) {
+        String name = null;
+        for (String line : text.split("\n")) {
+            String one = line.endsWith("\r") ? line.substring(0, line.length() - 1) : line;
+            if (one.startsWith("#")) {
+                String said = one.substring(1).trim();
+                if (said.startsWith("name:")) {
+                    name = said.substring(5).trim();
+                }
+                continue;
+            }
+            int cut = one.indexOf(" = ");
+            if (cut > 0) {
+                into.put(one.substring(0, cut), one.substring(cut + 3).replace("\\n", "\n"));
+            }
+        }
+        return name;
+    }
+
+    /** The name a module brought from a file gives itself; or none if none was brought. */
+    static String broughtName(android.content.Context context) {
+        java.io.File file = new java.io.File(context.getFilesDir(), BROUGHT_FILE);
+        if (!file.isFile()) {
+            return null;
+        }
+        try {
+            String name = parse(Copy.load(file), new HashMap<String, String>());
+            return name == null ? "From a file" : name;
+        } catch (java.io.IOException gone) {
+            return null;
+        }
     }
 }

@@ -26,7 +26,7 @@ final class Tabs {
     static TextView tab(Context context, String word, float size, int ink, int quiet, boolean on) {
         float density = context.getResources().getDisplayMetrics().density;
         TextView one = new TextView(context);
-        one.setText(word.toUpperCase(Locale.getDefault()));
+        one.setText(Words.t(word).toUpperCase(Locale.getDefault()));
         one.setTextSize(TypedValue.COMPLEX_UNIT_PX, size);
         one.setLetterSpacing(0.08f);
         one.setGravity(Gravity.CENTER);
@@ -64,7 +64,7 @@ final class Tabs {
         probe.setLetterSpacing(0.08f);
         float total = 0f;
         for (String word : words) {
-            total += probe.measureText(word.toUpperCase(Locale.getDefault())) + 20f * density;
+            total += probe.measureText(Words.t(word).toUpperCase(Locale.getDefault())) + 20f * density;
         }
         return total <= width ? size : size * Math.max(0.6f, width / total);
     }

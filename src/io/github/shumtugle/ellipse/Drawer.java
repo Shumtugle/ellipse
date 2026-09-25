@@ -188,7 +188,7 @@ final class Drawer extends FrameLayout {
         field.setBackground(null);
         field.setPadding(dp(6), dp(6), dp(10), dp(6));
         field.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
-        field.setHint(SEARCH);
+        field.setHint(Words.t(SEARCH));
         field.setSingleLine(true);
         field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_FILTER
             | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);

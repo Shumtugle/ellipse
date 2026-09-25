@@ -89,7 +89,7 @@ public final class Pin extends Activity {
         int pad = Math.round(24 * density);
         card.setPadding(pad, pad, pad, Math.round(12 * density));
         TextView caption = new TextView(this);
-        caption.setText(ASKING.toUpperCase(Locale.getDefault()));
+        caption.setText(Words.t(ASKING).toUpperCase(Locale.getDefault()));
         caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         caption.setLetterSpacing(0.12f);
         caption.setTextColor(Tone.faint());
@@ -147,7 +147,7 @@ public final class Pin extends Activity {
 
     private TextView word(String text, int colour, float density, float scaled) {
         TextView made = new TextView(this);
-        made.setText(text);
+        made.setText(Words.t(text));
         made.setTextColor(colour);
         made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
         int h = Math.round(16 * density);

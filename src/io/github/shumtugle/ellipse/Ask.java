@@ -53,7 +53,7 @@ final class Ask {
         card.setClickable(true);
 
         TextView title = new TextView(context);
-        title.setText(caption.toUpperCase(Locale.getDefault()));
+        title.setText(Words.t(caption).toUpperCase(Locale.getDefault()));
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         title.setLetterSpacing(0.12f);
         title.setTextColor(Tone.faint());
@@ -175,13 +175,13 @@ final class Ask {
         card.setElevation(6 * density);
         card.setClickable(true);
         TextView title = new TextView(context);
-        title.setText(caption.toUpperCase(Locale.getDefault()));
+        title.setText(Words.t(caption).toUpperCase(Locale.getDefault()));
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         title.setLetterSpacing(0.12f);
         title.setTextColor(Tone.faint());
         card.addView(title);
         TextView said = new TextView(context);
-        said.setText(text);
+        said.setText(Words.t(text));
         said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scaled);
         said.setTextColor(Tone.onSurface());
         said.setPadding(0, Math.round(12 * density), 0, Math.round(4 * density));
@@ -232,7 +232,7 @@ final class Ask {
 
     private static TextView word(Context context, String text, int colour, float scaled, float density) {
         TextView made = new TextView(context);
-        made.setText(text);
+        made.setText(Words.t(text));
         made.setTextColor(colour);
         made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
         int h = Math.round(16 * density);

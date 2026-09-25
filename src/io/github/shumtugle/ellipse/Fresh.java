@@ -92,7 +92,7 @@ final class Fresh extends FrameLayout {
 
     private TextView caption(String text) {
         TextView made = new TextView(getContext());
-        made.setText(text.toUpperCase(Locale.ROOT));
+        made.setText(Words.t(text).toUpperCase(Locale.getDefault()));
         made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         made.setLetterSpacing(0.12f);
         made.setTextColor(Tone.faint());
@@ -181,8 +181,8 @@ final class Fresh extends FrameLayout {
         List<Apps.Door> doors = which == 0 ? most : which == 1 ? recent : lately;
         if (doors.isEmpty()) {
             TextView none = new TextView(getContext());
-            none.setText(which == 0 ? "Nothing opened from here yet." : which == 1 ? "Nothing opened lately."
-                : "Nothing installed or updated lately.");
+            none.setText(Words.t(which == 0 ? "Nothing opened from here yet." : which == 1 ? "Nothing opened lately."
+                : "Nothing installed or updated lately."));
             none.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
             none.setTextColor(Tone.faint());
             none.setPadding(dp(16), dp(24), dp(16), dp(24));

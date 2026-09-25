@@ -457,7 +457,7 @@ public final class Tune extends Activity {
                 onBackPressed();
             }
         } : null);
-        heading.setText(nameOf(room()));
+        heading.setText(Words.t(nameOf(room())));
         if (inRoom) {
             hideKeys();
         }
@@ -520,6 +520,10 @@ public final class Tune extends Activity {
         }
         if (room() == LOOKS) {
             fillLooks();
+            return;
+        }
+        if (room() == LANGUAGE) {
+            fillLanguages();
             return;
         }
         if (room() == FONTS) {
@@ -595,7 +599,7 @@ public final class Tune extends Activity {
         words.setOrientation(LinearLayout.VERTICAL);
         words.setPadding(drawn ? dp(28) : 0, 0, dp(12), 0);
         TextView title = new TextView(this);
-        title.setText(line.title);
+        title.setText(Words.t(line.title));
         title.setTextColor(soon ? Tone.faint() : Tone.onSurface());
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
         words.addView(title);
@@ -603,7 +607,7 @@ public final class Tune extends Activity {
         String said = line.kind == DEED && line.room == DEFAULT && isHome() ? ALREADY
             : line.kind == DEED && line.room == PLACE && Keep.here(this)[0].length() > 0 ? Keep.here(this)[0]
             : line.about;
-        about.setText(soon ? line.about + ". " + LATER + "." : said);
+        about.setText(soon ? Words.t(line.about) + ". " + Words.t(LATER) + "." : Words.t(said));
         about.setTextColor(Tone.faint());
         about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         about.setPadding(0, dp(2), 0, 0);
@@ -665,10 +669,10 @@ public final class Tune extends Activity {
         int now = current(line);
         for (int i = 0; i < line.values.length; i++) {
             if (line.values[i] == now) {
-                return line.names[i];
+                return Words.t(line.names[i]);
             }
         }
-        return line.names[0];
+        return Words.t(line.names[0]);
     }
 
     /** A choice opens the one menu beside the value it shows, the value it holds marked. */
@@ -777,7 +781,7 @@ public final class Tune extends Activity {
         long now = System.currentTimeMillis();
         if (now - armed > 4000L) {
             armed = now;
-            about.setText(AGAIN);
+            about.setText(Words.t(AGAIN));
             about.setTextColor(Tone.primary());
             about.performHapticFeedback(Build.VERSION.SDK_INT >= 30
                 ? HapticFeedbackConstants.REJECT : HapticFeedbackConstants.LONG_PRESS);
@@ -868,7 +872,7 @@ public final class Tune extends Activity {
             }
         });
         TextView caption = new TextView(this);
-        caption.setText("SHAPE");
+        caption.setText(Words.t("SHAPE"));
         caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         caption.setLetterSpacing(0.12f);
         caption.setTextColor(Tone.faint());
@@ -1018,7 +1022,7 @@ public final class Tune extends Activity {
 
     private void caption(String text) {
         TextView caption = new TextView(this);
-        caption.setText(text);
+        caption.setText(Words.t(text));
         caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
         caption.setLetterSpacing(0.12f);
         caption.setTextColor(Tone.faint());
@@ -1036,7 +1040,7 @@ public final class Tune extends Activity {
         made.setPadding(dp(24), dp(6), dp(24), dp(6));
         LinearLayout top = new LinearLayout(this);
         final TextView name = new TextView(this);
-        name.setText(title);
+        name.setText(Words.t(title));
         name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1049,7 +1053,7 @@ public final class Tune extends Activity {
         top.addView(value);
         made.addView(top);
         TextView said = new TextView(this);
-        said.setText(about);
+        said.setText(Words.t(about));
         said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
         said.setTextColor(Tone.faint());
         made.addView(said);
@@ -1085,7 +1089,7 @@ public final class Tune extends Activity {
     /** A choice among a few, as a pill; the chosen one wears the accent. */
     private View chip(String title, boolean on, final String key, final int value) {
         TextView chip = new TextView(this);
-        chip.setText(title);
+        chip.setText(Words.t(title));
         chip.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         chip.setTextColor(on ? Tone.onAccent() : Tone.onSurface());
         chip.setPadding(dp(18), dp(12), dp(18), dp(12));
@@ -1232,7 +1236,7 @@ public final class Tune extends Activity {
             groundSlider(30);
             caption("PLACES");
             TextView back = new TextView(this);
-            back.setText("Put every ring back in the chain");
+            back.setText(Words.t("Put every ring back in the chain"));
             back.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
             back.setTextColor(Tone.primary());
             back.setPadding(dp(24), dp(12), dp(24), dp(12));
@@ -1327,7 +1331,7 @@ public final class Tune extends Activity {
         made.setPadding(dp(24), dp(6), dp(24), dp(6));
         LinearLayout top = new LinearLayout(this);
         TextView name = new TextView(this);
-        name.setText("Darkening");
+        name.setText(Words.t("Darkening"));
         name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1399,7 +1403,7 @@ public final class Tune extends Activity {
         made.setPadding(dp(24), dp(6), dp(24), dp(6));
         LinearLayout top = new LinearLayout(this);
         TextView name = new TextView(this);
-        name.setText("Line strength");
+        name.setText(Words.t("Line strength"));
         name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1455,7 +1459,7 @@ public final class Tune extends Activity {
         made.setPadding(dp(24), dp(6), dp(24), dp(6));
         LinearLayout top = new LinearLayout(this);
         TextView name = new TextView(this);
-        name.setText(title);
+        name.setText(Words.t(title));
         name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1478,6 +1482,8 @@ public final class Tune extends Activity {
     private static final int WRITE_COPY = 21;
     private static final int READ_COPY = 22;
     private static final int READ_FOREIGN = 23;
+    private static final int READ_LANGUAGE = 24;
+    private static final int WRITE_TEMPLATE = 25;
     /** A copy armed by a first tap, waiting for the second. */
     private java.io.File armedCopy;
     private long armedCopyAt;
@@ -1538,7 +1544,7 @@ public final class Tune extends Activity {
                         if (!one.equals(armedCopy) || now - armedCopyAt > 4000L) {
                             armedCopy = one;
                             armedCopyAt = now;
-                            line.setText("Tap again to bring this set-out back");
+                            line.setText(Words.t("Tap again to bring this set-out back"));
                             v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                             v.postDelayed(new Runnable() {
                                 public void run() {
@@ -1644,7 +1650,7 @@ public final class Tune extends Activity {
                     long now = System.currentTimeMillis();
                     if (now - armed > 3000L) {
                         armed = now;
-                        gone.setText("Forget?");
+                        gone.setText(Words.t("Forget?"));
                         v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                         return;
                     }
@@ -1707,7 +1713,7 @@ public final class Tune extends Activity {
         made.setPadding(dp(24), dp(6), dp(24), dp(6));
         LinearLayout top = new LinearLayout(this);
         TextView name = new TextView(this);
-        name.setText(title);
+        name.setText(Words.t(title));
         name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1746,6 +1752,69 @@ public final class Tune extends Activity {
         rows.addView(faces);
     }
 
+    /**
+     * Languages: English, the two modules that come with the home screen,
+     * and one brought from a file; a module brought from a file; and the
+     * English template given away, for a module of any language to be made
+     * from it.
+     */
+    private void fillLanguages() {
+        note("The words of the home screen in another language. A module is a file of words, one phrase a "
+            + "line: the English, then the same in its language. A phrase a module lacks is said in English.");
+        String now = Keep.word(this, Keep.LANGUAGE);
+        now = now == null ? "" : now;
+        java.util.List<String> codes = new java.util.ArrayList<>(java.util.Arrays.asList(Words.CODES));
+        java.util.List<String> names = new java.util.ArrayList<>(java.util.Arrays.asList(Words.NAMES));
+        String brought = Words.broughtName(this);
+        if (brought != null) {
+            codes.add(Words.BROUGHT);
+            names.add(brought);
+        }
+        for (int i = 0; i < codes.size(); i++) {
+            final String code = codes.get(i);
+            boolean on = code.equals(now);
+            TextView line = new TextView(this);
+            line.setText((on ? "\u25CF  " : "\u25CB  ") + names.get(i));
+            line.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
+            line.setTextColor(on ? Tone.primary() : Tone.onSurface());
+            line.setPadding(dp(24), dp(12), dp(24), dp(12));
+            line.setBackground(Tone.touch(null, dp(16)));
+            line.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                    Keep.saveWord(Tune.this, Keep.LANGUAGE, code);
+                    worn();
+                }
+            });
+            rows.addView(line);
+        }
+        caption("MODULES");
+        rows.addView(deed("Bring in a module from a file", new Runnable() {
+            public void run() {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("*/*");
+                try {
+                    startActivityForResult(pick, READ_LANGUAGE);
+                } catch (RuntimeException none) {
+                    said("The phone has no place to keep files");
+                }
+            }
+        }));
+        rows.addView(deed("Save the English template", new Runnable() {
+            public void run() {
+                Intent make = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("text/plain").putExtra(Intent.EXTRA_TITLE, "ellipse-words-en.txt");
+                try {
+                    startActivityForResult(make, WRITE_TEMPLATE);
+                } catch (RuntimeException none) {
+                    said("The phone has no place to keep files");
+                }
+            }
+        }));
+        note("The template holds every phrase in English on both sides of \" = \". Put the right side into "
+            + "another language, by hand or by an assistant, and bring the file in here.");
+    }
+
     /** A look put on: the colours read again and the settings made again in them. */
     private void worn() {
         Tone.read(this);
@@ -1754,7 +1823,7 @@ public final class Tune extends Activity {
     }
 
     private void said(String words) {
-        android.widget.Toast.makeText(this, words, android.widget.Toast.LENGTH_LONG).show();
+        android.widget.Toast.makeText(this, Words.t(words), android.widget.Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -1764,6 +1833,43 @@ public final class Tune extends Activity {
             return;
         }
         android.net.Uri where = answer.getData();
+        if (asked == WRITE_TEMPLATE) {
+            try (java.io.OutputStream out = getContentResolver().openOutputStream(where, "wt");
+                 java.io.InputStream in = getAssets().open("lang/template.txt")) {
+                if (out == null) {
+                    throw new java.io.IOException();
+                }
+                Copy.put(out, Copy.words(in));
+                said("The template is saved");
+            } catch (java.io.IOException | RuntimeException failed) {
+                said("The template could not be written");
+            }
+            return;
+        }
+        if (asked == READ_LANGUAGE) {
+            try (java.io.InputStream in = getContentResolver().openInputStream(where)) {
+                if (in == null) {
+                    throw new java.io.IOException();
+                }
+                String text = Copy.words(in);
+                java.util.Map<String, String> probe = new java.util.HashMap<>();
+                Words.parse(text, probe);
+                if (probe.isEmpty()) {
+                    said("That file holds no phrases");
+                    return;
+                }
+                try (java.io.OutputStream out = new java.io.FileOutputStream(
+                    new java.io.File(getFilesDir(), Words.BROUGHT_FILE))) {
+                    Copy.put(out, text);
+                }
+                Keep.saveWord(this, Keep.LANGUAGE, Words.BROUGHT);
+                Words.forget();
+                worn();
+            } catch (java.io.IOException | RuntimeException failed) {
+                said("That file could not be read");
+            }
+            return;
+        }
         if (asked == WRITE_COPY) {
             try (java.io.OutputStream out = getContentResolver().openOutputStream(where, "wt")) {
                 if (out == null) {
@@ -1870,7 +1976,7 @@ public final class Tune extends Activity {
         made.setPadding(dp(24), dp(6), dp(24), dp(6));
         LinearLayout top = new LinearLayout(this);
         TextView name = new TextView(this);
-        name.setText(title);
+        name.setText(Words.t(title));
         name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
@@ -1940,7 +2046,7 @@ public final class Tune extends Activity {
     /** A line of words in the accent that does something when touched. */
     private View deed(String said, final Runnable does) {
         TextView made = new TextView(this);
-        made.setText(said);
+        made.setText(Words.t(said));
         made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
         made.setTextColor(Tone.primary());
         made.setPadding(dp(24), dp(12), dp(24), dp(12));
@@ -1959,7 +2065,7 @@ public final class Tune extends Activity {
     /** A quiet line of words under a caption, saying how something is done. */
     private void note(String text) {
         TextView said = new TextView(this);
-        said.setText(text);
+        said.setText(Words.t(text));
         said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
         said.setTextColor(Tone.onVariant());
         said.setPadding(dp(24), dp(2), dp(24), dp(8));
@@ -2230,7 +2336,7 @@ public final class Tune extends Activity {
             faces.add(face);
             one.addView(face, new LinearLayout.LayoutParams(dp(84), dp(84)));
             TextView name = new TextView(this);
-            name.setText(names[i]);
+            name.setText(Words.t(names[i]));
             name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 13f * scaled);
             name.setTextColor(Tone.faint());
             name.setGravity(Gravity.CENTER);

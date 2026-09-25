@@ -127,7 +127,7 @@ final class Chooser extends FrameLayout {
 
     /** What the field at the foot says it finds, for what is chosen now. */
     void hint(String what) {
-        field.setHint(what);
+        field.setHint(Words.t(what));
     }
 
     /** Rises with things in groups, each group under its caption; none for a group with no name. */
@@ -215,7 +215,7 @@ final class Chooser extends FrameLayout {
             }
             if (captions[g] != null) {
                 TextView caption = new TextView(getContext());
-                caption.setText(captions[g].toUpperCase(Locale.getDefault()));
+                caption.setText(Words.t(captions[g]).toUpperCase(Locale.getDefault()));
                 caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
                 caption.setLetterSpacing(0.12f);
                 caption.setTextColor(Tone.faint());

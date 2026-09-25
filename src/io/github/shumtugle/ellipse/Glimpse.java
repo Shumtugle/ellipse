@@ -127,7 +127,7 @@ final class Glimpse extends FrameLayout {
         float scaled = sized.getResources().getDisplayMetrics().scaledDensity;
         for (int i = 0; i < lines.length; i++) {
             TextView line = new TextView(sized);
-            line.setText(lines[i]);
+            line.setText(Words.t(lines[i]));
             line.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
             line.setTextColor(i == 0 ? Tone.primary() : Tone.onSurface());
             line.setPadding(dp(12), dp(7), dp(12), dp(7));

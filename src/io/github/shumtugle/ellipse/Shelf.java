@@ -373,7 +373,7 @@ final class Shelf extends FrameLayout {
         name.setSingleLine(true);
         words.addView(name);
         TextView count = new TextView(getContext());
-        count.setText(offers.size() == 1 ? ONE : offers.size() + MANY);
+        count.setText(offers.size() == 1 ? Words.t(ONE) : offers.size() + " " + Words.t(MANY.trim()));
         count.setTextColor(Tone.faint());
         count.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         words.addView(count);
@@ -438,7 +438,7 @@ final class Shelf extends FrameLayout {
         name.setSingleLine(true);
         words.addView(name);
         TextView what = new TextView(context);
-        what.setText(hand.clockStands() ? STANDS : CLOCK);
+        what.setText(Words.t(hand.clockStands() ? STANDS : CLOCK));
         what.setTextColor(Tone.faint());
         what.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         words.addView(what);
@@ -500,7 +500,7 @@ final class Shelf extends FrameLayout {
         inside.addView(frame, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
         TextView said = new TextView(context);
-        said.setText(hand.clockStands() ? SHOW : SET);
+        said.setText(Words.t(hand.clockStands() ? SHOW : SET));
         said.setTextColor(Tone.faint());
         said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
         said.setGravity(Gravity.CENTER_HORIZONTAL);

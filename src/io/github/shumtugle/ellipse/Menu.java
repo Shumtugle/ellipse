@@ -227,7 +227,7 @@ final class Menu {
             }
             if (section.caption != null) {
                 TextView caption = new TextView(context);
-                caption.setText(section.caption.toUpperCase(Locale.ROOT));
+                caption.setText(Words.t(section.caption).toUpperCase(Locale.getDefault()));
                 caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
                 caption.setLetterSpacing(0.12f);
                 caption.setTextColor(Tone.faint());
@@ -272,7 +272,7 @@ final class Menu {
             made.addView(frame, new LinearLayout.LayoutParams(dp(34), dp(34)));
         }
         TextView words = new TextView(context);
-        words.setText(section.lines[i]);
+        words.setText(Words.t(section.lines[i]));
         words.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         words.setSingleLine(true);
         words.setEllipsize(android.text.TextUtils.TruncateAt.END);
@@ -311,7 +311,7 @@ final class Menu {
         this.secondGlyph = secondGlyph;
         onSecond = this.second == null;
         pointing = true;
-        title.setText(name);
+        title.setText(Words.t(name));
         this.sections = this.first;
         open(x, y, gap);
     }
