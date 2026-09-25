@@ -151,7 +151,31 @@ final class Pager extends ViewGroup {
         if (scroller.computeScrollOffset()) {
             scrollTo(scroller.getCurrX(), 0);
             postInvalidateOnAnimation();
+        } else if (endless && (getScrollX() < 0 || getScrollX() > Math.max(0, (getChildCount() - 1) * getWidth()))) {
+            /* Come round past an end: the page there is the one at the far
+               end, drawn the same, so the turn to it is not seen. */
+            scrollTo(page * getWidth(), 0);
         }
+    }
+
+    /**
+     * A turn round past an end: the pages slide on to the far end's page
+     * drawn beyond this end, as if it lay there, and then stand where it
+     * really is.
+     */
+    private void round(int beyond) {
+        int last = getChildCount() - 1;
+        int which = beyond < 0 ? last : 0;
+        int to = beyond * getWidth();
+        scroller.startScroll(getScrollX(), 0, to - getScrollX(), 0, (int) Pace.ARRIVE);
+        postInvalidateOnAnimation();
+        if (which != page) {
+            page = which;
+            if (turn != null) {
+                turn.turned(page);
+            }
+        }
+        invalidate();
     }
 
     @Override
@@ -200,8 +224,11 @@ final class Pager extends ViewGroup {
                     int max = Math.max(0, (getChildCount() - 1) * getWidth());
                     float to = getScrollX() + by;
                     /* Past either end the page gives only a little, as if
-                       held on an elastic. */
-                    if (to < 0 || to > max) {
+                       held on an elastic; going round, the far end's page
+                       follows on as a neighbour, a page's width at most. */
+                    if (endless && getChildCount() > 1) {
+                        to = Math.max(-getWidth(), Math.min(max + getWidth(), to));
+                    } else if (to < 0 || to > max) {
                         to = getScrollX() + by * 0.35f;
                     }
                     scrollTo(Math.round(to), 0);
@@ -219,10 +246,11 @@ final class Pager extends ViewGroup {
                     }
                     int last = getChildCount() - 1;
                     /* Past an end, with the screens going round, the far
-                       end is come to: the pages dim, turn, and light again. */
-                    boolean past = at < -0.12f || at > last + 0.12f;
-                    if (endless && last > 0 && (near < 0 || near > last) && (past || Math.abs(v) > fling)) {
-                        wrap(near < 0 ? last : 0);
+                       end's page comes on as a neighbour would. */
+                    if (endless && last > 0 && (near < 0 || near > last)) {
+                        round(near < 0 ? -1 : last + 1);
+                    } else if (endless && last > 0 && (at < 0f || at > last)) {
+                        round(at < 0f ? 0 : last);
                     } else {
                         show(near, true);
                     }
@@ -238,15 +266,6 @@ final class Pager extends ViewGroup {
         }
     }
 
-    private void wrap(final int to) {
-        animate().cancel();
-        animate().alpha(0f).setDuration(Pace.PRESS).withEndAction(new Runnable() {
-            public void run() {
-                show(to, false);
-                animate().alpha(1f).setDuration(Pace.ARRIVE / 2).withEndAction(null).start();
-            }
-        }).start();
-    }
 
     private void track(MotionEvent event) {
         if (speed == null) {
@@ -260,6 +279,24 @@ final class Pager extends ViewGroup {
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
         int count = getChildCount();
+        /* Going round, the far end's page is drawn once more beyond this
+           end, where it would lie if the pages were a ring. */
+        if (endless && count > 1) {
+            int width = getWidth();
+            if (getScrollX() < 0) {
+                View far = getChildAt(count - 1);
+                canvas.save();
+                canvas.translate(-width - far.getLeft(), 0f);
+                drawChild(canvas, far, getDrawingTime());
+                canvas.restore();
+            } else if (getScrollX() > (count - 1) * width) {
+                View far = getChildAt(0);
+                canvas.save();
+                canvas.translate(count * width - far.getLeft(), 0f);
+                drawChild(canvas, far, getDrawingTime());
+                canvas.restore();
+            }
+        }
         if (count < 2 || !dots) {
             return;
         }
