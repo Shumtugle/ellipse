@@ -67,9 +67,10 @@ final class Rings extends View implements Timepiece {
     static final int DAYLIGHT = 6;
     static final int RAIN = 7;
     static final int ALARM = 8;
-    static final String[] SMALL_NAMES = {"Weather", "Calendar", "Charge", "Feels like", "Humidity", "Wind",
-        "Daylight", "Rain", "Alarm"};
-    static final int[] SMALL_KINDS = {CITY, CALENDAR, CHARGE, FEELS, DAMP, WIND, DAYLIGHT, RAIN, ALARM};
+    static final int TIME = 9;
+    static final String[] SMALL_NAMES = {"Time", "Weather", "Calendar", "Charge", "Feels like", "Humidity",
+        "Wind", "Daylight", "Rain", "Alarm"};
+    static final int[] SMALL_KINDS = {TIME, CITY, CALENDAR, CHARGE, FEELS, DAMP, WIND, DAYLIGHT, RAIN, ALARM};
 
     /** The big ring is the first; the small ones follow in order; the headphones' is the last. */
     private static final int BIG = 0;
@@ -143,7 +144,7 @@ final class Rings extends View implements Timepiece {
         earsRing = count - 1;
         kinds = new int[count];
         for (int i = 0; i < ids.length; i++) {
-            kinds[i + 1] = Math.max(CITY, Math.min(ALARM, Keep.number(context, Keep.RING_KIND + ids[i], CITY)));
+            kinds[i + 1] = Math.max(CITY, Math.min(TIME, Keep.number(context, Keep.RING_KIND + ids[i], CITY)));
         }
         placed = new float[count][];
         stands = new float[count][];
@@ -529,7 +530,7 @@ final class Rings extends View implements Timepiece {
             window = big == HANDS ? Almanac.DIAL : Almanac.TIME;
         } else if (ring == earsRing) {
             window = Almanac.EARS;
-        } else if (kinds[ring] == CALENDAR || kinds[ring] == ALARM) {
+        } else if (kinds[ring] == CALENDAR || kinds[ring] == ALARM || kinds[ring] == TIME) {
             window = Almanac.TIME;
         } else if (kinds[ring] == CHARGE) {
             window = Almanac.CHARGE;
@@ -763,6 +764,15 @@ final class Rings extends View implements Timepiece {
         } else if (kind == CHARGE) {
             arc(canvas, at, charge < 0 ? 0f : charge / 100f, accent, 5f, 3.5f);
             text(canvas, charge >= 0 ? charge + "%" : "\u2026", x, y + r * 0.13f, r * 0.36f, INK, room);
+        } else if (kind == TIME) {
+            /* The hour in figures, as the big ring has it, and the day under it. */
+            Date now = new Date();
+            words.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+            text(canvas, android.text.format.DateFormat.getTimeFormat(getContext()).format(now), x, y + r * 0.12f,
+                r * 0.44f, INK, room);
+            words.setTypeface(Typeface.DEFAULT);
+            text(canvas, new SimpleDateFormat("EE d", Locale.getDefault()).format(now), x, y + r * 0.48f,
+                r * 0.2f, QUIET, room);
         } else if (kind == FEELS) {
             text(canvas, Words.s("feels like"), x, y - r * 0.12f, r * 0.2f, QUIET, room);
             text(canvas, Sky.feels() != Sky.MISSING ? Sky.feels() + "\u00B0" : "\u2026", x, y + r * 0.34f,
