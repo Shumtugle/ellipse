@@ -128,6 +128,11 @@ final class Keep {
         return store(context).getInt(key, fallback);
     }
 
+    /** A number noted for the settings to read, not a setting: the home screen is not set out again for it. */
+    static void note(Context context, String key, int value) {
+        store(context).edit().putInt(key, value).apply();
+    }
+
     static void saveNumber(Context context, String key, int value) {
         store(context).edit().putInt(key, value).apply();
         touch(context);
@@ -233,8 +238,10 @@ final class Keep {
     static final String CLOCK_PLATE = "clock_plate";
     static final String CLOCK_DIAL = "clock_dial_of";
     static final String CLOCK_FIELDS = "clock_fields";
-    /** Whether the clock reaches the screen's edges; its size is kept with its place. */
+    /** Whether the clock reached the screen's edges: the old word, read once into the grid's. */
     static final String CLOCK_EDGE = "clock_edge";
+    /** Whether widgets on the grid's first or last column run past its margins to the screen's edges. */
+    static final String GRID_EDGES = "grid_edges";
     /** The clock's size as it last stood on a screen, in dp: what the settings show it at. */
     static final String CLOCK_WIDE = "clock_wide";
     static final String CLOCK_TALL = "clock_tall";
@@ -549,6 +556,20 @@ final class Keep {
      * the middle one as home, and whatever stood on the single screen moves
      * onto that middle one.
      */
+    /**
+     * Whether widgets run to the screen's edges: the grid's own setting,
+     * taken over the first time from the clock's, which was its first form.
+     */
+    static boolean edges(Context context) {
+        SharedPreferences kept = store(context);
+        if (!kept.contains(GRID_EDGES)) {
+            boolean was = kept.getBoolean(CLOCK_EDGE, false);
+            kept.edit().putBoolean(GRID_EDGES, was).apply();
+            return was;
+        }
+        return kept.getBoolean(GRID_EDGES, false);
+    }
+
     static void settle(Context context) {
         SharedPreferences kept = store(context);
         if (kept.getInt(SHAPE, 0) >= 1) {

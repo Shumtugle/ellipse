@@ -281,8 +281,14 @@ final class Grid extends ViewGroup {
         edged.remove(child);
     }
 
-    private boolean reaches(View child, int[] at) {
-        return edged.contains(child) && at[0] == 0 && across(at) >= columns;
+    /** Whether a thing runs past the left margin: it may, and it stands in the first column. */
+    private boolean reachesLeft(View child, int[] at) {
+        return edged.contains(child) && at[0] == 0;
+    }
+
+    /** Whether a thing runs past the right margin: it may, and it ends in the last column. */
+    private boolean reachesRight(View child, int[] at) {
+        return edged.contains(child) && at[0] + across(at) >= columns;
     }
 
     @Override
@@ -295,7 +301,8 @@ final class Grid extends ViewGroup {
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             int[] at = (int[]) child.getTag();
-            int wide = reaches(child, at) ? width : Math.round(w * across(at));
+            int wide = Math.round(w * across(at)) + (reachesLeft(child, at) ? getPaddingLeft() : 0)
+                + (reachesRight(child, at) ? getPaddingRight() : 0);
             child.measure(MeasureSpec.makeMeasureSpec(wide, MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(Math.round(h * down(at)), MeasureSpec.EXACTLY));
         }
@@ -308,7 +315,7 @@ final class Grid extends ViewGroup {
         for (int i = 0; i < getChildCount(); i++) {
             View child = getChildAt(i);
             int[] at = (int[]) child.getTag();
-            int left = reaches(child, at) ? 0 : Math.round(getPaddingLeft() + at[0] * w);
+            int left = reachesLeft(child, at) ? 0 : Math.round(getPaddingLeft() + at[0] * w);
             int top = Math.round(getPaddingTop() + at[1] * h);
             child.layout(left, top, left + child.getMeasuredWidth(), top + child.getMeasuredHeight());
         }

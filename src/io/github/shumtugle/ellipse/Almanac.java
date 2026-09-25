@@ -217,6 +217,11 @@ final class Almanac extends View implements Timepiece {
             float side = Math.min(column, (w - 2f * (inset + pad)) * 0.38f);
             dialBox.set(left, (h - side) / 2f, left + side, (h + side) / 2f);
             from = dialBox.right + gap * 1.4f;
+            /* The windows stand in a band as high as the face, so rows
+               added below or above only widen the card's margins. */
+            top = dialBox.top;
+            bottom = dialBox.bottom;
+            column = side;
         }
         float split = top + (column - gap) * (line ? 0.58f : 0.6f);
         /* Headphones near take their window from the hour's, beside it and

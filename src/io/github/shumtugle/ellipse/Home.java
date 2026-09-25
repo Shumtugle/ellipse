@@ -735,6 +735,15 @@ public final class Home extends Activity {
                 takeWidget(info);
             }
 
+            public boolean clockStands() {
+                return clockView != null;
+            }
+
+            public void clock() {
+                shelf.close(true);
+                takeClock();
+            }
+
             public void settings() {
                 tune(screens);
             }
@@ -836,6 +845,7 @@ public final class Home extends Activity {
         pages.clear();
         dock.removeAllViews();
         cells.clear();
+        clockView = null;
         things.clear();
         insides.clear();
         standing.clear();
@@ -1199,7 +1209,7 @@ public final class Home extends Activity {
             }
         });
         page.put(clock, column, row, across, down);
-        page.edge(clock, Keep.flag(this, Keep.CLOCK_EDGE, false));
+        page.edge(clock, Keep.edges(this));
         /* Its size as it stands, kept for the settings to show it at. */
         clock.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
@@ -1207,8 +1217,8 @@ public final class Home extends Activity {
                     return;
                 }
                 float d = getResources().getDisplayMetrics().density;
-                Keep.saveNumber(Home.this, Keep.CLOCK_WIDE, Math.round((r - l) / d));
-                Keep.saveNumber(Home.this, Keep.CLOCK_TALL, Math.round((b - t) / d));
+                Keep.note(Home.this, Keep.CLOCK_WIDE, Math.round((r - l) / d));
+                Keep.note(Home.this, Keep.CLOCK_TALL, Math.round((b - t) / d));
             }
         });
         cells.add(clock);
@@ -3373,6 +3383,50 @@ public final class Home extends Activity {
         refuse(screens);
     }
 
+    /**
+     * The launcher's own clock, from the widget shelf: if it stands, its
+     * screen is shown; if not, it is set on the first free block, whole
+     * width and as many rows as its face needs, from the screen the shelf
+     * was opened on — kept there, the one clock there is.
+     */
+    private void takeClock() {
+        if (clockView != null) {
+            for (int i = 0; i < pages.size(); i++) {
+                if (pages.get(i).indexOfChild((View) clockView) >= 0) {
+                    screens.show(i, true);
+                    return;
+                }
+            }
+            return;
+        }
+        int[] least = clockLeast(place());
+        List<Integer> order = new ArrayList<>();
+        order.add(Math.max(0, Math.min(pendingPage, pages.size() - 1)));
+        for (int i = 0; i < pages.size(); i++) {
+            if (!order.contains(i)) {
+                order.add(i);
+            }
+        }
+        for (int screen : order) {
+            Grid page = pages.get(screen);
+            for (int r = 0; r + least[1] <= rows; r++) {
+                if (page.free(0, r, columns, least[1])) {
+                    if (!Keep.laid(this)) {
+                        Keep.lay(this, standing);
+                    }
+                    Keep.saveFlag(this, Keep.CLOCK, true);
+                    Keep.keepOnly(this, Keep.CLOCK_THING, Keep.CLOCK_THING, screen, 0, r);
+                    fill();
+                    screens.show(screen, true);
+                    screens.performHapticFeedback(Build.VERSION.SDK_INT >= 30
+                        ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.VIRTUAL_KEY);
+                    return;
+                }
+            }
+        }
+        refuse(screens);
+    }
+
     /** A widget kept on a screen, made anew from its host; gone if its application is. */
     private void widget(Grid page, Keep.Spot spot) {
         String[] part = spot.token.substring(WIDGET.length()).split(":");
@@ -3421,6 +3475,7 @@ public final class Home extends Activity {
         view.setTranslationY(0f);
         view.setVisibility(View.VISIBLE);
         page.put(view, spot.x, spot.y, across, down);
+        page.edge(view, Keep.edges(this));
         cells.add(view);
         stand(page, view, spot.token);
     }

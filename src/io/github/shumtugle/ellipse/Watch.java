@@ -193,33 +193,18 @@ final class Watch extends View implements Timepiece {
         }
         canvas.restore();
 
-        /* Wide, the dial on the left and the windows beside it, all in a
-           band as high as the dial; narrow, the dial above and the windows
-           under it. The dial is never more than its share of the width, so
+        /* The dial on the left and the windows beside it, all in a band as
+           high as the dial, in any box: rows added only widen the plate's
+           margins. The dial is never more than its share of the width, so
            nothing on the right is ever pushed over it. */
-        boolean wide = slab.width() >= slab.height() * 1.7f;
-        float pad = Math.min(slab.height(), slab.width() / (wide ? 2.6f : 1f)) * 0.08f;
+        float pad = Math.min(slab.height(), slab.width() / 2.6f) * 0.08f;
         float gap = pad * 0.7f;
-        float left;
         float right = slab.right - pad;
-        float top;
-        float band;
-        if (wide) {
-            float d = Math.min(slab.height() - 2 * pad, (slab.width() - 2 * pad) * 0.42f);
-            dialBox.set(slab.left + pad, slab.centerY() - d / 2f, slab.left + pad + d, slab.centerY() + d / 2f);
-            left = dialBox.right + pad * 1.2f;
-            top = dialBox.top;
-            band = d;
-        } else {
-            float across = slab.width() - 2 * pad;
-            band = Math.min(across * 0.62f, (slab.height() - 2 * pad) * 0.4f);
-            float d = Math.min(across, slab.height() - 2 * pad - band - pad);
-            float all = d + pad + band;
-            float at = slab.centerY() - all / 2f;
-            dialBox.set(slab.centerX() - d / 2f, at, slab.centerX() + d / 2f, at + d);
-            left = slab.left + pad;
-            top = dialBox.bottom + pad;
-        }
+        float d = Math.min(slab.height() - 2 * pad, (slab.width() - 2 * pad) * 0.42f);
+        dialBox.set(slab.left + pad, slab.centerY() - d / 2f, slab.left + pad + d, slab.centerY() + d / 2f);
+        float left = dialBox.right + pad * 1.2f;
+        float top = dialBox.top;
+        float band = d;
         face(canvas, dialBox);
 
         float split = top + (band - gap) * 0.58f;

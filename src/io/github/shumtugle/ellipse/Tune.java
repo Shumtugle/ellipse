@@ -151,6 +151,8 @@ public final class Tune extends Activity {
                         Keep.WALL_MOVES, true),
                     toggle("Add new apps", "An app put on the phone is set down on a free place",
                         Keep.AUTO_ADD, false),
+                    toggle("Widgets to the edges", "Widgets and the clock on the grid's first or last column "
+                        + "run past its margins to the screen's edges", Keep.GRID_EDGES, false),
                     toggle("Hide the status bar", "The home screen takes the top of the screen; a swipe down "
                         + "from the edge shows the bar for a moment", Keep.HIDE_STATUS, false),
                     toggle("Hide the navigation bar", "The home screen takes the foot of the screen; a swipe up "
@@ -1001,9 +1003,8 @@ public final class Tune extends Activity {
     private void fillClock() {
         showClock();
         caption("SIZE");
-        note("The clock is sized on the home screen: hold it and choose Resize.");
-        rows.addView(row(toggle("To the edges", "The clock runs past the grid's margins to the screen's edges",
-            Keep.CLOCK_EDGE, false)));
+        note("The clock is sized on the home screen: hold it and choose Resize. Whether it runs to the "
+            + "screen's edges is the grid's to say, with every widget: Desktop, Widgets to the edges.");
         caption("FACE");
         int face = Keep.number(this, Keep.CLOCK_FACE, Home.FACE_FIRST);
         rows.addView(swatches(Keep.CLOCK_FACE, face,

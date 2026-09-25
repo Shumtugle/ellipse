@@ -46,11 +46,24 @@ final class Shelf extends FrameLayout {
 
         void chosen(AppWidgetProviderInfo info);
 
+        /** Whether the launcher's own clock stands on a screen now. */
+        boolean clockStands();
+
+        /** The launcher's own clock was chosen. */
+        void clock();
+
         /** The launcher's settings were asked for from the shelf's menu. */
         void settings();
     }
 
     private static final String WIDGETS = "Search widgets";
+    private static final String OWN = "Ellipse";
+    private static final String CLOCK = "The clock";
+    private static final String STANDS = "The clock \u00B7 on the home screen";
+    private static final String SET = "Tap to set it on the home screen";
+    private static final String SHOW = "Tap to go to it";
+    /** The key the launcher's own card is opened under: no package is named so. */
+    private static final String OWN_KEY = "#own";
     private static final String SETTINGS = "Settings";
     private static final String ONE = "1 widget";
     private static final String MANY = " widgets";
@@ -221,6 +234,15 @@ final class Shelf extends FrameLayout {
         String typed = Match.norm(field.getText().toString());
         PackageManager manager = getContext().getPackageManager();
         int shownCount = 0;
+        /* The launcher's own first, above every application's. */
+        if (typed.length() == 0 || Match.rank(Match.norm(OWN), typed) != Match.NONE
+            || Match.rank(Match.norm(CLOCK), typed) != Match.NONE) {
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            params.topMargin = dp(6);
+            cards.addView(own(typed.length() > 0), params);
+            shownCount++;
+        }
         for (final Maker maker : makers) {
             List<AppWidgetProviderInfo> offers = maker.offers;
             if (typed.length() > 0 && Match.rank(Match.norm(maker.name.toString()), typed) == Match.NONE) {
@@ -386,6 +408,104 @@ final class Shelf extends FrameLayout {
             }
         });
         return made;
+    }
+
+    /**
+     * The launcher's own card: its name and its clock; opened, the clock
+     * itself, live, as it will stand, and a tap sets it on the home
+     * screen — or, if it stands already, goes to it.
+     */
+    private View own(boolean open) {
+        final Context context = getContext();
+        final LinearLayout made = new LinearLayout(context);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setBackground(Tone.box(Tone.container(), dp(24), 0f));
+        LinearLayout top = new LinearLayout(context);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        top.setPadding(dp(20), dp(16), dp(20), dp(16));
+        top.setBackground(Tone.touch(null, dp(24)));
+        ImageView icon = new ImageView(context);
+        icon.setImageDrawable(context.getApplicationInfo().loadIcon(context.getPackageManager()));
+        top.addView(icon, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        LinearLayout words = new LinearLayout(context);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.setPadding(dp(20), 0, dp(12), 0);
+        TextView name = new TextView(context);
+        name.setText(OWN);
+        name.setTextColor(Tone.onSurface());
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 21f * scaled);
+        name.setSingleLine(true);
+        words.addView(name);
+        TextView what = new TextView(context);
+        what.setText(hand.clockStands() ? STANDS : CLOCK);
+        what.setTextColor(Tone.faint());
+        what.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        words.addView(what);
+        top.addView(words, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        final Glyph chevron = new Glyph(context, Glyph.CHEVRON, dp(24));
+        chevron.tint(Tone.faint());
+        chevron.setRotation(open || OWN_KEY.equals(opened) ? 180f : 0f);
+        top.addView(chevron);
+        made.addView(top);
+        final LinearLayout inside = new LinearLayout(context);
+        inside.setOrientation(LinearLayout.VERTICAL);
+        inside.setPadding(dp(16), 0, dp(16), dp(16));
+        made.addView(inside);
+        if (open || OWN_KEY.equals(opened)) {
+            ownInside(inside);
+        }
+        top.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                boolean opening = inside.getChildCount() == 0;
+                chevron.animate().rotation(opening ? 180f : 0f).setDuration(Pace.ARRIVE / 2)
+                    .setInterpolator(Pace.EMPHASIS).start();
+                if (opening) {
+                    opened = OWN_KEY;
+                    ownInside(inside);
+                } else {
+                    if (OWN_KEY.equals(opened)) {
+                        opened = null;
+                    }
+                    inside.removeAllViews();
+                }
+            }
+        });
+        return made;
+    }
+
+    /** The clock, live, in a window of the card, and what a tap on it does. */
+    private void ownInside(LinearLayout inside) {
+        Context context = getContext();
+        View clock = Home.timepiece(context, new Almanac.Hand() {
+            public void pressed(String window, View from, android.graphics.RectF box) {
+                hand.clock();
+            }
+        });
+        ((Timepiece) clock).weather(Keep.flag(context, Keep.WEATHER, true));
+        ((Timepiece) clock).ears(-1);
+        FrameLayout frame = new FrameLayout(context);
+        frame.setBackground(Tone.touch(null, dp(20)));
+        frame.addView(clock, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(132)));
+        View.OnClickListener take = new View.OnClickListener() {
+            public void onClick(View v) {
+                hand.clock();
+            }
+        };
+        /* A cover over the live clock takes every tap, so no window of it
+           opens anything here. */
+        View cover = new View(context);
+        cover.setOnClickListener(take);
+        frame.addView(cover, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(132)));
+        inside.addView(frame, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView said = new TextView(context);
+        said.setText(hand.clockStands() ? SHOW : SET);
+        said.setTextColor(Tone.faint());
+        said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+        said.setGravity(Gravity.CENTER_HORIZONTAL);
+        said.setPadding(0, dp(8), 0, 0);
+        inside.addView(said);
     }
 
     /** Each widget as a picture of itself, with its name, its places and what it is for. */
