@@ -105,7 +105,7 @@ final class Drawer extends FrameLayout {
         this.iconSize = Math.round(gridIcon * 0.78f);
         density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
-        setBackgroundColor(Color.BLACK);
+        ground();
         setVisibility(GONE);
         /* Touches that fall between the lines stay here and never reach the
            screen underneath. */
@@ -438,7 +438,16 @@ final class Drawer extends FrameLayout {
         pager.show(0, false);
     }
 
+    /**
+     * The list's own ground: black in the dark scheme, as it was first
+     * made; in the light one, the light surface, so its words can be read.
+     */
+    private void ground() {
+        setBackgroundColor(Tone.light() ? Tone.surface() : Color.BLACK);
+    }
+
     void tint() {
+        ground();
         bar.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
         field.setTextColor(Tone.onSurface());
         field.setHintTextColor(Tone.faint());
