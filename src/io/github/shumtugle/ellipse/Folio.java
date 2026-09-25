@@ -168,6 +168,7 @@ public final class Folio extends Activity {
         setContentView(host);
         getWindow().setStatusBarColor(LOOK.equals(opened) ? Tone.frame() : Tone.surface());
         getWindow().setNavigationBarColor(Tone.surface());
+        Tone.dress(getWindow(), !LOOK.equals(opened));
         show(opened);
     }
 
@@ -259,6 +260,7 @@ public final class Folio extends Activity {
             }
             getWindow().setStatusBarColor(Tone.surface());
             getWindow().setNavigationBarColor(Tone.surface());
+            Tone.dress(getWindow(), true);
             show(LOOK);
             return;
         }
@@ -283,6 +285,7 @@ public final class Folio extends Activity {
             Tone.read(this);
             getWindow().setStatusBarColor(Tone.surface());
             getWindow().setNavigationBarColor(Tone.surface());
+            Tone.dress(getWindow(), true);
             if (glimpse != null) {
                 glimpse.show(zoom);
             }

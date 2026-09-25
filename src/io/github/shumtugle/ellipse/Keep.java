@@ -357,6 +357,12 @@ final class Keep {
         touch(context);
     }
 
+    /** Dark surfaces, light ones, or as the phone is set: the ground of lists, cards and settings. */
+    static final String THEME = "theme";
+    static final int THEME_DARK = 0;
+    static final int THEME_LIGHT = 1;
+    static final int THEME_PHONE = 2;
+
     /** How high a row of the grid stands, in percent of its full share of the screen. */
     static final String ROW_HEIGHT = "row_height";
 

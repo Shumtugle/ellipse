@@ -102,7 +102,7 @@ final class Fresh extends FrameLayout {
         int rows = (doors.size() + COLUMNS - 1) / COLUMNS;
         Grid grid = new Grid(getContext(), COLUMNS, rows);
         for (int i = 0; i < doors.size(); i++) {
-            final Cell cell = new Cell(getContext(), doors.get(i), iconSize, true);
+            final Cell cell = new Cell(getContext(), doors.get(i), iconSize, true).onGround();
             if (notes != null) {
                 cell.note(notes.get(i));
             }

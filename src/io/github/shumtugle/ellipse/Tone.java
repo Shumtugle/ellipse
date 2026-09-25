@@ -10,7 +10,7 @@ import android.os.Build;
 /**
  * Colour as roles, not as a palette.
  *
- * One ground, one accent, no light mode, as the owner mixes them on the
+ * One ground, one accent, dark or light, as the owner mixes them on the
  * colour page: a hue, how rich it is, how bright the accent, how solid the
  * containers stand over what is behind them, and how much colour the
  * ground itself takes. Everything else is derived from the same hue:
@@ -18,6 +18,12 @@ import android.os.Build;
  * screen drifts with the slider instead of leaving grey furniture around a
  * coloured button. Depth comes from neighbouring tones of the same surface
  * rather than from shadows.
+ *
+ * Light, the same roles stand the other way up: the ground near white
+ * with a trace of the hue, the cards a step darker, the words dark, the
+ * accent deepened so it reads on paper. What stands on the wallpaper —
+ * the names under the icons, the frame round the screen — keeps the dark
+ * scheme's light words and dark frame, for the wallpaper is not the theme's.
  */
 final class Tone {
 
@@ -26,6 +32,8 @@ final class Tone {
     private static float rich = 0.58f;
     private static int accent = shade(0.58f, 1f);
     private static int veil = 255;
+    /** Whether the surfaces are light. */
+    private static boolean light;
     /** How coloured the ground is: nought is the old near black, one a deep colour. */
     private static float earth;
     /** The design system's containers and their inks, first, second and third. */
@@ -62,11 +70,16 @@ final class Tone {
             rich = Math.min(0.72f, Math.max(0.24f, hsv[1]));
             bright = Math.max(0.82f, hsv[2]);
         }
-        accent = shade(rich, bright);
+        boolean wasLight = light;
+        int theme = Keep.number(context, Keep.THEME, Keep.THEME_DARK);
+        light = theme == Keep.THEME_LIGHT || (theme == Keep.THEME_PHONE
+            && (context.getResources().getConfiguration().uiMode
+            & android.content.res.Configuration.UI_MODE_NIGHT_MASK) != android.content.res.Configuration.UI_MODE_NIGHT_YES);
+        accent = lead(rich, bright);
         veil = Math.round(255f * Math.min(100f, Math.max(55f, look[3])) / 100f);
         earth = Keep.ground(context) / 100f;
         hold();
-        return was != accent || wasEarth != earth || wasVeil != veil;
+        return was != accent || wasEarth != earth || wasVeil != veil || wasLight != light;
     }
 
     /**
@@ -80,16 +93,60 @@ final class Tone {
             hue = h;
             rich = s;
             bright = v;
-            accent = shade(rich, bright);
+            accent = lead(rich, bright);
         }
         veil = Math.round(255f * Math.min(100f, Math.max(55f, solid)) / 100f);
         earth = Math.max(0, Math.min(100, ground)) / 100f;
         hold();
     }
 
+    /** Whether the surfaces are light now. */
+    static boolean light() {
+        return light;
+    }
+
+    /** The accent: as mixed on a dark ground; on a light one, deepened so it reads on paper. */
+    private static int lead(float sat, float val) {
+        return light ? shade(Math.min(0.85f, sat + 0.25f), Math.max(0.30f, val * 0.46f)) : shade(sat, val);
+    }
+
+    /**
+     * The phone's own bars over a surface: dark marks on a light one, light
+     * marks on a dark one or on the wallpaper.
+     */
+    static void dress(android.view.Window window, boolean onSurface) {
+        boolean dark = onSurface && light;
+        if (Build.VERSION.SDK_INT >= 30) {
+            android.view.WindowInsetsController bars = window.getInsetsController();
+            if (bars != null) {
+                int both = android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+                    | android.view.WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
+                bars.setSystemBarsAppearance(dark ? both : 0, both);
+            }
+            return;
+        }
+        android.view.View decor = window.getDecorView();
+        int flags = decor.getSystemUiVisibility() & ~(android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            | android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
+        if (dark) {
+            flags |= android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+                | android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        }
+        decor.setSystemUiVisibility(flags);
+    }
+
     /** The containers of the design system, and their inks, from the hue. */
     private static void hold() {
         float third = (hue + 60f) % 360f;
+        if (light) {
+            held[0] = shade(Math.min(0.45f, rich * 0.7f + earth * 0.1f), 0.90f);
+            held[1] = shade(Math.min(0.8f, rich + 0.2f), 0.24f);
+            held[2] = shade(Math.min(0.30f, rich * 0.4f + earth * 0.1f), 0.93f);
+            held[3] = shade(Math.min(0.6f, rich * 0.8f), 0.20f);
+            held[4] = Color.HSVToColor(new float[] {third, 0.28f, 0.90f});
+            held[5] = Color.HSVToColor(new float[] {third, 0.55f, 0.22f});
+            return;
+        }
         held[0] = shade(Math.min(0.7f, rich + 0.1f), mix(0.34f, 0.42f));
         held[1] = shade(0.18f, 0.96f);
         held[2] = shade(Math.min(0.6f, rich * 0.4f + earth * 0.2f), mix(0.28f, 0.36f));
@@ -165,6 +222,9 @@ final class Tone {
      * containers climb with it, a step lighter each.
      */
     static int surface() {
+        if (light) {
+            return shade(mix(Math.min(0.06f, rich * 0.1f), Math.min(0.22f, 0.08f + rich * 0.2f)), mix(0.975f, 0.93f));
+        }
         float sat = mix(Math.min(0.30f, rich * 0.4f), Math.min(0.80f, 0.30f + rich * 0.6f));
         return shade(sat, mix(0.035f, 0.19f));
     }
@@ -179,30 +239,44 @@ final class Tone {
     }
 
     static int container() {
+        if (light) {
+            return veiled(shade(mix(Math.min(0.10f, rich * 0.16f), Math.min(0.30f, 0.12f + rich * 0.26f)),
+                mix(0.935f, 0.88f)));
+        }
         float sat = mix(Math.min(0.26f, rich * 0.34f), Math.min(0.70f, 0.26f + rich * 0.5f));
         return veiled(shade(sat, mix(0.095f, 0.26f)));
     }
 
     static int containerHigh() {
+        if (light) {
+            return veiled(shade(mix(Math.min(0.12f, rich * 0.18f), Math.min(0.34f, 0.14f + rich * 0.3f)),
+                mix(0.895f, 0.84f)));
+        }
         float sat = mix(Math.min(0.24f, rich * 0.30f), Math.min(0.60f, 0.24f + rich * 0.42f));
         return veiled(shade(sat, mix(0.14f, 0.33f)));
     }
 
     static int onSurface() {
+        return light ? shade(Math.min(0.5f, rich * 0.4f), 0.12f) : shade(rich * 0.07f, 0.96f);
+    }
+
+    /** Words on the wallpaper, under the icons: light in either scheme, for the wallpaper is its own. */
+    static int onWall() {
         return shade(rich * 0.07f, 0.96f);
     }
 
     static int onVariant() {
-        return shade(rich * 0.12f, mix(0.66f, 0.80f));
+        return light ? shade(Math.min(0.4f, rich * 0.35f), 0.34f) : shade(rich * 0.12f, mix(0.66f, 0.80f));
     }
 
     /** Quiet words; on a coloured ground they need more light to be read at all. */
     static int faint() {
-        return shade(rich * 0.14f, mix(0.42f, 0.64f));
+        return light ? shade(Math.min(0.3f, rich * 0.25f), 0.52f) : shade(rich * 0.14f, mix(0.42f, 0.64f));
     }
 
     static int outline() {
-        return (0x26 << 24) | (shade(rich * 0.2f, 0.85f) & 0x00FFFFFF);
+        return light ? (0x33 << 24) | (shade(rich * 0.3f, 0.25f) & 0x00FFFFFF)
+            : (0x26 << 24) | (shade(rich * 0.2f, 0.85f) & 0x00FFFFFF);
     }
 
     /** A lamp of the chosen hue: the light the colour page fills a room with. */

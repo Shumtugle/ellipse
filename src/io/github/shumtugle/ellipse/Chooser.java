@@ -240,7 +240,7 @@ final class Chooser extends FrameLayout {
             Grid grid = new Grid(getContext(), COLUMNS, rows);
             for (int i = 0; i < found.size(); i++) {
                 final Item item = found.get(i);
-                Cell cell = new Cell(getContext(), item.icon, item.name, iconSize);
+                Cell cell = new Cell(getContext(), item.icon, item.name, iconSize).onGround();
                 cell.setOnClickListener(new OnClickListener() {
                     public void onClick(View v) {
                         hand.chosen(item.key);

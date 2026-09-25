@@ -90,7 +90,7 @@ final class Tray extends FrameLayout {
         int rows = Math.max(1, (doors.size() + COLUMNS - 1) / COLUMNS);
         Grid grid = new Grid(getContext(), COLUMNS, rows);
         for (int i = 0; i < doors.size(); i++) {
-            final Cell cell = new Cell(getContext(), doors.get(i), iconSize, true);
+            final Cell cell = new Cell(getContext(), doors.get(i), iconSize, true).onGround();
             cell.setOnClickListener(new OnClickListener() {
                 public void onClick(View v) {
                     hand.open(cell, cell.door, cell.localIcon());

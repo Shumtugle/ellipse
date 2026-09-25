@@ -80,7 +80,7 @@ final class Nest extends LinearLayout {
                 grid.put(more, i % columns, i / columns);
                 continue;
             }
-            final Cell cell = new Cell(context, doors.get(i), icon, false);
+            final Cell cell = new Cell(context, doors.get(i), icon, false).onGround();
             cell.setOnClickListener(new OnClickListener() {
                 public void onClick(View v) {
                     hand.open(cell, cell.door, cell.localIcon());

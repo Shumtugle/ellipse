@@ -182,6 +182,9 @@ public final class Tune extends Activity {
                 };
             case LOOK:
                 return new Line[] {
+                    choice("Theme", "Dark surfaces, light ones, or as the phone is set", Keep.THEME,
+                        Keep.THEME_DARK, new String[] {"Dark", "Light", "As the phone"},
+                        new int[] {Keep.THEME_DARK, Keep.THEME_LIGHT, Keep.THEME_PHONE}),
                     deed(Glyph.LOOK, "Colour and text",
                         "The accent, the ground, how solid the cards are, the size of words", COLOUR),
                     door(Glyph.ICONS, "Icons", "The outline every icon is cut to", ICONS),
@@ -287,6 +290,7 @@ public final class Tune extends Activity {
                     | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         }
         build();
+        Tone.dress(getWindow(), true);
         show(0);
     }
 
@@ -624,6 +628,16 @@ public final class Tune extends Activity {
             openSafely(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS));
         }
         askingValue.setText(valueOf(asking));
+        if (Keep.THEME.equals(asking.key)) {
+            /* A new ground for everything: the settings are made again in it. */
+            Tone.read(this);
+            host.postDelayed(new Runnable() {
+                public void run() {
+                    recreate();
+                }
+            }, Pace.ARRIVE);
+            return;
+        }
         if (room() == CLOCK) {
             showClock();
         }

@@ -61,7 +61,7 @@ final class Cell extends View {
         words.setTextSize(14f * scaled * Style.nameScale);
         words.setTypeface(Style.face());
         words.setTextAlign(Paint.Align.CENTER);
-        words.setColor(Tone.onSurface());
+        words.setColor(Tone.onWall());
         /* The names stand on the wallpaper, whatever it is; a soft dark
            halo keeps them legible on a white sky without a plate behind. */
         words.setShadowLayer(3f * density, 0f, 0.75f * density, 0x99000000);
@@ -153,6 +153,14 @@ final class Cell extends View {
         int left = Math.round(at[0] + (getWidth() - iconSize) / 2f);
         int top = Math.round(at[1] + top());
         return new int[] {left, top, Math.round(iconSize), Math.round(iconSize)};
+    }
+
+    /** Names on a surface of the theme, not on the wallpaper: its own words, no halo. */
+    Cell onGround() {
+        words.setColor(Tone.onSurface());
+        words.clearShadowLayer();
+        invalidate();
+        return this;
     }
 
     @Override

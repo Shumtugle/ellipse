@@ -421,7 +421,7 @@ final class Drawer extends FrameLayout {
                 page.setPadding(dp(8), 0, dp(8), 0);
                 pager.addView(page);
             }
-            final Cell cell = new Cell(getContext(), doors.get(i), gridIcon, Style.namesInList);
+            final Cell cell = new Cell(getContext(), doors.get(i), gridIcon, Style.namesInList).onGround();
             cell.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     opener.open(cell, cell.door, cell.localIcon());
@@ -510,6 +510,13 @@ final class Drawer extends FrameLayout {
     }
 
     /** How far it stands drawn, from nought, below the screen, to one, open. */
+    /** The phone's bars dressed for what stands under them: the list's surface, or the wallpaper. */
+    private void bars() {
+        if (getContext() instanceof android.app.Activity) {
+            Tone.dress(((android.app.Activity) getContext()).getWindow(), shown);
+        }
+    }
+
     void drag(float drawn) {
         drawn = drawn < 0f ? 0f : (drawn > 1f ? 1f : drawn);
         setTranslationY((1f - drawn) * travel());
@@ -520,11 +527,13 @@ final class Drawer extends FrameLayout {
         animate().cancel();
         if (open) {
             shown = true;
+            bars();
             animate().translationY(0f).alpha(1f).setDuration(Pace.ARRIVE)
                 .setInterpolator(Pace.EMPHASIS).withEndAction(null).start();
             return;
         }
         shown = false;
+        bars();
         forget();
         animate().translationY(travel()).setDuration(Pace.ARRIVE / 2)
             .setInterpolator(Pace.EMPHASIS).withEndAction(new Runnable() {
@@ -543,6 +552,7 @@ final class Drawer extends FrameLayout {
             return;
         }
         shown = true;
+        bars();
         list.setSelection(0);
         pager.show(0, false);
         setVisibility(VISIBLE);
@@ -559,6 +569,7 @@ final class Drawer extends FrameLayout {
             return;
         }
         shown = false;
+        bars();
         forget();
         animate().cancel();
         if (!slowly) {
