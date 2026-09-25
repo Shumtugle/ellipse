@@ -117,6 +117,8 @@ public final class Tune extends Activity {
     private static final int DEFAULT = 3;
     private static final int COLOUR = 4;
     private static final int PLACE = 5;
+    private static final int ABOUT = 6;
+    private static final int HELP = 7;
 
     private static final String SEARCH = "Search settings";
     private static final String RESTART_LINE = "Restart launcher";
@@ -247,6 +249,8 @@ public final class Tune extends Activity {
                         "Make the phone's Home button open Ellipse", DEFAULT),
                     deed(Glyph.RESTART, "Restart launcher", "Close the home screen and open it again",
                         RESTART),
+                    deed(Glyph.INFO, "Help", "How every part of the home screen works, in English", HELP),
+                    deed(Glyph.INFO, "About", "The version, the project, and where the weather comes from", ABOUT),
                     deed(Glyph.RESET, "Reset launcher",
                         "Forget everything set by hand and lay the screens out as on first start", RESET)
                 };
@@ -770,6 +774,11 @@ public final class Tune extends Activity {
         }
         if (line.room == DEFAULT) {
             askToBeHome();
+            return;
+        }
+        if (line.room == ABOUT || line.room == HELP) {
+            startActivity(new Intent(this, Folio.class).putExtra(Folio.PAGE, line.room == ABOUT ? Folio.ABOUT
+                : Folio.HELP));
             return;
         }
         if (line.room == COLOUR || line.room == PLACE) {

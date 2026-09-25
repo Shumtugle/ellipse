@@ -455,3 +455,7 @@ Sans medium = Puolilihava groteski
 Serif = Antiikva
 Monospace = Tasalevyinen
 LETTERS = KIRJAINTYYPPI
+Help = Ohje
+How every part of the home screen works, in English = Miten kotinäytön jokainen osa toimii, englanniksi
+About = Tietoja
+The version, the project, and where the weather comes from = Versio, projekti ja mistä sää tulee

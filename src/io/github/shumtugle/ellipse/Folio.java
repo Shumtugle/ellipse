@@ -32,6 +32,8 @@ public final class Folio extends Activity {
     static final String LOOK = "look";
     static final String WEATHER = "weather";
     static final String PLACE = "place";
+    static final String ABOUT = "about";
+    static final String HELP = "help";
 
     private static final String SCHEME = "ellipse:";
     private static final String BASE = "ellipse://folio/";
@@ -118,6 +120,13 @@ public final class Folio extends Activity {
                 String url = request.getUrl().toString();
                 if (url.startsWith(SCHEME)) {
                     command(url.substring(SCHEME.length()));
+                } else if (url.startsWith("https://") || url.startsWith("http://")) {
+                    /* A page elsewhere opens where the phone opens pages. */
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, request.getUrl()));
+                    } catch (RuntimeException none) {
+                        // No browser: the link simply does nothing.
+                    }
                 }
                 return true;
             }
@@ -176,10 +185,14 @@ public final class Folio extends Activity {
         page = which;
         if (foot != null) {
             foot.named(LOOK.equals(which) ? Words.s("colour_text")
-                : PLACE.equals(which) ? Words.s("weather_place") : Words.s("weather"));
+                : PLACE.equals(which) ? Words.s("weather_place") : ABOUT.equals(which) ? "About"
+                : HELP.equals(which) ? "Help" : Words.s("weather"));
         }
         String html;
-        if (LOOK.equals(which)) {
+        if (ABOUT.equals(which) || HELP.equals(which)) {
+            /* Kept in English: a page too long for a module, and the same for everyone. */
+            html = Paper.text(asset(this, which + ".html").replace("{version}", Copy.version(this)));
+        } else if (LOOK.equals(which)) {
             float[] look = Keep.look(this);
             Tone.read(this);
             html = Paper.look(Tone.hue(), Tone.rich(), Tone.bright(), Math.round(look[3]), Keep.ground(this),

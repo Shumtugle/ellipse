@@ -227,6 +227,28 @@ private static String round(double value) {
         return b.toString();
     }
 
+    /**
+     * A page of words the home screen keeps as a fragment of its own:
+     * the shell every page shares, its words in paragraphs, and links in
+     * the accent that open in the phone's browser.
+     */
+    static String text(String body) {
+        /* The fragment's own heading becomes the page's. */
+        String title = "";
+        int open = body.indexOf("<h1>");
+        int close = body.indexOf("</h1>");
+        if (open >= 0 && close > open) {
+            title = body.substring(open + 4, close);
+            body = body.substring(0, open) + body.substring(close + 5);
+        }
+        StringBuilder b = new StringBuilder();
+        b.append(head(title, "a{color:" + Tone.hex(Tone.primary()) + ";text-decoration:none;border-bottom:1px solid "
+            + Tone.rgba(Tone.primary(), .45f) + "}p{margin:0 0 14px}p.lead{font-size:18px;color:"
+            + Tone.hex(Tone.onVariant()) + "}b{font-weight:500}"));
+        b.append("<div class=part>").append(body).append("</div></body></html>");
+        return b.toString();
+    }
+
     /** Each section arrives a beat after the one above it. */
     private static String rise(int rank) {
         return "<div class=part style='animation-delay:" + (rank * 60) + "ms'>";

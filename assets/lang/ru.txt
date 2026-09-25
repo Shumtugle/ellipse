@@ -455,3 +455,7 @@ Sans medium = Полужирный
 Serif = С засечками
 Monospace = Моноширинный
 LETTERS = НАЧЕРТАНИЕ
+Help = Справка
+How every part of the home screen works, in English = Как устроена каждая часть лаунчера, по-английски
+About = О приложении
+The version, the project, and where the weather comes from = Версия, проект и откуда берётся погода
