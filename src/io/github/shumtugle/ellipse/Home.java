@@ -20,6 +20,7 @@ import android.provider.MediaStore;
 import android.provider.Settings;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowInsets;
@@ -140,6 +141,8 @@ public final class Home extends Activity {
     private static final int KEY_RENAME = 5;
     private static final int KEY_SHORTCUT = 100;
     private static final int KEY_FACE = 7;
+    private static final int KEY_ARRANGE = 8;
+    private static final String ARRANGE = "Arrange rings";
     private static final String FACE_LINE = "Change icon";
     /** What the whole screen of choices is choosing now: a shortcut's maker, or one icon's face. */
     private boolean choosingFace;
@@ -296,6 +299,7 @@ public final class Home extends Activity {
     @Override
     protected void onStop() {
         super.onStop();
+        giveBack();
         unlisten();
         try {
             host.stopListening();
@@ -1180,6 +1184,9 @@ public final class Home extends Activity {
         if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_MENO) {
             return Meno.least();
         }
+        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_RINGS) {
+            return Rings.least();
+        }
         return new float[] {240f, 96f};
     }
 
@@ -1239,9 +1246,13 @@ public final class Home extends Activity {
     static final int FACE_FIRST = 0;
     static final int FACE_PLATE = 1;
     static final int FACE_MENO = 2;
-    static final String[] FACE_NAMES = {"First", "Plate", "Meno"};
+    static final int FACE_RINGS = 3;
+    static final String[] FACE_NAMES = {"First", "Plate", "Meno", "Rings"};
 
     static View timepiece(Context context, Almanac.Hand hand) {
+        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_RINGS) {
+            return new Rings(context, hand);
+        }
         if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_MENO) {
             return new Meno(context, hand);
         }
@@ -2390,6 +2401,11 @@ public final class Home extends Activity {
             keys.add(KEY_RESIZE);
             glyphs.add(Glyph.RESIZE);
         }
+        if (thing instanceof Rings) {
+            lines.add(ARRANGE);
+            keys.add(KEY_ARRANGE);
+            glyphs.add(Glyph.HANDS);
+        }
         if (!lines.isEmpty()) {
             ours.add(pictured(lines, keys, glyphs));
         }
@@ -2562,6 +2578,8 @@ public final class Home extends Activity {
                     fill();
                 }
                 reshapeAt(offerToken, offerWhence[0], offerWhence[1], offerWhence[2]);
+            } else if (key == KEY_ARRANGE && offerView instanceof Rings) {
+                arrange((Rings) offerView);
             } else if (key == KEY_RENAME) {
                 rename(folderId(offerToken));
             } else if (key == KEY_FACE) {
@@ -3430,6 +3448,88 @@ public final class Home extends Activity {
             }
         }
         refuse(screens);
+    }
+
+    /** The rings being set by hand now, and the veil over the rest of the screen meanwhile. */
+    private Rings arranged;
+    private View veil;
+
+    /**
+     * The rings taken into the owner's hands: the screen dims round the
+     * clock and leaves every touch on it to the rings, a word under it
+     * says what the fingers do; a touch anywhere else gives them back.
+     */
+    private void arrange(final Rings rings) {
+        giveBack();
+        arranged = rings;
+        rings.arrange(true);
+        root.still(true);
+        final Rect clock = new Rect();
+        int[] at = new int[2];
+        int[] floor = new int[2];
+        rings.getLocationOnScreen(at);
+        root.getLocationOnScreen(floor);
+        clock.set(at[0] - floor[0], at[1] - floor[1], at[0] - floor[0] + rings.getWidth(),
+            at[1] - floor[1] + rings.getHeight());
+        final android.graphics.Paint dim = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        final android.graphics.Paint said = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        said.setTextAlign(android.graphics.Paint.Align.CENTER);
+        said.setTextSize(15f * getResources().getDisplayMetrics().scaledDensity);
+        said.setColor(0xE6FFFFFF);
+        veil = new View(this) {
+            @Override
+            protected void onDraw(android.graphics.Canvas canvas) {
+                canvas.save();
+                if (Build.VERSION.SDK_INT >= 26) {
+                    canvas.clipOutRect(clock);
+                }
+                dim.setColor(0x99000000);
+                canvas.drawRect(0, 0, getWidth(), getHeight(), dim);
+                canvas.restore();
+                float y = clock.bottom + dp(28);
+                canvas.drawText("Drag a ring \u00B7 pinch to size it \u00B7 double-tap to put it back",
+                    getWidth() / 2f, y, said);
+                canvas.drawText("Tap outside the clock when done", getWidth() / 2f, y + dp(22), said);
+            }
+
+            @Override
+            public boolean onTouchEvent(MotionEvent event) {
+                if (event.getActionMasked() == MotionEvent.ACTION_DOWN
+                    && clock.contains((int) event.getX(), (int) event.getY())) {
+                    return false;
+                }
+                if (event.getActionMasked() == MotionEvent.ACTION_UP) {
+                    giveBack();
+                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                }
+                return true;
+            }
+        };
+        veil.setAlpha(0f);
+        root.addView(veil, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
+        veil.animate().alpha(1f).setDuration(Pace.ARRIVE).start();
+    }
+
+    /** The rings given back, if they were in hand: where they stand is kept. */
+    private void giveBack() {
+        if (arranged == null) {
+            return;
+        }
+        Rings rings = arranged;
+        arranged = null;
+        root.still(false);
+        if (veil != null) {
+            final View gone = veil;
+            veil = null;
+            gone.animate().alpha(0f).setDuration(Pace.ARRIVE / 2).withEndAction(new Runnable() {
+                public void run() {
+                    root.removeView(gone);
+                }
+            }).start();
+        }
+        rings.arrange(false);
+        stamp = Keep.stamp(this);
     }
 
     /** A widget kept on a screen, made anew from its host; gone if its application is. */

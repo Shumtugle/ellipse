@@ -261,6 +261,23 @@ final class Keep {
     static final String CLOCK_GROUND = "clock_ground";
     /** Which of the widget clock's own seconds hands is drawn. */
     static final String MENO_SECOND = "meno_second";
+    /** The rings: what the big one holds, what each small one holds, and where each stands. */
+    static final String RINGS_BIG = "rings_big";
+    static final String RINGS_FIRST = "rings_first";
+    static final String RINGS_SECOND = "rings_second";
+    static final String RINGS_PLACES = "rings_places";
+
+    /** Where the rings were set by hand, as the rings wrote it; empty if never. */
+    static String rings(Context context) {
+        return store(context).getString(RINGS_PLACES, "");
+    }
+
+    /** Where the rings stand now, set by hand; the home screen is set out again for it. */
+    static void saveRings(Context context, String places) {
+        store(context).edit().putString(RINGS_PLACES, places).apply();
+        touch(context);
+    }
+
     /** How strong the widget clock's fine lines are, in percent of their own. */
     static final String MENO_LINES = "meno_lines";
     /** The window cut in the icons' plate, and the tile's width to its height in percent. */

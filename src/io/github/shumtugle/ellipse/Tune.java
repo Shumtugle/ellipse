@@ -1011,15 +1011,57 @@ public final class Tune extends Activity {
         caption("FACE");
         int face = Keep.number(this, Keep.CLOCK_FACE, Home.FACE_FIRST);
         rows.addView(swatches(Keep.CLOCK_FACE, face,
-            new int[] {Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO}, Home.FACE_NAMES,
+            new int[] {Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO, Home.FACE_RINGS}, Home.FACE_NAMES,
             new Painter() {
                 public void paint(android.graphics.Canvas c, float w, float h, int value) {
                     paintFace(c, w, h, value);
                 }
             }));
+        if (face == Home.FACE_RINGS) {
+            note("To set the rings by hand, hold the clock on the home screen and choose Arrange rings.");
+            caption("BIG RING");
+            rows.addView(swatches(Keep.RINGS_BIG, Keep.number(this, Keep.RINGS_BIG, Rings.FIGURES),
+                new int[] {Rings.FIGURES, Rings.HANDS}, Rings.BIG_NAMES, new Painter() {
+                    public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                        paintRing(c, w, h, value == Rings.HANDS ? -1 : -2);
+                    }
+                }));
+            int[] smalls = {Rings.CITY, Rings.CALENDAR, Rings.CHARGE};
+            caption("FIRST SMALL RING");
+            rows.addView(swatches(Keep.RINGS_FIRST, Keep.number(this, Keep.RINGS_FIRST, Rings.CITY), smalls,
+                Rings.SMALL_NAMES, new Painter() {
+                    public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                        paintRing(c, w, h, value);
+                    }
+                }));
+            caption("SECOND SMALL RING");
+            rows.addView(swatches(Keep.RINGS_SECOND, Keep.number(this, Keep.RINGS_SECOND, Rings.CHARGE), smalls,
+                Rings.SMALL_NAMES, new Painter() {
+                    public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                        paintRing(c, w, h, value);
+                    }
+                }));
+            caption("GROUND");
+            groundSlider(30);
+            caption("PLACES");
+            TextView back = new TextView(this);
+            back.setText("Put every ring back in the chain");
+            back.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
+            back.setTextColor(Tone.primary());
+            back.setPadding(dp(24), dp(12), dp(24), dp(12));
+            back.setBackground(Tone.touch(null, dp(16)));
+            back.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    Keep.saveRings(Tune.this, "");
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    showClock();
+                }
+            });
+            rows.addView(back);
+        }
         if (face == Home.FACE_MENO) {
             caption("GROUND");
-            groundSlider();
+            groundSlider(10);
             caption("LINES");
             linesSlider();
             caption("SECOND HAND");
@@ -1092,7 +1134,7 @@ public final class Tune extends Activity {
     }
 
     /** How dark the outline clock's ground is: clear to nearly black, evenly. */
-    private void groundSlider() {
+    private void groundSlider(final int fallback) {
         LinearLayout made = new LinearLayout(this);
         made.setOrientation(LinearLayout.VERTICAL);
         made.setPadding(dp(24), dp(6), dp(24), dp(6));
@@ -1103,7 +1145,7 @@ public final class Tune extends Activity {
         name.setTextColor(Tone.onSurface());
         top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
         final TextView value = new TextView(this);
-        value.setText(Keep.number(this, Keep.CLOCK_GROUND, 10) + "%");
+        value.setText(Keep.number(this, Keep.CLOCK_GROUND, fallback) + "%");
         value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         value.setTextColor(Tone.primary());
         top.addView(value);
@@ -1272,9 +1314,70 @@ public final class Tune extends Activity {
     }
 
     /** A clock face in small: the first as its round dial and its windows; the plate as a slab with dark windows. */
+    /**
+     * A ring in small: the big one in figures (-2) or in hands (-1), or a
+     * small one by what it holds.
+     */
+    private void paintRing(android.graphics.Canvas c, float w, float h, int kind) {
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        float r = h * 0.36f;
+        float x = w / 2f;
+        float y = h / 2f;
+        p.setStyle(android.graphics.Paint.Style.STROKE);
+        p.setStrokeWidth(Math.max(1f, h * 0.02f));
+        p.setColor(Tone.onSurface());
+        c.drawCircle(x, y, r, p);
+        p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+        p.setStrokeWidth(Math.max(1.5f, h * 0.035f));
+        android.graphics.RectF o = new android.graphics.RectF(x - r * 0.86f, y - r * 0.86f, x + r * 0.86f,
+            y + r * 0.86f);
+        if (kind == -1) {
+            p.setColor(Tone.onSurface());
+            c.drawLine(x, y, x - r * 0.4f, y - r * 0.1f, p);
+            c.drawLine(x, y, x + r * 0.15f, y - r * 0.6f, p);
+            p.setColor(0xFFF29A4A);
+            c.drawArc(o, -90f, 250f, false, p);
+            return;
+        }
+        android.graphics.Paint t = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        t.setTextAlign(android.graphics.Paint.Align.CENTER);
+        t.setColor(Tone.onSurface());
+        if (kind == -2) {
+            p.setColor(0xFFF29A4A);
+            c.drawArc(o, -90f, 250f, false, p);
+            t.setTextSize(r * 0.5f);
+            c.drawText("9:06", x, y + r * 0.18f, t);
+        } else if (kind == Rings.CITY) {
+            t.setTextSize(r * 0.42f);
+            c.drawText("12\u00B0", x, y + r * 0.15f, t);
+        } else if (kind == Rings.CALENDAR) {
+            t.setTextSize(r * 0.6f);
+            c.drawText("25", x, y + r * 0.22f, t);
+        } else {
+            p.setColor(Tone.primary());
+            c.drawArc(o, -90f, 220f, false, p);
+            t.setTextSize(r * 0.36f);
+            c.drawText("62%", x, y + r * 0.13f, t);
+        }
+    }
+
     private void paintFace(android.graphics.Canvas c, float w, float h, int value) {
         android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         float r = h * 0.28f;
+        if (value == Home.FACE_RINGS) {
+            p.setStyle(android.graphics.Paint.Style.STROKE);
+            p.setStrokeWidth(Math.max(1f, h * 0.02f));
+            p.setColor(Tone.onSurface());
+            c.drawCircle(w * 0.3f, h * 0.5f, h * 0.3f, p);
+            c.drawCircle(w * 0.62f, h * 0.38f, h * 0.18f, p);
+            c.drawCircle(w * 0.82f, h * 0.62f, h * 0.18f, p);
+            p.setColor(Tone.primary());
+            p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+            p.setStrokeWidth(Math.max(1.5f, h * 0.03f));
+            c.drawArc(new android.graphics.RectF(w * 0.82f - h * 0.14f, h * 0.48f, w * 0.82f + h * 0.14f, h * 0.76f),
+                -90f, 220f, false, p);
+            return;
+        }
         if (value == Home.FACE_MENO) {
             p.setStyle(android.graphics.Paint.Style.STROKE);
             p.setStrokeWidth(Math.max(1f, h * 0.02f));

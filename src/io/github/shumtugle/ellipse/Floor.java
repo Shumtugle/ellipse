@@ -66,6 +66,15 @@ final class Floor extends FrameLayout {
         slop = ViewConfiguration.get(context).getScaledTouchSlop();
     }
 
+    /** Whether the floor leaves every touch to what lies under it: while a clock's rings are set by hand. */
+    private boolean still;
+
+    void still(boolean on) {
+        still = on;
+        deciding = false;
+        pulling = false;
+    }
+
     void carrier(Carrier carrier) {
         this.carrier = carrier;
     }
@@ -134,7 +143,7 @@ final class Floor extends FrameLayout {
             return true;
         }
         taken = false;
-        if (hand == null) {
+        if (hand == null || still) {
             return super.dispatchTouchEvent(event);
         }
         switch (event.getActionMasked()) {
