@@ -61,10 +61,10 @@ final class Cell extends View {
         words.setTextSize(14f * scaled * Style.nameScale);
         words.setTypeface(Style.face());
         words.setTextAlign(Paint.Align.CENTER);
-        words.setColor(Tone.onWall());
+        words.setColor(Style.nameInk());
         /* The names stand on the wallpaper, whatever it is; a soft dark
            halo keeps them legible on a white sky without a plate behind. */
-        words.setShadowLayer(3f * density, 0f, 0.75f * density, 0x99000000);
+        words.setShadowLayer(3f * density, 0f, 0.75f * density, Style.nameHalo());
         small.setTextSize(12.5f * scaled);
         small.setTextAlign(Paint.Align.CENTER);
         small.setColor(Tone.primary());

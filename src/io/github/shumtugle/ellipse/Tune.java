@@ -302,9 +302,40 @@ public final class Tune extends Activity {
         show(0);
     }
 
+    /** The window onto the wallpaper, if a room keeps one open; the rest of the settings is the surface. */
+    private View throughTo;
+
     private void build() {
-        host = new FrameLayout(this);
-        host.setBackgroundColor(Tone.surface());
+        /* The settings paint their own ground, all but a window the icons'
+           sample may open onto the wallpaper behind them. */
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER);
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0));
+        host = new FrameLayout(this) {
+            private final android.graphics.Path hole = new android.graphics.Path();
+            private final int[] at = new int[2];
+            private final int[] mine = new int[2];
+
+            @Override
+            protected void onDraw(android.graphics.Canvas canvas) {
+                View through = throughTo;
+                if (through != null && through.isShown() && through.getWidth() > 0) {
+                    through.getLocationInWindow(at);
+                    getLocationInWindow(mine);
+                    float left = at[0] - mine[0];
+                    float top = at[1] - mine[1];
+                    hole.reset();
+                    hole.addRoundRect(new android.graphics.RectF(left, top, left + through.getWidth(),
+                        top + through.getHeight()), dp(30), dp(30), android.graphics.Path.Direction.CW);
+                    canvas.save();
+                    canvas.clipOutPath(hole);
+                    canvas.drawColor(Tone.surface());
+                    canvas.restore();
+                } else {
+                    canvas.drawColor(Tone.surface());
+                }
+            }
+        };
+        host.setWillNotDraw(false);
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         host.addView(root, new FrameLayout.LayoutParams(
@@ -323,6 +354,11 @@ public final class Tune extends Activity {
            its head, which stays while the room's lines scroll under it. */
         window = new FrameLayout(this);
         window.setPadding(dp(16), dp(4), dp(16), dp(10));
+        window.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                host.invalidate();
+            }
+        });
         window.setVisibility(View.GONE);
         root.addView(window);
 
@@ -804,6 +840,12 @@ public final class Tune extends Activity {
         window.removeAllViews();
         sample = new Sample(this);
         window.addView(sample);
+        throughTo = sample;
+        sample.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
+                host.invalidate();
+            }
+        });
         TextView caption = new TextView(this);
         caption.setText("SHAPE");
         caption.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
@@ -833,6 +875,14 @@ public final class Tune extends Activity {
         rows.addView(row(toggle("In the list", "Names under the icons of every app's pages",
             Keep.NAMES_LIST, true)));
         slider("Size of names", "How large the names are drawn", Keep.NAME_SIZE, 80, 140);
+        rows.addView(swatches(Keep.NAME_COLOUR, Keep.number(this, Keep.NAME_COLOUR, Keep.NAME_LIGHT),
+            new int[] {Keep.NAME_LIGHT, Keep.NAME_DARK, 0, 1, 2, 3, 4, 5, 6, 7},
+            new String[] {"Light", "Dark", "Accent", "Orange", "Red", "Lilac", "Blue", "Green", "Sand", "White"},
+            new Painter() {
+                public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                    paintName(c, w, h, value);
+                }
+            }));
         caption("COLOUR");
         android.widget.HorizontalScrollView tints = new android.widget.HorizontalScrollView(this);
         tints.setHorizontalScrollBarEnabled(false);
@@ -1811,6 +1861,24 @@ public final class Tune extends Activity {
             t.setTextSize(r * 0.36f);
             c.drawText("62%", x, y + r * 0.13f, t);
         }
+    }
+
+    /** A name's colour in small: a word in it, with its halo, on a ground of dusk. */
+    private void paintName(android.graphics.Canvas c, float w, float h, int which) {
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        int ink = which == Keep.NAME_LIGHT ? Tone.onWall() : which == Keep.NAME_DARK ? 0xFF1C1A17
+            : Rings.colour(which);
+        float r = h * 0.2f;
+        p.setShader(new android.graphics.LinearGradient(0f, 0f, 0f, h, 0xFF4A3F33, 0xFFB9A98F,
+            android.graphics.Shader.TileMode.CLAMP));
+        c.drawRoundRect(w * 0.12f, h * 0.18f, w * 0.88f, h * 0.82f, r, r, p);
+        p.setShader(null);
+        p.setTextAlign(android.graphics.Paint.Align.CENTER);
+        p.setTextSize(h * 0.3f);
+        p.setColor(ink);
+        p.setShadowLayer(h * 0.04f, 0f, h * 0.01f,
+            android.graphics.Color.luminance(ink) > 0.4f ? 0x99000000 : 0x99FFFFFF);
+        c.drawText("Aa", w / 2f, h * 0.61f, p);
     }
 
     /** A colour for the rings in small: an arc of it round a faint ring. */

@@ -281,6 +281,10 @@ final class Tone {
 
     /** A lamp of the chosen hue: the light the colour page fills a room with. */
     static int lit(float weight, float richness) {
+        /* Light, a glow is a pale tint of the hue over the paper, never a shadow. */
+        if (light) {
+            return shade(Math.min(0.6f, rich * richness * 0.5f), Math.max(0.78f, 1f - weight * 0.4f));
+        }
         return shade(Math.min(1f, rich * richness), Math.min(1f, weight));
     }
 

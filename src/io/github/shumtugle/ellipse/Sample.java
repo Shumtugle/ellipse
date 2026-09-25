@@ -56,7 +56,12 @@ final class Sample extends LinearLayout {
     /** Draws the icons again in the outline chosen now. */
     void show() {
         removeAllViews();
-        setBackground(Tone.box(Tone.container(), dp(30), dp(0.5f)));
+        /* The icons stand on the wallpaper itself, seen through the settings,
+           as they will on the screens: only a fine edge marks the window. */
+        android.graphics.drawable.GradientDrawable edge = new android.graphics.drawable.GradientDrawable();
+        edge.setCornerRadius(dp(30));
+        edge.setStroke(Math.max(1, dp(0.5f)), Tone.outline());
+        setBackground(edge);
         if (doors.isEmpty()) {
             return;
         }

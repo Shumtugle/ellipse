@@ -391,6 +391,11 @@ final class Keep {
     static final String WIDGET_GLAZE = "widget_glaze";
     static final String FRAME_OFF = "frame_off.";
 
+    /** The colour of the names under the icons on the screens: light, dark, or one of the rings' colours. */
+    static final String NAME_COLOUR = "name_colour";
+    static final int NAME_LIGHT = -1;
+    static final int NAME_DARK = -2;
+
     /** Whether things may be set down over one another, the last set down on top. */
     static final String OVERLAP = "overlap";
     private static final String LAYOUT_FINE = "layout_fine";

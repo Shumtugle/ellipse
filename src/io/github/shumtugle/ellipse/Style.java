@@ -22,6 +22,18 @@ final class Style {
     static boolean namesOnScreens = true;
     static boolean namesInList = true;
     static float nameScale = 1f;
+    /** The names' colour on the screens, and the halo that keeps them read on any wallpaper. */
+    private static int nameChoice = Keep.NAME_LIGHT;
+
+    static int nameInk() {
+        return nameChoice == Keep.NAME_LIGHT ? Tone.onWall() : nameChoice == Keep.NAME_DARK ? 0xFF1C1A17
+            : Rings.colour(nameChoice);
+    }
+
+    /** A dark halo under light words, a light one under dark words. */
+    static int nameHalo() {
+        return android.graphics.Color.luminance(nameInk()) > 0.4f ? 0x99000000 : 0x99FFFFFF;
+    }
     static int family;
     /** Nought: the apps' own colours; one: every icon in the accent; two: only those drawn for it. */
     static int tint;
@@ -100,6 +112,7 @@ final class Style {
         namesOnScreens = Keep.flag(context, Keep.NAMES_SCREENS, true);
         namesInList = Keep.flag(context, Keep.NAMES_LIST, true);
         nameScale = Keep.number(context, Keep.NAME_SIZE, 100) / 100f;
+        nameChoice = Keep.number(context, Keep.NAME_COLOUR, Keep.NAME_LIGHT);
         font(Keep.number(context, Keep.FONT, 0));
         tint = Keep.number(context, Keep.ICON_TINT, OWN);
         faces = Keep.faces(context);
