@@ -89,6 +89,7 @@ final class Foreign {
         Integer listRows;
         Boolean listEndless;
         Boolean listNames;
+        Integer listLines;
         final List<List<Item>> screens = new ArrayList<>();
 
         int count(int kind) {
@@ -196,6 +197,7 @@ final class Foreign {
                     found.listRows = seen.listRows;
                     found.listEndless = seen.listEndless;
                     found.listNames = seen.listNames;
+                    found.listLines = seen.listLines;
                     found.names = seen.names;
                     found.dock = seen.dock;
                     found.tile = seen.tile;
@@ -275,6 +277,10 @@ final class Foreign {
         Matcher drawn = Pattern.compile("\"drawerSettings\":\\{[^}]*?\"hasLabel\":(true|false)").matcher(plain);
         if (drawn.find() && into.listNames == null) {
             into.listNames = Boolean.valueOf(drawn.group(1));
+        }
+        Matcher labelLines = Pattern.compile("\"drawerSettings\":\\{[^}]*?\"labelLines\":(\\d+)").matcher(plain);
+        if (labelLines.find()) {
+            into.listLines = Integer.parseInt(labelLines.group(1));
         }
         Matcher pack = Pattern.compile("name=\"homeIconAppearanceKey\">[^<]*?icPk:([^;<]+)").matcher(said);
         if (pack.find()) {
@@ -748,6 +754,10 @@ final class Foreign {
         }
         if (layout.listEndless != null) {
             Keep.saveFlag(context, Keep.LIST_ENDLESS, layout.listEndless);
+            report.look++;
+        }
+        if (layout.listLines != null) {
+            Keep.saveNumber(context, Keep.NAME_LINES_LIST, layout.listLines >= 2 ? 2 : 1);
             report.look++;
         }
         if (layout.listNames != null) {

@@ -23,6 +23,10 @@ final class Cell extends View {
     private final float iconSize;
     private final float gap;
     private CharSequence shown = "";
+    /** How many lines the name may take, and, for two, the name set out in them. */
+    private int lines = Style.nameLinesScreens;
+    private android.text.StaticLayout two;
+    private final TextPaint wordsTwo = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     /** Whether the app has a notification standing: a small point of the accent at the icon's shoulder. */
     private boolean dot;
     private final Paint point = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -86,14 +90,56 @@ final class Cell extends View {
         return this;
     }
 
-    /** How tall the name under an icon stands, with the air above it. */
+    /** How tall the name under an icon stands, with the air above it, in the lines names take on the screens. */
     static float below(Context context) {
         float density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
         TextPaint probe = new TextPaint();
         probe.setTextSize(14f * scaled * Style.nameScale);
         probe.setTypeface(Style.face());
-        return 6f * density - probe.ascent() + probe.descent();
+        return 6f * density + (-probe.ascent() + probe.descent()) * Style.nameLinesScreens;
+    }
+
+    /** How tall the name stands: one line, or the lines it was set out in, where they have room. */
+    private float nameHeight() {
+        float one = -words.ascent() + words.descent();
+        return twoFit() ? two.getHeight() : one;
+    }
+
+    /** Whether the name stands in two lines: it may, it was set out so, and the place is high enough. */
+    private boolean twoFit() {
+        return lines >= 2 && two != null
+            && (getHeight() == 0 || iconSize + gap + two.getHeight() <= getHeight() + 0.5f);
+    }
+
+    /** How many lines the name may take here. */
+    Cell lines(int count) {
+        lines = count >= 2 ? 2 : 1;
+        if (getWidth() > 0) {
+            setOut(getWidth());
+        }
+        invalidate();
+        return this;
+    }
+
+    private void setOut(int w) {
+        if (!named) {
+            return;
+        }
+        int room = Math.max(1, Math.round(w - gap * 1.5f));
+        shown = TextUtils.ellipsize(label, words, room, TextUtils.TruncateAt.END);
+        if (lines >= 2) {
+            wordsTwo.set(words);
+            wordsTwo.setTextAlign(Paint.Align.LEFT);
+            two = android.text.StaticLayout.Builder.obtain(label, 0, label.length(), wordsTwo, room)
+                .setAlignment(android.text.Layout.Alignment.ALIGN_CENTER)
+                .setMaxLines(2)
+                .setEllipsize(TextUtils.TruncateAt.END)
+                .setIncludePad(false)
+                .build();
+        } else {
+            two = null;
+        }
     }
 
     /**
@@ -102,14 +148,13 @@ final class Cell extends View {
      * of the row below.
      */
     private boolean nameFits() {
-        return named && (getHeight() == 0
-            || iconSize + gap - words.ascent() + words.descent() <= getHeight() + 0.5f);
+        return named && (getHeight() == 0 || iconSize + gap + nameHeight() <= getHeight() + 0.5f);
     }
 
     private float top() {
         float tall = iconSize;
         if (nameFits()) {
-            tall += gap - words.ascent() + words.descent();
+            tall += gap + nameHeight();
         }
         if (note != null) {
             tall += -small.ascent() + small.descent();
@@ -122,10 +167,7 @@ final class Cell extends View {
         super.onSizeChanged(w, h, oldw, oldh);
         setPivotX(w / 2f);
         setPivotY(top() + iconSize / 2f);
-        if (named) {
-            shown = TextUtils.ellipsize(label, words,
-                w - gap * 1.5f, TextUtils.TruncateAt.END);
-        }
+        setOut(w);
     }
 
     /** Sinks under the finger, and springs back past its place when it lifts. */
@@ -172,6 +214,7 @@ final class Cell extends View {
 
     /** The same, in words of a given colour: for a ground of the owner's own. */
     Cell onGround(int ink) {
+        lines = Style.nameLinesList;
         words.setColor(ink);
         words.clearShadowLayer();
         invalidate();
@@ -215,13 +258,25 @@ final class Cell extends View {
             canvas.drawCircle(px, py, r, point);
         }
         if (nameFits()) {
-            float base = y + iconSize + gap - words.ascent();
-            canvas.drawText(shown, 0, shown.length(), getWidth() / 2f, base, words);
+            float under;
+            if (twoFit()) {
+                /* The layout's paint takes the name's colour and halo as they are now. */
+                wordsTwo.set(words);
+                wordsTwo.setTextAlign(Paint.Align.LEFT);
+                canvas.save();
+                canvas.translate((getWidth() - two.getWidth()) / 2f, y + iconSize + gap);
+                two.draw(canvas);
+                canvas.restore();
+                under = y + iconSize + gap + two.getHeight();
+            } else {
+                float base = y + iconSize + gap - words.ascent();
+                canvas.drawText(shown, 0, shown.length(), getWidth() / 2f, base, words);
+                under = base + words.descent();
+            }
             if (note != null) {
                 CharSequence cut = TextUtils.ellipsize(note, small, getWidth() - gap,
                     TextUtils.TruncateAt.END);
-                canvas.drawText(cut, 0, cut.length(), getWidth() / 2f,
-                    base + words.descent() - small.ascent(), small);
+                canvas.drawText(cut, 0, cut.length(), getWidth() / 2f, under - small.ascent(), small);
             }
         }
     }

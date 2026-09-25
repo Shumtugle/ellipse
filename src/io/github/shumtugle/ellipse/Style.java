@@ -21,6 +21,9 @@ final class Style {
     static float fill = 1f;
     static boolean namesOnScreens = true;
     static boolean namesInList = true;
+    /** How many lines a name may take: on the screens; in the list and the panels. */
+    static int nameLinesScreens = 1;
+    static int nameLinesList = 1;
     static float nameScale = 1f;
     /** The names' colour on the screens, and the halo that keeps them read on any wallpaper. */
     private static int nameChoice = Keep.NAME_LIGHT;
@@ -113,6 +116,8 @@ final class Style {
         namesInList = Keep.flag(context, Keep.NAMES_LIST, true);
         nameScale = Keep.number(context, Keep.NAME_SIZE, 100) / 100f;
         nameChoice = Keep.number(context, Keep.NAME_COLOUR, Keep.NAME_LIGHT);
+        nameLinesScreens = Keep.number(context, Keep.NAME_LINES_SCREENS, 1) >= 2 ? 2 : 1;
+        nameLinesList = Keep.number(context, Keep.NAME_LINES_LIST, 1) >= 2 ? 2 : 1;
         Pack.read(context);
         font(Keep.number(context, Keep.FONT, 0));
         tint = Keep.number(context, Keep.ICON_TINT, OWN);

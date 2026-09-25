@@ -706,6 +706,10 @@ public final class Tune extends Activity {
         if (room() == CLOCK) {
             showClock();
         }
+        if (room() == ICONS && sample != null) {
+            Style.read(this);
+            sample.show();
+        }
         host.postDelayed(new Runnable() {
             public void run() {
                 menu.hide(true);
@@ -888,6 +892,10 @@ public final class Tune extends Activity {
         rows.addView(row(toggle("In the list", "Names under the icons of every app's pages",
             Keep.NAMES_LIST, true)));
         slider("Size of names", "How large the names are drawn", Keep.NAME_SIZE, 80, 140);
+        rows.addView(row(choice("Lines on the screens", "One line, or two for a long name", Keep.NAME_LINES_SCREENS, 1,
+            new String[] {"One", "Two"}, new int[] {1, 2})));
+        rows.addView(row(choice("Lines in the list", "One line, or two for a long name, in the list and the panels",
+            Keep.NAME_LINES_LIST, 1, new String[] {"One", "Two"}, new int[] {1, 2})));
         rows.addView(swatches(Keep.NAME_COLOUR, Keep.number(this, Keep.NAME_COLOUR, Keep.NAME_LIGHT),
             new int[] {Keep.NAME_LIGHT, Keep.NAME_DARK, 0, 1, 2, 3, 4, 5, 6, 7},
             new String[] {"Light", "Dark", "Accent", "Orange", "Red", "Lilac", "Blue", "Green", "Sand", "White"},

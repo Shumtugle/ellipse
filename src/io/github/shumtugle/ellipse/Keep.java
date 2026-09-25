@@ -407,6 +407,10 @@ final class Keep {
     static final String WIDGET_GLAZE = "widget_glaze";
     static final String FRAME_OFF = "frame_off.";
 
+    /** How many lines a name under an icon may take: on the screens, and in the list and the panels. */
+    static final String NAME_LINES_SCREENS = "name_lines_screens";
+    static final String NAME_LINES_LIST = "name_lines_list";
+
     /** The colour of the names under the icons on the screens: light, dark, or one of the rings' colours. */
     static final String NAME_COLOUR = "name_colour";
     static final int NAME_LIGHT = -1;
