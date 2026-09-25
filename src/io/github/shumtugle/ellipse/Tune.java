@@ -124,6 +124,8 @@ public final class Tune extends Activity {
     private static final String[] GRIDS = {"3 \u00D7 4", "4 \u00D7 5", "4 \u00D7 6", "5 \u00D7 5", "5 \u00D7 6",
         "5 \u00D7 8", "5 \u00D7 9", "5 \u00D7 11", "6 \u00D7 7"};
     private static final int[] GRID_VALUES = {34, 45, 46, 55, 56, 58, 59, 511, 67};
+    private static final String[] EDGE_NAMES = {"Margins", "Widgets to the edges", "Everything to the edges"};
+    private static final int[] EDGE_VALUES = {Keep.EDGES_MARGINS, Keep.EDGES_WIDGETS, Keep.EDGES_ALL};
 
     private static final Line[] ROOMS = {
         door(Glyph.DESK, "Desktop", "Dock, grid, scrolling, page points, new apps", DESK),
@@ -151,8 +153,9 @@ public final class Tune extends Activity {
                         Keep.WALL_MOVES, true),
                     toggle("Add new apps", "An app put on the phone is set down on a free place",
                         Keep.AUTO_ADD, false),
-                    toggle("Widgets to the edges", "Widgets and the clock on the grid's first or last column "
-                        + "run past its margins to the screen's edges", Keep.GRID_EDGES, false),
+                    choice("Edges", "How the grid meets the screen's edges: within its margins; widgets and "
+                        + "the clock past them; or no margins at all, screen against screen", Keep.EDGES,
+                        Keep.EDGES_MARGINS, EDGE_NAMES, EDGE_VALUES),
                     toggle("Hide the status bar", "The home screen takes the top of the screen; a swipe down "
                         + "from the edge shows the bar for a moment", Keep.HIDE_STATUS, false),
                     toggle("Hide the navigation bar", "The home screen takes the foot of the screen; a swipe up "
@@ -1004,7 +1007,7 @@ public final class Tune extends Activity {
         showClock();
         caption("SIZE");
         note("The clock is sized on the home screen: hold it and choose Resize. Whether it runs to the "
-            + "screen's edges is the grid's to say, with every widget: Desktop, Widgets to the edges.");
+            + "screen's edges is the grid's to say, with every widget: Desktop, Edges.");
         caption("FACE");
         int face = Keep.number(this, Keep.CLOCK_FACE, Home.FACE_FIRST);
         rows.addView(swatches(Keep.CLOCK_FACE, face,

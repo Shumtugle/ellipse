@@ -860,7 +860,7 @@ public final class Home extends Activity {
         }
         for (int i = 0; i < count; i++) {
             Grid page = new Grid(this, columns, rows);
-            page.setPadding(dp(8), dp(16), dp(8), 0);
+            page.setPadding(side(), dp(16), side(), 0);
             page.shape(iconSize, Cell.below(this));
             final android.view.GestureDetector twice = new android.view.GestureDetector(this,
                 new android.view.GestureDetector.SimpleOnGestureListener() {
@@ -1141,6 +1141,11 @@ public final class Home extends Activity {
         });
     }
 
+    /** A screen's margin at each side: none if the grid runs to the edges whole. */
+    private int side() {
+        return Keep.edgeless(this) ? 0 : dp(8);
+    }
+
     /** Whether the places were measured by a guess, before the screens had a size. */
     private boolean guessed;
 
@@ -1150,12 +1155,12 @@ public final class Home extends Activity {
      */
     private float[] place() {
         if (screens != null && screens.getWidth() > 0 && screens.getHeight() > 0) {
-            return new float[] {(screens.getWidth() - dp(16)) / (float) columns,
+            return new float[] {(screens.getWidth() - 2 * side()) / (float) columns,
                 (screens.getHeight() - dp(16)) / (float) rows};
         }
         guessed = true;
         android.util.DisplayMetrics m = getResources().getDisplayMetrics();
-        return new float[] {(m.widthPixels - dp(16)) / (float) columns, m.heightPixels * 0.72f / rows};
+        return new float[] {(m.widthPixels - 2 * side()) / (float) columns, m.heightPixels * 0.72f / rows};
     }
 
     /**
@@ -1288,7 +1293,7 @@ public final class Home extends Activity {
         int across = Math.min(columns - column, span[0]);
         int down = Math.min(rows - row, span[1]);
         if (across * down > 1 && into.free(column, row, across, down)) {
-            float cell = (getResources().getDisplayMetrics().widthPixels - dp(16)) / (float) columns;
+            float cell = (getResources().getDisplayMetrics().widthPixels - 2 * side()) / (float) columns;
             float small = Math.min(iconSize * 0.62f, (cell / 2f - dp(8)) * 0.86f);
             final Nest nest = new Nest(this, name, doors, across, down, small, new Nest.Hand() {
                 public void open(View from, Apps.Door door, int[] icon) {
@@ -3235,7 +3240,7 @@ public final class Home extends Activity {
     private int[] widgetSpan(android.appwidget.AppWidgetProviderInfo info) {
         Grid page = pages.isEmpty() ? null : pages.get(Math.min(screens.page(), pages.size() - 1));
         float wide = page == null || page.cellWidth() <= 0
-            ? (getResources().getDisplayMetrics().widthPixels - dp(16)) / (float) columns : page.cellWidth();
+            ? (getResources().getDisplayMetrics().widthPixels - 2 * side()) / (float) columns : page.cellWidth();
         float tall = page == null || page.cellHeight() <= 0 ? wide * 1.2f : page.cellHeight();
         /* Its least size is in pixels of this phone; counted in places of
            this grid, not of any other. */
@@ -3474,6 +3479,15 @@ public final class Home extends Activity {
         view.setTranslationX(0f);
         view.setTranslationY(0f);
         view.setVisibility(View.VISIBLE);
+        /* A widget's host leaves a margin of its own round it; with no
+           margins on the grid, it leaves none either. */
+        if (Keep.edgeless(this)) {
+            view.setPadding(0, 0, 0, 0);
+        } else {
+            android.graphics.Rect own = android.appwidget.AppWidgetHostView.getDefaultPaddingForWidget(
+                this, info.provider, null);
+            view.setPadding(own.left, own.top, own.right, own.bottom);
+        }
         page.put(view, spot.x, spot.y, across, down);
         page.edge(view, Keep.edges(this));
         cells.add(view);

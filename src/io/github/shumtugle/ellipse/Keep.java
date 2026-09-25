@@ -240,8 +240,17 @@ final class Keep {
     static final String CLOCK_FIELDS = "clock_fields";
     /** Whether the clock reached the screen's edges: the old word, read once into the grid's. */
     static final String CLOCK_EDGE = "clock_edge";
-    /** Whether widgets on the grid's first or last column run past its margins to the screen's edges. */
+    /** Whether widgets on the grid's first or last column ran past its margins: the old word. */
     static final String GRID_EDGES = "grid_edges";
+    /**
+     * How the grid meets the screen's edges: within its margins; its
+     * widgets past them; or with no margins at all, icons and widgets to
+     * the very edge and screen against screen with nothing between.
+     */
+    static final String EDGES = "edges";
+    static final int EDGES_MARGINS = 0;
+    static final int EDGES_WIDGETS = 1;
+    static final int EDGES_ALL = 2;
     /** The clock's size as it last stood on a screen, in dp: what the settings show it at. */
     static final String CLOCK_WIDE = "clock_wide";
     static final String CLOCK_TALL = "clock_tall";
@@ -561,13 +570,25 @@ final class Keep {
      * taken over the first time from the clock's, which was its first form.
      */
     static boolean edges(Context context) {
+        return edgeMode(context) != EDGES_MARGINS;
+    }
+
+    /** Whether the grid has no margins at all. */
+    static boolean edgeless(Context context) {
+        return edgeMode(context) == EDGES_ALL;
+    }
+
+    /** How the grid meets the edges; the first time, taken from the words that said it before. */
+    static int edgeMode(Context context) {
         SharedPreferences kept = store(context);
-        if (!kept.contains(GRID_EDGES)) {
-            boolean was = kept.getBoolean(CLOCK_EDGE, false);
-            kept.edit().putBoolean(GRID_EDGES, was).apply();
-            return was;
+        if (!kept.contains(EDGES)) {
+            boolean was = kept.contains(GRID_EDGES) ? kept.getBoolean(GRID_EDGES, false)
+                : kept.getBoolean(CLOCK_EDGE, false);
+            int mode = was ? EDGES_WIDGETS : EDGES_MARGINS;
+            kept.edit().putInt(EDGES, mode).apply();
+            return mode;
         }
-        return kept.getBoolean(GRID_EDGES, false);
+        return Math.max(EDGES_MARGINS, Math.min(EDGES_ALL, kept.getInt(EDGES, EDGES_MARGINS)));
     }
 
     static void settle(Context context) {
