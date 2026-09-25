@@ -108,6 +108,7 @@ public final class Tune extends Activity {
     private static final int HIDDEN = 8;
     private static final int ICONS = 9;
     private static final int CLOCK = 10;
+    private static final int LOOKS = 11;
 
     private static final int RESTART = 1;
     private static final int RESET = 2;
@@ -191,6 +192,7 @@ public final class Tune extends Activity {
                 };
             case LOOK:
                 return new Line[] {
+                    door(Glyph.LOOK, "Looks", "The whole look kept under a name, put on at a touch", LOOKS),
                     choice("Theme", "Dark surfaces, light ones, or as the phone is set", Keep.THEME,
                         Keep.THEME_DARK, new String[] {"Dark", "Light", "As the phone"},
                         new int[] {Keep.THEME_DARK, Keep.THEME_LIGHT, Keep.THEME_PHONE}),
@@ -250,7 +252,8 @@ public final class Tune extends Activity {
                 return line.title;
             }
         }
-        return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face" : "";
+        return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face"
+            : room == LOOKS ? "Looks" : "";
     }
 
     private float density;
@@ -468,6 +471,10 @@ public final class Tune extends Activity {
         }
         if (room() == BACKUP) {
             fillBackup();
+            return;
+        }
+        if (room() == LOOKS) {
+            fillLooks();
             return;
         }
         if (room() == CLOCK) {
@@ -1462,6 +1469,92 @@ public final class Tune extends Activity {
         }
         caption("FROM ANOTHER HOME SCREEN");
         rows.addView(row(soon("Bring in", "The set-out of another home screen, from its backup")));
+    }
+
+    /**
+     * Looks: the look as it is now kept under a name; each kept look put on
+     * at a touch, kept again as it is now, or forgotten; and the look worn
+     * before the last put on, back at a touch.
+     */
+    private void fillLooks() {
+        note("A look holds what is seen: the theme and accent, the icons, the widgets' frames, the clock "
+            + "and its rings, the shape of the places. Where things stand stays as it is.");
+        rows.addView(deed("Keep the look as it is now", new Runnable() {
+            public void run() {
+                Ask.show(host, "Name this look", "Look " + (Looks.names(Tune.this).size() + 1), new Ask.Answer() {
+                    public void answered(String text) {
+                        String name = text == null ? "" : text.trim();
+                        if (name.isEmpty()) {
+                            return;
+                        }
+                        Looks.keep(Tune.this, name);
+                        fill();
+                    }
+                });
+            }
+        }));
+        if (Looks.undoable(this)) {
+            rows.addView(deed("Back to the look before", new Runnable() {
+                public void run() {
+                    if (Looks.undo(Tune.this)) {
+                        worn();
+                    }
+                }
+            }));
+        }
+        java.util.List<String> names = Looks.names(this);
+        if (names.isEmpty()) {
+            return;
+        }
+        caption("KEPT");
+        for (final String name : names) {
+            LinearLayout line = new LinearLayout(this);
+            line.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            TextView wear = (TextView) deed(name, new Runnable() {
+                public void run() {
+                    if (Looks.wear(Tune.this, name)) {
+                        worn();
+                    }
+                }
+            });
+            wear.setTextColor(Tone.onSurface());
+            line.addView(wear, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            TextView again = (TextView) deed("Keep now", new Runnable() {
+                public void run() {
+                    Looks.keep(Tune.this, name);
+                    said("\u201C" + name + "\u201D now holds the look as it is");
+                }
+            });
+            again.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+            again.setPadding(dp(12), dp(12), dp(12), dp(12));
+            line.addView(again);
+            final TextView gone = (TextView) deed("\u00D7", null);
+            gone.setPadding(dp(16), dp(12), dp(24), dp(12));
+            gone.setOnClickListener(new View.OnClickListener() {
+                private long armed;
+
+                public void onClick(View v) {
+                    long now = System.currentTimeMillis();
+                    if (now - armed > 3000L) {
+                        armed = now;
+                        gone.setText("Forget?");
+                        v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        return;
+                    }
+                    Looks.forget(Tune.this, name);
+                    fill();
+                }
+            });
+            line.addView(gone);
+            rows.addView(line);
+        }
+    }
+
+    /** A look put on: the colours read again and the settings made again in them. */
+    private void worn() {
+        Tone.read(this);
+        Style.read(this);
+        recreate();
     }
 
     private void said(String words) {
