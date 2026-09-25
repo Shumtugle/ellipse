@@ -923,6 +923,35 @@ public final class Tune extends Activity {
         }
         rows.addView(row(toggle("Glaze", "The curved light of glass across the top of every icon",
             Keep.GLAZE, false)));
+        caption("ICON PACK");
+        note("A pack's own picture stands for each app it knows; every other app is laid on its ground, "
+            + "cut by its mask and glossed, if it has those. What a pack gives is not cut again.");
+        String pack = Keep.word(this, Keep.ICON_PACK);
+        java.util.Map<String, String> packs = Pack.installed(this);
+        java.util.List<String> keys = new java.util.ArrayList<>();
+        java.util.List<String> names = new java.util.ArrayList<>();
+        keys.add("");
+        names.add("None, the apps' own");
+        for (java.util.Map.Entry<String, String> one : packs.entrySet()) {
+            keys.add(one.getKey());
+            names.add(one.getValue());
+        }
+        for (int i = 0; i < keys.size(); i++) {
+            final String key = keys.get(i);
+            boolean on = key.equals(pack == null ? "" : pack);
+            TextView line = (TextView) deed((on ? "\u25CF  " : "\u25CB  ") + names.get(i), new Runnable() {
+                public void run() {
+                    Keep.saveWord(Tune.this, Keep.ICON_PACK, key);
+                    Style.read(Tune.this);
+                    fill();
+                }
+            });
+            line.setTextColor(on ? Tone.primary() : Tone.onSurface());
+            rows.addView(line);
+        }
+        if (packs.isEmpty()) {
+            note("No pack of icons is on the phone.");
+        }
         caption("WIDGET FRAMES");
         final View framed = new FramedSample(this);
         LinearLayout.LayoutParams sampleAt = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(120));
@@ -1697,8 +1726,11 @@ public final class Tune extends Activity {
                     told.append(done.apps).append(" apps, ").append(done.folders).append(" folders and ")
                         .append(done.widgets).append(" widgets are in their places.");
                     if (done.look > 0) {
-                        told.append(" Taken over too, as it looked there: the names under the icons, the dock "
-                            + "and the icons' outline, where its settings told.");
+                        told.append(" Taken over too, as it looked there: the names under the icons, the dock, "
+                            + "the icons' outline and their pack, where its settings told.");
+                    }
+                    if (done.packMissing != null) {
+                        told.append(" Its pack of icons is not on this phone: ").append(done.packMissing).append('.');
                     }
                     if (done.missing > 0) {
                         told.append(" Not on this phone: ").append(done.missing).append('.');

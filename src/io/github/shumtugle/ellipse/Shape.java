@@ -227,6 +227,10 @@ final class Shape {
         "What stands apart"};
 
     static Drawable face(Drawable icon, int shape, int tint, int drawing, int method) {
+        /* An icon a pack gave or made is final: not cut, rimmed or tinted again. */
+        if (icon instanceof Pack.Given && drawing == Marks.NONE) {
+            return icon;
+        }
         int outline = shape >= 0 ? shape : current;
         int colour = tint >= 0 ? tint : Style.tint;
         if (icon != null && drawing != Marks.NONE) {

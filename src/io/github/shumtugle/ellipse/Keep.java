@@ -239,6 +239,22 @@ final class Keep {
     static final String FONT = "font";
     /** Icons in their own colours, all in the accent, or in the accent only where they can be. */
     static final String ICON_TINT = "icon_tint";
+    /** The pack of icons read, by its package; none, the phone's own icons. */
+    static final String ICON_PACK = "icon_pack";
+
+    /** A word kept under a key, or none. */
+    static String word(Context context, String key) {
+        return store(context).getString(key, null);
+    }
+
+    static void saveWord(Context context, String key, String value) {
+        if (value == null || value.isEmpty()) {
+            store(context).edit().remove(key).apply();
+        } else {
+            store(context).edit().putString(key, value).apply();
+        }
+        touch(context);
+    }
     /** How a folder's face lays out what it holds, and whether its container is drawn. */
     static final String FOLDER_FACE = "folder_face";
     static final String FOLDER_GROUND = "folder_ground";

@@ -113,6 +113,7 @@ final class Style {
         namesInList = Keep.flag(context, Keep.NAMES_LIST, true);
         nameScale = Keep.number(context, Keep.NAME_SIZE, 100) / 100f;
         nameChoice = Keep.number(context, Keep.NAME_COLOUR, Keep.NAME_LIGHT);
+        Pack.read(context);
         font(Keep.number(context, Keep.FONT, 0));
         tint = Keep.number(context, Keep.ICON_TINT, OWN);
         faces = Keep.faces(context);

@@ -65,7 +65,7 @@ final class Apps {
 
         /** The icon as the app gives it, before any cutting: for a preview of other outlines. */
         Drawable plain() {
-            return info.getIcon(density);
+            return Pack.icon(name, info.getIcon(density));
         }
 
         /** How it is kept: its component, and after an at sign its profile when that is not the owner's own. */

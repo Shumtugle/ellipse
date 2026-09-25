@@ -77,6 +77,8 @@ final class Foreign {
         Boolean names;
         Boolean dock;
         Float tile;
+        /** The pack of icons it read, by its package; none if it read none. */
+        String pack;
         final List<List<Item>> screens = new ArrayList<>();
 
         int count(int kind) {
@@ -175,6 +177,7 @@ final class Foreign {
                     if (seen.home >= 0 && found.home < 0 && seen.home < found.screens.size()) {
                         found.home = seen.home;
                     }
+                    found.pack = seen.pack;
                     found.names = seen.names;
                     found.dock = seen.dock;
                     found.tile = seen.tile;
@@ -215,6 +218,14 @@ final class Foreign {
         Matcher shown = Pattern.compile("name=\"dock_enable\" value=\"(true|false)\"").matcher(said);
         if (shown.find() && into.dock == null) {
             into.dock = Boolean.valueOf(shown.group(1));
+        }
+        Matcher pack = Pattern.compile("name=\"homeIconAppearanceKey\">[^<]*?icPk:([^;<]+)").matcher(said);
+        if (pack.find()) {
+            into.pack = pack.group(1).trim();
+        }
+        Matcher theme = Pattern.compile("name=\"theme_icon_pack\">([^<]+)<").matcher(said);
+        if (theme.find() && into.pack == null) {
+            into.pack = theme.group(1).trim();
         }
         Matcher shape = Pattern.compile("name=\"homeIconAppearanceKey\">[^<]*?path:([^;<]+)").matcher(said);
         if (shape.find()) {
@@ -529,6 +540,8 @@ final class Foreign {
         int others;
         /** How many of the other home screen's looks were taken over: names, dock, outline. */
         int look;
+        /** The pack of icons the other home screen read, not on this phone; or none. */
+        String packMissing;
         final List<String> unmade = new ArrayList<>();
     }
 
@@ -625,6 +638,15 @@ final class Foreign {
             Keep.saveShape(context, Shape.PAPER);
             Keep.saveNumber(context, Keep.TILE_ASPECT, Math.max(70, Math.min(135, Math.round(layout.tile * 100f))));
             report.look++;
+        }
+        /* Its pack of icons, if it read one and the pack is on this phone. */
+        if (layout.pack != null && !layout.pack.isEmpty()) {
+            if (Pack.installed(context).containsKey(layout.pack)) {
+                Keep.saveWord(context, Keep.ICON_PACK, layout.pack);
+                report.look++;
+            } else {
+                report.packMissing = layout.pack;
+            }
         }
         return report;
     }
