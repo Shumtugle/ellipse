@@ -1061,6 +1061,24 @@ public final class Tune extends Activity {
                     }
                 }));
             }
+            int[] hues = new int[Rings.COLOURS.length];
+            for (int i = 0; i < hues.length; i++) {
+                hues[i] = i;
+            }
+            Painter hue = new Painter() {
+                public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                    paintHue(c, w, h, value);
+                }
+            };
+            caption("LEVEL ARCS");
+            rows.addView(swatches(Keep.RINGS_LEVEL, Keep.number(this, Keep.RINGS_LEVEL, Rings.ACCENT), hues,
+                Rings.COLOUR_NAMES, hue));
+            caption("SECOND HAND");
+            rows.addView(swatches(Keep.RINGS_SECONDS, Keep.number(this, Keep.RINGS_SECONDS, Rings.ORANGE_ONE), hues,
+                Rings.COLOUR_NAMES, hue));
+            caption("DAY ARC AND ALARM");
+            rows.addView(swatches(Keep.RINGS_DAY, Keep.number(this, Keep.RINGS_DAY, Rings.ORANGE_ONE), hues,
+                Rings.COLOUR_NAMES, hue));
             caption("GROUND");
             groundSlider(30);
             caption("PLACES");
@@ -1396,6 +1414,20 @@ public final class Tune extends Activity {
             t.setTextSize(r * 0.36f);
             c.drawText("62%", x, y + r * 0.13f, t);
         }
+    }
+
+    /** A colour for the rings in small: an arc of it round a faint ring. */
+    private void paintHue(android.graphics.Canvas c, float w, float h, int which) {
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        float r = h * 0.34f;
+        p.setStyle(android.graphics.Paint.Style.STROKE);
+        p.setStrokeWidth(Math.max(1f, h * 0.02f));
+        p.setColor(Tone.outline());
+        c.drawCircle(w / 2f, h / 2f, r, p);
+        p.setStrokeWidth(Math.max(2f, h * 0.07f));
+        p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+        p.setColor(Rings.colour(which));
+        c.drawArc(new android.graphics.RectF(w / 2f - r, h / 2f - r, w / 2f + r, h / 2f + r), -90f, 250f, false, p);
     }
 
     private void paintFace(android.graphics.Canvas c, float w, float h, int value) {

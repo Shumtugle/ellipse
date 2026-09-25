@@ -27,12 +27,13 @@ import java.util.Locale;
 
 /**
  * Rings of glass with no card under them: a big one with the hour, in
- * figures or in hands, and an orange arc of the day gone; beside it up to
+ * figures or in hands, and an arc of the day gone; beside it up to
  * seven small ones, each holding what the settings chose — the place's
  * warmth, the calendar's day, the charge, how warm it feels, the damp, the
  * wind, the daylight, the rain, the next alarm — and, while headphones are
- * connected, one more with theirs. An arc whose length is a level is drawn
- * in the accent.
+ * connected, one more with theirs. The arcs that are levels, the seconds
+ * hand, and the day's arc with the daylight and the alarm each take a
+ * colour of their own: the accent, orange and orange, unless chosen.
  *
  * The rings stand on a canvas of their own measured in dp, brought to the
  * box by one multiplier, as the widget clock is: a wide canvas, or, in a
@@ -77,7 +78,20 @@ final class Rings extends View implements Timepiece {
 
     private static final int INK = 0xFFF5F1E8;
     private static final int QUIET = 0xFFD8D2C6;
-    private static final int ORANGE = 0xFFF29A4A;
+    /**
+     * The colours the rings' marks may take: the accent of the launcher,
+     * then orange, red, lilac, blue, green, sand and white.
+     */
+    static final int[] COLOURS = {0, 0xFFF29A4A, 0xFFD2464E, 0xFFC3A2D6, 0xFF7AA7F0, 0xFF8FBF8A, 0xFFD4BFA3,
+        0xFFF5F1E8};
+    static final String[] COLOUR_NAMES = {"Accent", "Orange", "Red", "Lilac", "Blue", "Green", "Sand", "White"};
+    static final int ACCENT = 0;
+    static final int ORANGE_ONE = 1;
+
+    /** A colour by its place in the list; the first is the launcher's accent. */
+    static int colour(int which) {
+        return which <= 0 || which >= COLOURS.length ? Tone.primary() : COLOURS[which];
+    }
     private static final int GLASS = 0x0E1014;
 
     private final Almanac.Hand hand;
@@ -95,7 +109,10 @@ final class Rings extends View implements Timepiece {
     private final int earsRing;
     private final int count;
     private final int ground;
+    /** The arcs that are levels; the seconds hand; the day's arc, the daylight, the alarm. */
     private final int accent;
+    private final int seconds;
+    private final int daily;
     /** Where each ring was set by hand: a share across, a share down, a radius in dp; or none. */
     private final float[][] placed;
     /** Where each ring stands as last drawn, in the canvas's dp: x, y, radius; or none. */
@@ -149,7 +166,9 @@ final class Rings extends View implements Timepiece {
         placed = new float[count][];
         stands = new float[count][];
         ground = Math.round(255f * Math.max(0, Math.min(95, Keep.number(context, Keep.CLOCK_GROUND, 30))) / 100f);
-        accent = Tone.primary();
+        accent = colour(Keep.number(context, Keep.RINGS_LEVEL, ACCENT));
+        seconds = colour(Keep.number(context, Keep.RINGS_SECONDS, ORANGE_ONE));
+        daily = colour(Keep.number(context, Keep.RINGS_DAY, ORANGE_ONE));
         read(Keep.rings(context));
         taps = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
             @Override
@@ -570,7 +589,7 @@ final class Rings extends View implements Timepiece {
             }
             glass(canvas, at, ring == held);
             if (ring == BIG) {
-                arc(canvas, at, dayGone(), ORANGE, 5f, 4f);
+                arc(canvas, at, dayGone(), daily, 5f, 4f);
                 if (big == HANDS) {
                     hands(canvas, at);
                 } else {
@@ -675,7 +694,7 @@ final class Rings extends View implements Timepiece {
             float start = x - all / 2f;
             bell(canvas, start + icon / 2f, y + r * 0.63f - size * 0.36f, icon);
             words.setTextAlign(Paint.Align.LEFT);
-            words.setColor(ORANGE);
+            words.setColor(daily);
             canvas.drawText(when, start + icon + size * 0.45f, y + r * 0.63f, words);
         }
     }
@@ -689,7 +708,7 @@ final class Rings extends View implements Timepiece {
     /** A small alarm clock: a round face with its hands, in orange. */
     private void bell(Canvas canvas, float x, float y, float size) {
         paint.setStyle(Paint.Style.STROKE);
-        paint.setColor(ORANGE);
+        paint.setColor(daily);
         paint.setStrokeWidth(size * 0.14f);
         canvas.drawCircle(x, y, size * 0.5f, paint);
         paint.setStrokeCap(Paint.Cap.ROUND);
@@ -725,9 +744,9 @@ final class Rings extends View implements Timepiece {
         float hour = now.get(Calendar.HOUR) + min / 60f;
         hand(canvas, x, y, hour * 30f, r * 0.45f, r * 0.07f, INK);
         hand(canvas, x, y, min * 6f, r * 0.66f, r * 0.045f, INK);
-        hand(canvas, x, y, sec * 6f, r * 0.70f, Math.max(r * 0.018f, 1.5f / k), ORANGE);
+        hand(canvas, x, y, sec * 6f, r * 0.70f, Math.max(r * 0.018f, 1.5f / k), seconds);
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(ORANGE);
+        paint.setColor(seconds);
         canvas.drawCircle(x, y, r * 0.04f, paint);
         paint.setStrokeCap(Paint.Cap.BUTT);
     }
@@ -758,7 +777,7 @@ final class Rings extends View implements Timepiece {
         } else if (kind == CALENDAR) {
             Date now = new Date();
             text(canvas, new SimpleDateFormat("EE", Locale.getDefault()).format(now), x, y - r * 0.12f,
-                r * 0.24f, ORANGE, room);
+                r * 0.24f, daily, room);
             text(canvas, new SimpleDateFormat("d", Locale.getDefault()).format(now), x, y + r * 0.36f,
                 r * 0.5f, INK, room);
         } else if (kind == CHARGE) {
@@ -848,7 +867,7 @@ final class Rings extends View implements Timepiece {
         canvas.drawCircle(x, y, ri, paint);
         if (from >= 0f && to > from) {
             paint.setStrokeCap(Paint.Cap.ROUND);
-            paint.setColor(ORANGE);
+            paint.setColor(daily);
             canvas.drawArc(oval, -90f + 360f * from / 1440f, 360f * (to - from) / 1440f, false, paint);
             paint.setStrokeCap(Paint.Cap.BUTT);
         }

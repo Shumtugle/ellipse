@@ -267,6 +267,11 @@ final class Keep {
     static final String RINGS_SECOND = "rings_second";
     static final String RINGS_PLACES = "rings_places";
 
+    /** The rings' colours, by their place in the rings' list: levels, the seconds hand, the day. */
+    static final String RINGS_LEVEL = "rings_level";
+    static final String RINGS_SECONDS = "rings_seconds";
+    static final String RINGS_DAY = "rings_day";
+
     /** The small rings in their order, each by a number of its own, and what each holds. */
     static final String RINGS_LIST = "rings_list";
     static final String RING_KIND = "ring_kind.";
