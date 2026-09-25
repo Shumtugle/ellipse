@@ -16,6 +16,7 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,9 @@ import java.util.Set;
  * new version starts, of the set-out the old one left, so a version that
  * breaks something can be stepped back from. The last five of those are
  * kept, and nothing else.
+ *
+ * With the settings go the few things kept as files of their own: a
+ * language module brought from a file, and the pictures icons were given.
  *
  * Widgets are kept as the places they stood in; a widget belongs to the
  * phone's own list of them, so on another phone, or after the home screen
@@ -87,6 +91,7 @@ final class Copy {
         copy.put("made", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.ROOT).format(new Date()));
         copy.put("version", version(context));
         copy.put("settings", all);
+        copy.put("files", files(context));
         return copy.toString(1);
     }
 
@@ -145,6 +150,15 @@ final class Copy {
            copy does not look like a new version starting. */
         edit.putInt(SEEN, versionCode(context));
         edit.commit();
+        try {
+            JSONObject kept = new JSONObject(words).optJSONObject("files");
+            if (kept != null) {
+                unfile(context, kept);
+            }
+        } catch (JSONException | IOException broken) {
+            // The settings are back; a file that could not be is left as it was.
+        }
+        Words.forget();
         return true;
     }
 
@@ -154,6 +168,56 @@ final class Copy {
             save(context, new File(dir(context), BEFORE_RESTORE), write(context));
         } catch (JSONException | IOException unsaved) {
             // What comes next cannot be undone, then.
+        }
+    }
+
+    /** The files kept beside the settings, by their place under the application's own, as words. */
+    private static JSONObject files(Context context) throws JSONException {
+        JSONObject out = new JSONObject();
+        File root = context.getFilesDir();
+        List<File> kept = new ArrayList<>();
+        kept.add(new File(root, Words.BROUGHT_FILE));
+        File[] faces = new File(root, "faces").listFiles();
+        if (faces != null) {
+            kept.addAll(Arrays.asList(faces));
+        }
+        for (File one : kept) {
+            if (!one.isFile() || one.length() > 2L * 1024 * 1024) {
+                continue;
+            }
+            try (InputStream in = new FileInputStream(one)) {
+                java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+                byte[] chunk = new byte[8192];
+                int n;
+                while ((n = in.read(chunk)) > 0) {
+                    bytes.write(chunk, 0, n);
+                }
+                String where = root.toURI().relativize(one.toURI()).getPath();
+                out.put(where, android.util.Base64.encodeToString(bytes.toByteArray(), android.util.Base64.NO_WRAP));
+            } catch (IOException unread) {
+                // That one file stays out of the copy.
+            }
+        }
+        return out;
+    }
+
+    /** The files a copy kept, written back where they were. */
+    private static void unfile(Context context, JSONObject kept) throws IOException {
+        File root = context.getFilesDir();
+        java.util.Iterator<String> names = kept.keys();
+        while (names.hasNext()) {
+            String where = names.next();
+            if (where.contains("..") || where.startsWith("/")) {
+                continue;
+            }
+            File to = new File(root, where);
+            File dir = to.getParentFile();
+            if (dir != null && !dir.isDirectory()) {
+                dir.mkdirs();
+            }
+            try (OutputStream out = new FileOutputStream(to)) {
+                out.write(android.util.Base64.decode(kept.optString(where), android.util.Base64.DEFAULT));
+            }
         }
     }
 
