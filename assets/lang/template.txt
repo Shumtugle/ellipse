@@ -424,8 +424,6 @@ The set-out of another home screen, from its backup, or of this home screen's ea
 Bring in from a backup = Bring in from a backup
 A preset dresses the home screen: icons, colours, the clock, the frames. What you set out stays as it is: grids, apps and their places, the names under the icons, the theme. = A preset dresses the home screen: icons, colours, the clock, the frames. What you set out stays as it is: grids, apps and their places, the names under the icons, the theme.
 READY = READY
-Material 3 = Material 3
-The home screen as it first comes: icons in the phone's own shape and colours, the first clock, no rims or frames = The home screen as it first comes: icons in the phone's own shape and colours, the first clock, no rims or frames
 MINE = MINE
 Keep the look as it is now = Keep the look as it is now
 Name this look = Name this look

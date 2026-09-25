@@ -1584,29 +1584,31 @@ public final class Tune extends Activity {
         note("A preset dresses the home screen: icons, colours, the clock, the frames. What you set out stays "
             + "as it is: grids, apps and their places, the names under the icons, the theme.");
         caption("READY");
-        LinearLayout material = new LinearLayout(this);
-        material.setOrientation(LinearLayout.VERTICAL);
-        material.setPadding(dp(24), dp(12), dp(24), dp(12));
-        material.setBackground(Tone.touch(null, dp(16)));
-        TextView ready = new TextView(this);
-        ready.setText("Material 3");
-        ready.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
-        ready.setTextColor(Tone.onSurface());
-        material.addView(ready);
-        TextView about = new TextView(this);
-        about.setText(Words.t("The home screen as it first comes: icons in the phone's own shape and colours, "
-            + "the first clock, no rims or frames"));
-        about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
-        about.setTextColor(Tone.faint());
-        material.addView(about);
-        material.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-                Looks.material(Tune.this);
-                worn();
-            }
-        });
-        rows.addView(material);
+        for (int i = 0; i < Looks.READY.length; i++) {
+            final int which = i;
+            LinearLayout one = new LinearLayout(this);
+            one.setOrientation(LinearLayout.VERTICAL);
+            one.setPadding(dp(24), dp(12), dp(24), dp(12));
+            one.setBackground(Tone.touch(null, dp(16)));
+            TextView ready = new TextView(this);
+            ready.setText(Words.t(Looks.READY[i]));
+            ready.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
+            ready.setTextColor(Tone.onSurface());
+            one.addView(ready);
+            TextView about = new TextView(this);
+            about.setText(Words.t(Looks.READY_ABOUT[i]));
+            about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+            about.setTextColor(Tone.faint());
+            one.addView(about);
+            one.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                    Looks.ready(Tune.this, which);
+                    worn();
+                }
+            });
+            rows.addView(one);
+        }
         caption("MINE");
         rows.addView(deed("Keep the look as it is now", new Runnable() {
             public void run() {

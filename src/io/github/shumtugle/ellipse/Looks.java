@@ -154,6 +154,67 @@ final class Looks {
      * kept aside, to be put back.
      */
     static void material(Context context) {
+        dress(context, new Object[0]);
+    }
+
+    /** The ready presets, by their names; the first is the home screen as it first comes. */
+    static final String[] READY = {"Material 3", "Wood", "Steel", "Meno", "Rings", "Paper"};
+    static final String[] READY_ABOUT = {
+        "The home screen as it first comes: icons in the phone's own shape and colours, the first clock, "
+            + "no rims or frames",
+        "Tiles with a rim of wood, the plate clock in a case of wood, widgets framed in wood, a warm sand accent",
+        "Squircles with a rim of steel, the plate clock in steel, frames of steel, a cool grey-blue accent",
+        "The glass card clock, round icons with a fine rim of glass, frames of glass, a dark ground",
+        "The rings, and round icons of glass with its gleam, like small rings; no frames, the rings hang free",
+        "The paper tile, no rim; with the owner's own pack of masks, if it is on the phone"};
+
+    /** The pack of masks the paper preset wears, if the phone has it. */
+    private static final String PAPER_PACK = "Stylisha.superellipsy.icon.mask";
+
+    /** A ready preset put on, by its place in the list. */
+    static void ready(Context context, int which) {
+        switch (which) {
+            case 1:
+                dress(context, new Object[] {"icon_shape", Shape.PAPER, Keep.RIM_KIND, Rim.WOOD,
+                    Keep.CLOCK_FACE, Home.FACE_PLATE, Keep.CLOCK_PLATE, Rim.WOOD,
+                    Keep.WIDGET_FRAME, Rim.WOOD, Keep.WIDGET_FRAME_WIDTH, 6,
+                    "look_from", Keep.FROM_OWN, "hue", 36f, "sat", 0.34f, "val", 0.86f});
+                break;
+            case 2:
+                dress(context, new Object[] {"icon_shape", Shape.SQUIRCLE, Keep.RIM_KIND, Rim.STEEL,
+                    Keep.CLOCK_FACE, Home.FACE_PLATE, Keep.CLOCK_PLATE, Rim.STEEL,
+                    Keep.WIDGET_FRAME, Rim.STEEL, Keep.WIDGET_FRAME_WIDTH, 6,
+                    "look_from", Keep.FROM_OWN, "hue", 212f, "sat", 0.22f, "val", 0.82f});
+                break;
+            case 3:
+                dress(context, new Object[] {"icon_shape", Shape.CIRCLE, Keep.RIM_KIND, Rim.GLASS, Keep.RIM_WIDTH, 2,
+                    Keep.CLOCK_FACE, Home.FACE_MENO, Keep.WIDGET_FRAME, Rim.GLASS, Keep.WIDGET_FRAME_WIDTH, 3,
+                    "ground", 0});
+                break;
+            case 4:
+                dress(context, new Object[] {"icon_shape", Shape.CIRCLE, Keep.RIM_KIND, Rim.GLASS, Keep.RIM_WIDTH, 4,
+                    Keep.GLAZE, true, Keep.CLOCK_FACE, Home.FACE_RINGS});
+                break;
+            case 5:
+                boolean has = Pack.installed(context).containsKey(PAPER_PACK);
+                dress(context, has ? new Object[] {"icon_shape", Shape.PAPER, Keep.ICON_PACK, PAPER_PACK}
+                    : new Object[] {"icon_shape", Shape.PAPER});
+                break;
+            default:
+                dress(context, new Object[0]);
+                break;
+        }
+    }
+
+    /**
+     * A preset put on: the dress let go of, as the home screen first comes,
+     * then the preset's own words written over it — pairs of a word and its
+     * value. Nothing the owner set out is touched: the grids, the apps and
+     * their places, whether names stand under the icons and how, the size
+     * of the icons, the theme, the dock, the edges, the gestures, the
+     * language. The look worn till now is kept aside, to be put back.
+     */
+    private static void dress(Context context, Object[] sets) {
         try {
             store(context).edit().putString(BEFORE, now(context).toString()).apply();
         } catch (JSONException unsaved) {
@@ -162,7 +223,8 @@ final class Looks {
         String[] words = {"icon_shape", Keep.ICON_FILL, Keep.TILE_ASPECT, Keep.WINDOW, Keep.ICON_TINT,
             Keep.ICON_PACK, Keep.RIM_KIND, Keep.RIM_WIDTH, Keep.GLAZE, Keep.GLASS_TONE, Keep.GLASS_CLEAR,
             Keep.FOLDER_FACE, Keep.FOLDER_GROUND, Keep.FONT, Keep.NAME_COLOUR, "look_from", "ground", "solid",
-            Keep.CLOCK_FACE, Keep.WIDGET_FRAME, Keep.LIST_OWN};
+            Keep.CLOCK_FACE, Keep.CLOCK_PLATE, Keep.WIDGET_FRAME, Keep.WIDGET_FRAME_WIDTH, Keep.WIDGET_GLAZE,
+            Keep.LIST_OWN};
         SharedPreferences kept = store(context);
         SharedPreferences.Editor edit = kept.edit();
         for (String key : words) {
@@ -171,6 +233,19 @@ final class Looks {
         for (String key : kept.getAll().keySet()) {
             if (key.startsWith("hue.first.") || key.startsWith("size.first.")) {
                 edit.remove(key);
+            }
+        }
+        for (int i = 0; i + 1 < sets.length; i += 2) {
+            String key = (String) sets[i];
+            Object value = sets[i + 1];
+            if (value instanceof Integer) {
+                edit.putInt(key, (Integer) value);
+            } else if (value instanceof Float) {
+                edit.putFloat(key, (Float) value);
+            } else if (value instanceof Boolean) {
+                edit.putBoolean(key, (Boolean) value);
+            } else if (value instanceof String) {
+                edit.putString(key, (String) value);
             }
         }
         edit.putInt("stamp", kept.getInt("stamp", 0) + 1);
