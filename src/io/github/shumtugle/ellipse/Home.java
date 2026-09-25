@@ -147,6 +147,9 @@ public final class Home extends Activity {
     private static final int KEY_ARRANGE = 8;
     private static final int KEY_FRONT = 9;
     private static final int KEY_BEHIND = 10;
+    private static final int KEY_FRAME = 11;
+    private static final String FRAME_ON = "Frame";
+    private static final String FRAME_OFF = "No frame";
     private static final String FRONT = "Bring to front";
     private static final String BEHIND = "Send behind";
     private static final String ARRANGE = "Arrange rings";
@@ -2476,6 +2479,12 @@ public final class Home extends Activity {
             keys.add(KEY_RESIZE);
             glyphs.add(Glyph.RESIZE);
         }
+        if (token.startsWith(WIDGET) && Keep.number(this, Keep.WIDGET_FRAME, Rim.NONE) != Rim.NONE) {
+            boolean off = Keep.flag(this, Keep.FRAME_OFF + widgetId(token), false);
+            lines.add(off ? FRAME_ON : FRAME_OFF);
+            keys.add(KEY_FRAME);
+            glyphs.add(Glyph.RESIZE);
+        }
         if (whence != null && whence[0] >= 0 && Keep.flag(this, Keep.OVERLAP, false)) {
             lines.add(FRONT);
             keys.add(KEY_FRONT);
@@ -2661,6 +2670,10 @@ public final class Home extends Activity {
                     fill();
                 }
                 reshapeAt(offerToken, offerWhence[0], offerWhence[1], offerWhence[2]);
+            } else if (key == KEY_FRAME) {
+                String off = Keep.FRAME_OFF + widgetId(offerToken);
+                Keep.saveFlag(this, off, !Keep.flag(this, off, false));
+                fill();
             } else if ((key == KEY_FRONT || key == KEY_BEHIND) && offerWhence != null) {
                 if (!Keep.laid(this)) {
                     Keep.lay(this, standing);
@@ -3540,6 +3553,19 @@ public final class Home extends Activity {
         refuse(screens);
     }
 
+    /** A widget's own number from its word on the screen, or nought. */
+    private static int widgetId(String token) {
+        if (token == null || !token.startsWith(WIDGET)) {
+            return 0;
+        }
+        String[] part = token.substring(WIDGET.length()).split(":");
+        try {
+            return Integer.parseInt(part[0]);
+        } catch (NumberFormatException broken) {
+            return 0;
+        }
+    }
+
     /** The rings being set by hand now, and the veil over the rest of the screen meanwhile. */
     private Rings arranged;
     private View veil;
@@ -3671,12 +3697,21 @@ public final class Home extends Activity {
         view.setVisibility(View.VISIBLE);
         /* A widget's host leaves a margin of its own round it; with no
            margins on the grid, it leaves none either. */
+        /* The frame, if widgets wear one and this one was not let off it:
+           the widget drawn within it, the frame's width added to its margin. */
+        int kind = Keep.number(this, Keep.WIDGET_FRAME, Rim.NONE);
+        boolean framed = kind != Rim.NONE && !Keep.flag(this, Keep.FRAME_OFF + id, false);
+        int band = framed ? dp(Keep.number(this, Keep.WIDGET_FRAME_WIDTH, 6)) : 0;
+        if (view instanceof Piece) {
+            ((Piece) view).frame(framed ? kind : Rim.NONE, band, dp(Keep.number(this, Keep.WIDGET_FRAME_ROUND, 24)),
+                Keep.flag(this, Keep.WIDGET_GLAZE, false));
+        }
         if (Keep.edgeless(this)) {
-            view.setPadding(0, 0, 0, 0);
+            view.setPadding(band, band, band, band);
         } else {
             android.graphics.Rect own = android.appwidget.AppWidgetHostView.getDefaultPaddingForWidget(
                 this, info.provider, null);
-            view.setPadding(own.left, own.top, own.right, own.bottom);
+            view.setPadding(own.left + band, own.top + band, own.right + band, own.bottom + band);
         }
         page.put(view, spot.x, spot.y, across, down);
         page.edge(view, Keep.edges(this));

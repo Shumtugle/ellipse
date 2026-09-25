@@ -866,6 +866,22 @@ public final class Tune extends Activity {
         }
         rows.addView(row(toggle("Glaze", "The curved light of glass across the top of every icon",
             Keep.GLAZE, false)));
+        caption("WIDGET FRAMES");
+        final View framed = new FramedSample(this);
+        LinearLayout.LayoutParams sampleAt = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(120));
+        sampleAt.setMargins(dp(24), dp(4), dp(24), dp(8));
+        rows.addView(framed, sampleAt);
+        rows.addView(swatches(Keep.WIDGET_FRAME, Keep.number(this, Keep.WIDGET_FRAME, Rim.NONE), rimValues, rimNames,
+            new Painter() {
+                public void paint(android.graphics.Canvas c, float w, float h, int value) {
+                    paintMaterial(c, w, h, value);
+                }
+            }));
+        frameSlider("Frame width", Keep.WIDGET_FRAME_WIDTH, 2, 20, 6, framed);
+        frameSlider("Corners", Keep.WIDGET_FRAME_ROUND, 0, 48, 24, framed);
+        rows.addView(row(toggle("Frame glaze", "The curved light of glass across every framed widget",
+            Keep.WIDGET_GLAZE, false)));
+        note("A widget may go without: hold it and choose Frame.");
         caption("FOLDERS");
         int[] layouts = new int[Stack.NAMES.length];
         for (int i = 0; i < layouts.length; i++) {
@@ -1482,6 +1498,80 @@ public final class Tune extends Activity {
         }
     }
 
+    /** A frame's measure in dp, seen at once on the sample widget above it. */
+    private void frameSlider(String title, final String key, int least, int most, int fallback, final View sample) {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setPadding(dp(24), dp(6), dp(24), dp(6));
+        LinearLayout top = new LinearLayout(this);
+        TextView name = new TextView(this);
+        name.setText(title);
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        name.setTextColor(Tone.onSurface());
+        top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView value = new TextView(this);
+        value.setText(Keep.number(this, key, fallback) + " dp");
+        value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        value.setTextColor(Tone.primary());
+        top.addView(value);
+        made.addView(top);
+        made.addView(new Slide(this, least, most, Keep.number(this, key, fallback), new Slide.Moved() {
+            public void moved(int at, boolean done) {
+                value.setText(at + " dp");
+                Keep.saveNumber(Tune.this, key, at);
+                sample.invalidate();
+            }
+        }));
+        rows.addView(made);
+    }
+
+    /**
+     * A widget in small, as widgets will wear their frame: a card of the
+     * surface with a few lines on it, in the frame as set now.
+     */
+    private static final class FramedSample extends View {
+        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+        FramedSample(android.content.Context context) {
+            super(context);
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas canvas) {
+            android.content.Context c = getContext();
+            float d = getResources().getDisplayMetrics().density;
+            float w = getWidth();
+            float h = getHeight();
+            int kind = Keep.number(c, Keep.WIDGET_FRAME, Rim.NONE);
+            float f = kind == Rim.NONE ? 0f : Keep.number(c, Keep.WIDGET_FRAME_WIDTH, 6) * d;
+            float round = Keep.number(c, Keep.WIDGET_FRAME_ROUND, 24) * d;
+            android.graphics.RectF all = new android.graphics.RectF(0f, 0f, w, h);
+            android.graphics.RectF in = new android.graphics.RectF(f, f, w - f, h - f);
+            float innerRound = Math.max(0f, round - f * 0.6f);
+            paint.setColor(Tone.containerHigh());
+            canvas.drawRoundRect(in, innerRound, innerRound, paint);
+            paint.setColor(Tone.onVariant());
+            canvas.drawRoundRect(f + 18f * d, f + 20f * d, w * 0.55f, f + 34f * d, 7f * d, 7f * d, paint);
+            paint.setColor(Tone.faint());
+            canvas.drawRoundRect(f + 18f * d, f + 46f * d, w * 0.75f, f + 56f * d, 5f * d, 5f * d, paint);
+            canvas.drawRoundRect(f + 18f * d, f + 66f * d, w * 0.4f, f + 76f * d, 5f * d, 5f * d, paint);
+            if (kind == Rim.NONE) {
+                return;
+            }
+            android.graphics.Path outer = new android.graphics.Path();
+            outer.addRoundRect(all, round, round, android.graphics.Path.Direction.CW);
+            android.graphics.Path inner = new android.graphics.Path();
+            inner.addRoundRect(in, innerRound, innerRound, android.graphics.Path.Direction.CW);
+            android.graphics.Path ring = new android.graphics.Path();
+            ring.op(outer, inner, android.graphics.Path.Op.DIFFERENCE);
+            Rim.plate(canvas, ring, kind, w, h);
+            Rim.cut(canvas, inner, w);
+            if (Keep.flag(c, Keep.WIDGET_GLAZE, false) || kind == Rim.GLASS) {
+                Rim.glaze(canvas, outer, 0f, 0f, w, h);
+            }
+        }
+    }
+
     /** A line of words in the accent that does something when touched. */
     private View deed(String said, final Runnable does) {
         TextView made = new TextView(this);
@@ -1785,6 +1875,10 @@ public final class Tune extends Activity {
                     }
                     /* Glass has sliders of its own: they come and go with it. */
                     if (Keep.RIM_KIND.equals(key) && (was == Rim.GLASS) != (value == Rim.GLASS)) {
+                        fill();
+                    }
+                    /* The framed widget in small is drawn afresh in the new frame. */
+                    if (Keep.WIDGET_FRAME.equals(key)) {
                         fill();
                     }
                 }

@@ -380,6 +380,17 @@ final class Keep {
         return shape == SHAPE_SQUARE ? 1f : shape == SHAPE_WIDE ? 0.8f : shape == SHAPE_TALL ? 1.25f : 0f;
     }
 
+    /**
+     * Widgets' frames: the material, as the icons' rims have it (none, or a
+     * material of the rim's), the frame's width and its corners in dp, and
+     * whether the curve of glass lies over it; one widget may go without.
+     */
+    static final String WIDGET_FRAME = "widget_frame";
+    static final String WIDGET_FRAME_WIDTH = "widget_frame_width";
+    static final String WIDGET_FRAME_ROUND = "widget_frame_round";
+    static final String WIDGET_GLAZE = "widget_glaze";
+    static final String FRAME_OFF = "frame_off.";
+
     /** Whether things may be set down over one another, the last set down on top. */
     static final String OVERLAP = "overlap";
     private static final String LAYOUT_FINE = "layout_fine";

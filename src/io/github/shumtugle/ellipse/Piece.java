@@ -56,6 +56,54 @@ final class Piece extends AppWidgetHostView {
         slop = ViewConfiguration.get(context).getScaledTouchSlop();
     }
 
+    /* The frame the widget wears, as an icon wears its rim: a plate of a
+       material round it, a window cut in the plate the widget shows
+       through, and the curve of glass over all if asked for. */
+    private int frameKind = Rim.NONE;
+    private float frameWidth;
+    private float frameRound;
+    private boolean frameGlaze;
+    private final android.graphics.Path outer = new android.graphics.Path();
+    private final android.graphics.Path inner = new android.graphics.Path();
+    private final android.graphics.Path ring = new android.graphics.Path();
+
+    /** The frame to wear, in pixels; a kind of none takes it off. */
+    void frame(int kind, float width, float round, boolean glaze) {
+        frameKind = kind;
+        frameWidth = width;
+        frameRound = round;
+        frameGlaze = glaze;
+        invalidate();
+    }
+
+    @Override
+    protected void dispatchDraw(android.graphics.Canvas canvas) {
+        if (frameKind == Rim.NONE || frameWidth <= 0f) {
+            super.dispatchDraw(canvas);
+            return;
+        }
+        float w = getWidth();
+        float h = getHeight();
+        float f = frameWidth;
+        outer.reset();
+        outer.addRoundRect(new android.graphics.RectF(0f, 0f, w, h), frameRound, frameRound,
+            android.graphics.Path.Direction.CW);
+        float in = Math.max(0f, frameRound - f * 0.6f);
+        inner.reset();
+        inner.addRoundRect(new android.graphics.RectF(f, f, w - f, h - f), in, in, android.graphics.Path.Direction.CW);
+        canvas.save();
+        canvas.clipPath(inner);
+        super.dispatchDraw(canvas);
+        canvas.restore();
+        ring.reset();
+        ring.op(outer, inner, android.graphics.Path.Op.DIFFERENCE);
+        Rim.plate(canvas, ring, frameKind, w, h);
+        Rim.cut(canvas, inner, w);
+        if (frameGlaze || frameKind == Rim.GLASS) {
+            Rim.glaze(canvas, outer, 0f, 0f, w, h);
+        }
+    }
+
     @Override
     public boolean onInterceptTouchEvent(MotionEvent event) {
         switch (event.getActionMasked()) {
