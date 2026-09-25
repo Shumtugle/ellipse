@@ -367,7 +367,7 @@ public final class Tune extends Activity {
         scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         rows = new LinearLayout(this);
         rows.setOrientation(LinearLayout.VERTICAL);
-        rows.setPadding(0, dp(4), 0, dp(16));
+        rows.setPadding(0, dp(4), 0, dp(120));
         scroll.addView(rows);
         root.addView(scroll, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
@@ -427,7 +427,7 @@ public final class Tune extends Activity {
                     bottom = insets.getSystemWindowInsetBottom();
                 }
                 head.setPadding(0, top, 0, 0);
-                rows.setPadding(0, dp(4), 0, dp(16));
+                rows.setPadding(0, dp(4), 0, bottom + dp(112));
                 foot.lift(bottom);
                 return insets;
             }
@@ -1642,8 +1642,10 @@ public final class Tune extends Activity {
             } catch (java.io.IOException | org.json.JSONException | RuntimeException failed) {
                 said("The copy could not be written");
             }
-        } else if (asked == READ_FOREIGN) {
-            final Foreign.Layout found;
+        } else if (asked == READ_FOREIGN || asked == READ_COPY) {
+            /* One file, whichever line it was picked from: a copy made here is
+               restored; the backup of another home screen is brought in. */
+            byte[] bytes;
             try (java.io.InputStream in = getContentResolver().openInputStream(where)) {
                 if (in == null) {
                     throw new java.io.IOException();
@@ -1654,7 +1656,23 @@ public final class Tune extends Activity {
                 while ((n = in.read(chunk)) > 0) {
                     all.write(chunk, 0, n);
                 }
-                found = Foreign.read(this, all.toByteArray());
+                bytes = all.toByteArray();
+            } catch (java.io.IOException | RuntimeException failed) {
+                said("That file could not be read");
+                return;
+            }
+            String words = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
+            if (words.contains("\"" + Copy.KIND + "\"")) {
+                if (Copy.read(this, words)) {
+                    restart();
+                } else {
+                    said("That copy could not be read");
+                }
+                return;
+            }
+            final Foreign.Layout found;
+            try {
+                found = Foreign.read(this, bytes);
             } catch (java.io.IOException | RuntimeException failed) {
                 said("That file could not be read");
                 return;
@@ -1699,16 +1717,7 @@ public final class Tune extends Activity {
                     });
                 }
             });
-        } else if (asked == READ_COPY) {
-            try (java.io.InputStream in = getContentResolver().openInputStream(where)) {
-                if (in != null && Copy.read(this, Copy.words(in))) {
-                    restart();
-                    return;
-                }
-                said("That file is not a copy made here");
-            } catch (java.io.IOException | RuntimeException failed) {
-                said("That file could not be read");
-            }
+
         }
     }
 
