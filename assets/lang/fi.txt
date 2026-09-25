@@ -465,3 +465,6 @@ A preset dresses the home screen: icons, colours, the clock, the frames. What yo
 READY = VALMIIT
 The home screen as it first comes: icons in the phone's own shape and colours, the first clock, no rims or frames = Kotinäyttö sellaisena kuin se tulee: kuvakkeet puhelimen omassa muodossa ja väreissä, ensimmäinen kello, ei reunuksia eikä kehyksiä
 MINE = OMAT
+Medallion = Medaljonki
+Chrome = Kromi
+Sticker = Tarra

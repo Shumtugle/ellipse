@@ -43,9 +43,21 @@ final class Shape {
      * owner's own old masks, its corners turned by a seventh of its height.
      */
     static final int PAPER = 8;
-    static final int COUNT = 9;
+    /** A round icon in a dark ring, standing on a slate plinth that hides its lower half. */
+    static final int MEDALLION = 9;
+    /** A low, wide plate of polished metal with a bevel, the picture across it lit as a barrel is. */
+    static final int CHROME = 10;
+    /** A white sticker round a softly uneven outline, its shadow warm and set off down and right. */
+    static final int STICKER = 11;
+    static final int COUNT = 12;
     static final String[] NAMES = {"The phone's own", "Circle", "Squircle", "Rounded square",
-        "Drop, lower right", "Drop, lower left", "Drop, upper left", "Drop, upper right", "Paper tile"};
+        "Drop, lower right", "Drop, lower left", "Drop, upper left", "Drop, upper right", "Paper tile",
+        "Medallion", "Chrome", "Sticker"};
+
+    /** How much wider than tall the chrome plate stands, and how wide against the square it is given. */
+    private static final float CHROME_WIDE = 2.15f;
+    private static final float CHROME_SPAN = 1.16f;
+    private static final int STICKER_SHADOW = 0xFFE0892E;
 
     /** How much wider than tall the paper tile stands. */
     static final float PAPER_WIDE = 1.29f;
@@ -104,11 +116,49 @@ final class Shape {
                 path.addRoundRect(new RectF(0, top, w, top + tall), tall * 0.14f, tall * 0.14f,
                     Path.Direction.CW);
                 break;
+            case MEDALLION:
+                path.addCircle(w / 2f, h * 0.42f, least * 0.34f, Path.Direction.CW);
+                Path plinth = new Path();
+                plinth.addRoundRect(new RectF(w * 0.04f, h * 0.5f, w * 0.96f, h * 0.86f), least * 0.05f,
+                    least * 0.05f, Path.Direction.CW);
+                path.op(plinth, Path.Op.UNION);
+                break;
+            case CHROME:
+                float low = w / CHROME_WIDE;
+                float at = (h - low) / 2f;
+                path.addRoundRect(new RectF(0, at, w, at + low), low * 0.15f, low * 0.15f, Path.Direction.CW);
+                break;
+            case STICKER:
+                blob(path, w / 2f, h / 2f, least * 0.48f, 0.035f);
+                break;
             default:
                 path.addRoundRect(new RectF(0, 0, w, h), least * 0.5f, least * 0.5f, Path.Direction.CW);
                 break;
         }
         return path;
+    }
+
+    /**
+     * The sticker's outline: a soft superellipse a little lower than wide,
+     * its edge swelling and sinking three times round, as a sticker cut by
+     * hand does.
+     */
+    static void blob(Path path, float cx, float cy, float reach, float wobble) {
+        for (int i = 0; i <= 144; i++) {
+            double t = 2 * Math.PI * i / 144;
+            double c = Math.cos(t);
+            double s = Math.sin(t);
+            double r = reach / Math.pow(Math.pow(Math.abs(c), 3.4) + Math.pow(Math.abs(s), 3.4), 1 / 3.4)
+                * (1 + wobble * Math.sin(3 * t + 0.6));
+            float x = (float) (cx + r * c);
+            float y = (float) (cy + r * s * 0.9);
+            if (i == 0) {
+                path.moveTo(x, y);
+            } else {
+                path.lineTo(x, y);
+            }
+        }
+        path.close();
     }
 
     /** A superellipse of a given power filling a box. */
@@ -575,6 +625,9 @@ final class Shape {
             if (shape == PAPER) {
                 return 0.86f * PAPER_WIDE;
             }
+            if (shape == CHROME) {
+                return CHROME_SPAN;
+            }
             return weight(shape) * (float) Math.sqrt(aspect);
         }
 
@@ -586,6 +639,23 @@ final class Shape {
             }
             if (shape == PAPER) {
                 paper(canvas, side);
+                return;
+            }
+            if (shape == MEDALLION || shape == CHROME || shape == STICKER) {
+                if (drawn == null || drawn.getHeight() != cast(side)[1]) {
+                    int[] size = cast(side);
+                    drawn = Bitmap.createBitmap(size[0], size[1], Bitmap.Config.ARGB_8888);
+                    Canvas into = new Canvas(drawn);
+                    if (shape == MEDALLION) {
+                        medallion(into, size[0], size[1]);
+                    } else if (shape == CHROME) {
+                        chrome(into, size[0], size[1]);
+                    } else {
+                        sticker(into, size[0], size[1]);
+                    }
+                }
+                canvas.drawBitmap(drawn, getBounds().exactCenterX() - drawn.getWidth() / 2f,
+                    getBounds().exactCenterY() - drawn.getHeight() / 2f, paint);
                 return;
             }
             /* The tile keeps the area of its square whatever its proportion:
@@ -731,6 +801,144 @@ final class Shape {
             float y = hole.centerY() - wide / 2f;
             icon.setBounds(Math.round(x), Math.round(y), Math.round(x + wide), Math.round(y + wide));
             icon.draw(into);
+        }
+
+        /** The size a drawn outline of the owner's old masks takes against the square it is given. */
+        private int[] cast(int side) {
+            if (shape == CHROME) {
+                int w = Math.round(side * CHROME_SPAN);
+                return new int[] {w, Math.max(1, Math.round(w / CHROME_WIDE))};
+            }
+            return new int[] {side, side};
+        }
+
+        /** The picture set into a hole: in layers, spread; flat, on its ground. */
+        private void picture(Canvas into, Path cut, RectF hole) {
+            into.save();
+            into.clipPath(cut);
+            if (icon instanceof AdaptiveIconDrawable) {
+                layered(into, (AdaptiveIconDrawable) icon, hole);
+            } else {
+                flat(into, hole);
+            }
+            into.restore();
+        }
+
+        /**
+         * The medallion: a slate plinth across the lower half, a soft
+         * shadow on it, and the round picture standing in a dark ring over it.
+         */
+        private void medallion(Canvas into, int w, int h) {
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            float least = Math.min(w, h);
+            RectF plinth = new RectF(w * 0.04f, h * 0.5f, w * 0.96f, h * 0.86f);
+            float corner = least * 0.05f;
+            p.setShader(new android.graphics.LinearGradient(0f, plinth.top, 0f, plinth.bottom, 0xFF4A5058, 0xFF2E3238,
+                android.graphics.Shader.TileMode.CLAMP));
+            into.drawRoundRect(plinth, corner, corner, p);
+            p.setShader(null);
+            p.setColor(0x1AFFFFFF);
+            into.drawRect(plinth.left + corner, plinth.top, plinth.right - corner, plinth.top + Math.max(1f, least * 0.012f), p);
+            p.setColor(0x59000000);
+            into.drawOval(new RectF(w * 0.24f, h * 0.73f, w * 0.76f, h * 0.81f), p);
+            float cx = w / 2f;
+            float cy = h * 0.42f;
+            float r = least * 0.3f;
+            Path round = new Path();
+            round.addCircle(cx, cy, r, Path.Direction.CW);
+            picture(into, round, new RectF(cx - r, cy - r, cx + r, cy + r));
+            float ring = least * 0.045f;
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(ring);
+            p.setColor(0xFF2A2F35);
+            into.drawCircle(cx, cy, r + ring / 2f, p);
+            p.setStrokeWidth(Math.max(1f, least * 0.008f));
+            p.setColor(0x1FFFFFFF);
+            into.drawCircle(cx, cy, r + ring, p);
+        }
+
+        /**
+         * The chrome plate: a shadow under it, a bevel of polished metal
+         * lit from above and below, and in it the picture across the whole
+         * width, darkened at both ends and streaked with light as a barrel.
+         */
+        private void chrome(Canvas into, int w, int h) {
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            float shade = h * 0.06f;
+            RectF plate = new RectF(0f, 0f, w, h - shade);
+            float corner = plate.height() * 0.15f;
+            p.setColor(0x73000000);
+            into.drawRoundRect(new RectF(0f, shade, w, h), corner, corner, p);
+            p.setShader(new android.graphics.LinearGradient(0f, 0f, 0f, plate.bottom,
+                new int[] {0xFFF4F1EA, 0xFFA9A398, 0xFF8A847A, 0xFFE6E1D7}, new float[] {0f, 0.45f, 0.55f, 1f},
+                android.graphics.Shader.TileMode.CLAMP));
+            into.drawRoundRect(plate, corner, corner, p);
+            p.setShader(null);
+            float bevel = plate.height() * 0.1f;
+            RectF hole = new RectF(bevel, bevel, w - bevel, plate.bottom - bevel);
+            float inner = corner * 0.5f;
+            Path cut = new Path();
+            cut.addRoundRect(hole, inner, inner, Path.Direction.CW);
+            into.save();
+            into.clipPath(cut);
+            if (icon instanceof AdaptiveIconDrawable) {
+                AdaptiveIconDrawable layers = (AdaptiveIconDrawable) icon;
+                float cx = hole.centerX();
+                float cy = hole.centerY();
+                float groundSide = hole.width() * 1.5f;
+                Drawable ground = layers.getBackground();
+                if (ground != null) {
+                    ground.setBounds(Math.round(cx - groundSide / 2f), Math.round(cy - groundSide / 2f),
+                        Math.round(cx + groundSide / 2f), Math.round(cy + groundSide / 2f));
+                    ground.draw(into);
+                }
+                float pictureSide = hole.height() * 1.55f * Style.fill;
+                Drawable front = layers.getForeground();
+                if (front != null) {
+                    front.setBounds(Math.round(cx - pictureSide / 2f), Math.round(cy - pictureSide / 2f),
+                        Math.round(cx + pictureSide / 2f), Math.round(cy + pictureSide / 2f));
+                    front.draw(into);
+                }
+            } else {
+                flat(into, hole);
+            }
+            p.setShader(new android.graphics.LinearGradient(hole.left, 0f, hole.right, 0f,
+                new int[] {0x8C000000, 0x0D000000, 0x0D000000, 0x8C000000}, new float[] {0f, 0.07f, 0.93f, 1f},
+                android.graphics.Shader.TileMode.CLAMP));
+            into.drawRect(hole, p);
+            p.setShader(new android.graphics.LinearGradient(0f, hole.top, 0f, hole.bottom,
+                new int[] {0x1AFFFFFF, 0x8CFFFFFF, 0x14FFFFFF, 0x14000000, 0x38FFFFFF, 0x26000000},
+                new float[] {0f, 0.28f, 0.36f, 0.7f, 0.82f, 1f}, android.graphics.Shader.TileMode.CLAMP));
+            into.drawRect(hole, p);
+            p.setShader(null);
+            into.restore();
+            p.setStyle(Paint.Style.STROKE);
+            p.setStrokeWidth(Math.max(1f, h * 0.02f));
+            p.setColor(0x8C000000);
+            into.drawRoundRect(hole, inner, inner, p);
+        }
+
+        /**
+         * The sticker: its warm shadow set off down and right, the white
+         * sticker over it, and the picture within a softer outline inside.
+         */
+        private void sticker(Canvas into, int w, int h) {
+            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+            float reach = Math.min(w, h) * 0.44f;
+            float cx = w / 2f - reach * 0.03f;
+            float cy = h / 2f - reach * 0.04f;
+            Path shadow = new Path();
+            blob(shadow, cx + reach * 0.07f, cy + reach * 0.09f, reach, 0.035f);
+            p.setColor(STICKER_SHADOW);
+            into.drawPath(shadow, p);
+            Path body = new Path();
+            blob(body, cx, cy, reach, 0.035f);
+            p.setColor(0xFFFFFFFF);
+            into.drawPath(body, p);
+            float inside = reach * 0.8f;
+            Path cut = new Path();
+            blob(cut, cx, cy, inside, 0.02f);
+            picture(into, cut, new RectF(cx - inside, cy - inside * 0.9f, cx + inside, cy + inside * 0.9f));
         }
 
         /**

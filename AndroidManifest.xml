@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="17600"
-    android:versionName="1.76.0">
+    android:versionCode="17700"
+    android:versionName="1.77.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 

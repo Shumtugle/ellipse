@@ -465,3 +465,6 @@ A preset dresses the home screen: icons, colours, the clock, the frames. What yo
 READY = ГОТОВЫЕ
 The home screen as it first comes: icons in the phone's own shape and colours, the first clock, no rims or frames = Лаунчер, каким он приходит: значки в форме и цветах телефона, первые часы, без ободков и рамок
 MINE = МОИ
+Medallion = Медальон
+Chrome = Хром
+Sticker = Наклейка
