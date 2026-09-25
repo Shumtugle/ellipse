@@ -142,6 +142,41 @@ final class Looks {
         return put(context, look);
     }
 
+    /**
+     * The home screen as it first comes, Material 3: its dress let go of
+     * — the icons' outline, rim and gloss, a pack, the folders' face, the
+     * typeface, the names' colour, the colours' source, the ground, the
+     * first clock in its own colours, the widgets' frames, the list's own
+     * ground — so each is as it was at first. Nothing the owner set out is
+     * touched: the grids, the apps and their places, whether names stand
+     * under the icons and how, the size of the icons, the theme, the dock,
+     * the edges, the gestures, the language. The look worn till now is
+     * kept aside, to be put back.
+     */
+    static void material(Context context) {
+        try {
+            store(context).edit().putString(BEFORE, now(context).toString()).apply();
+        } catch (JSONException unsaved) {
+            // It is put on all the same; only it cannot be taken off again.
+        }
+        String[] words = {"icon_shape", Keep.ICON_FILL, Keep.TILE_ASPECT, Keep.WINDOW, Keep.ICON_TINT,
+            Keep.ICON_PACK, Keep.RIM_KIND, Keep.RIM_WIDTH, Keep.GLAZE, Keep.GLASS_TONE, Keep.GLASS_CLEAR,
+            Keep.FOLDER_FACE, Keep.FOLDER_GROUND, Keep.FONT, Keep.NAME_COLOUR, "look_from", "ground", "solid",
+            Keep.CLOCK_FACE, Keep.WIDGET_FRAME, Keep.LIST_OWN};
+        SharedPreferences kept = store(context);
+        SharedPreferences.Editor edit = kept.edit();
+        for (String key : words) {
+            edit.remove(key);
+        }
+        for (String key : kept.getAll().keySet()) {
+            if (key.startsWith("hue.first.") || key.startsWith("size.first.")) {
+                edit.remove(key);
+            }
+        }
+        edit.putInt("stamp", kept.getInt("stamp", 0) + 1);
+        edit.commit();
+    }
+
     /** Whether the look worn before the last one put on is kept. */
     static boolean undoable(Context context) {
         return store(context).contains(BEFORE);
