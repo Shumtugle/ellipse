@@ -1434,6 +1434,7 @@ public final class Tune extends Activity {
 
     private static final int WRITE_COPY = 21;
     private static final int READ_COPY = 22;
+    private static final int READ_FOREIGN = 23;
     /** A copy armed by a first tap, waiting for the second. */
     private java.io.File armedCopy;
     private long armedCopyAt;
@@ -1518,7 +1519,20 @@ public final class Tune extends Activity {
             }
         }
         caption("FROM ANOTHER HOME SCREEN");
-        rows.addView(row(soon("Bring in", "The set-out of another home screen, from its backup")));
+        note("The set-out of another home screen, from its backup, or of this home screen's earlier line: "
+            + "screens, applications at their places, folders, and widgets where the phone allows. "
+            + "What is here now is copied aside first.");
+        rows.addView(deed("Bring in from a backup", new Runnable() {
+            public void run() {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("*/*");
+                try {
+                    startActivityForResult(pick, READ_FOREIGN);
+                } catch (RuntimeException none) {
+                    said("The phone has no place to keep files");
+                }
+            }
+        }));
     }
 
     /**
@@ -1628,6 +1642,63 @@ public final class Tune extends Activity {
             } catch (java.io.IOException | org.json.JSONException | RuntimeException failed) {
                 said("The copy could not be written");
             }
+        } else if (asked == READ_FOREIGN) {
+            final Foreign.Layout found;
+            try (java.io.InputStream in = getContentResolver().openInputStream(where)) {
+                if (in == null) {
+                    throw new java.io.IOException();
+                }
+                java.io.ByteArrayOutputStream all = new java.io.ByteArrayOutputStream();
+                byte[] chunk = new byte[65536];
+                int n;
+                while ((n = in.read(chunk)) > 0) {
+                    all.write(chunk, 0, n);
+                }
+                found = Foreign.read(this, all.toByteArray());
+            } catch (java.io.IOException | RuntimeException failed) {
+                said("That file could not be read");
+                return;
+            }
+            if (found == null) {
+                said("No set-out of a known shape was found in that file");
+                return;
+            }
+            int columns = Math.max(3, Math.min(7, found.columns));
+            int rowsOf = Math.max(3, Math.min(12, found.rows));
+            String what = found.screens.size() + (found.screens.size() == 1 ? " screen" : " screens")
+                + " of " + columns + " \u00D7 " + rowsOf + ": " + found.count(Foreign.Item.APP) + " apps, "
+                + found.count(Foreign.Item.FOLDER) + " folders, " + found.count(Foreign.Item.WIDGET) + " widgets. "
+                + "It takes the place of the set-out here, which is copied aside first: "
+                + "Undo the last restore brings it back.";
+            Ask.tell(host, "Bring in this set-out?", what, "Bring in", new Runnable() {
+                public void run() {
+                    android.appwidget.AppWidgetHost widgets = new android.appwidget.AppWidgetHost(Tune.this,
+                        Home.WIDGET_HOST);
+                    Foreign.Report done = Foreign.bringIn(Tune.this, found, widgets);
+                    StringBuilder told = new StringBuilder();
+                    told.append(done.apps).append(" apps, ").append(done.folders).append(" folders and ")
+                        .append(done.widgets).append(" widgets are in their places.");
+                    if (done.missing > 0) {
+                        told.append(" Not on this phone: ").append(done.missing).append('.');
+                    }
+                    if (done.others > 0) {
+                        told.append(" Left behind, as shortcuts and the other home screen's own things: ")
+                            .append(done.others).append('.');
+                    }
+                    if (!done.unmade.isEmpty()) {
+                        told.append(" Widgets to add again, for the phone asks first: ");
+                        for (int i = 0; i < done.unmade.size(); i++) {
+                            told.append(i > 0 ? ", " : "").append(done.unmade.get(i));
+                        }
+                        told.append('.');
+                    }
+                    Ask.tell(host, "Brought in", told.toString(), "Done", new Runnable() {
+                        public void run() {
+                            restart();
+                        }
+                    });
+                }
+            });
         } else if (asked == READ_COPY) {
             try (java.io.InputStream in = getContentResolver().openInputStream(where)) {
                 if (in != null && Copy.read(this, Copy.words(in))) {

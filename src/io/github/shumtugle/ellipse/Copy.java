@@ -148,6 +148,15 @@ final class Copy {
         return true;
     }
 
+    /** What is here now copied aside, as before a restore, so what comes next can be undone. */
+    static void aside(Context context) {
+        try {
+            save(context, new File(dir(context), BEFORE_RESTORE), write(context));
+        } catch (JSONException | IOException unsaved) {
+            // What comes next cannot be undone, then.
+        }
+    }
+
     /** Whether a restore can be undone: what was there before it is kept. */
     static boolean undoable(Context context) {
         return new File(dir(context), BEFORE_RESTORE).isFile();

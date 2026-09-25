@@ -458,6 +458,12 @@ final class Keep {
         }
     }
 
+    /** The set-out written in whole places, with half steps off: as a set-out brought in is written. */
+    static void whole(Context context) {
+        store(context).edit().putBoolean(HALF_STEPS, false).putInt(LAYOUT_FINE, 1).apply();
+        touch(context);
+    }
+
     /** Dark surfaces, light ones, or as the phone is set: the ground of lists, cards and settings. */
     static final String THEME = "theme";
     static final int THEME_DARK = 0;
