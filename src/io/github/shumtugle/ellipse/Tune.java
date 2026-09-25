@@ -110,6 +110,7 @@ public final class Tune extends Activity {
     private static final int CLOCK = 10;
     private static final int LOOKS = 11;
     private static final int FONTS = 12;
+    private static final int LISTGROUND = 13;
 
     private static final int RESTART = 1;
     private static final int RESET = 2;
@@ -183,6 +184,8 @@ public final class Tune extends Activity {
                 return new Line[] {
                     choice("Layout", "Lines going down, or pages going across", Keep.VIEW_KEY,
                         Keep.LINES, new String[] {"Lines", "Pages"}, new int[] {Keep.LINES, Keep.PAGES}),
+                    door(Glyph.LOOK, "Background", "The list's ground: the theme's, or a colour of your own",
+                        LISTGROUND),
                     choice("Page grid", "Columns and rows of a page", Keep.LIST_GRID, 45,
                         GRIDS, GRID_VALUES),
                     toggle("Endless scrolling", "Past the last page comes the first again",
@@ -255,7 +258,7 @@ public final class Tune extends Activity {
             }
         }
         return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face"
-            : room == LOOKS ? "Looks" : room == FONTS ? "Typeface" : "";
+            : room == LOOKS ? "Looks" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : "";
     }
 
     private float density;
@@ -498,7 +501,7 @@ public final class Tune extends Activity {
 
     private void fillRoom() {
         rows.removeAllViews();
-        window.setVisibility(room() == ICONS || room() == CLOCK ? View.VISIBLE : View.GONE);
+        window.setVisibility(room() == ICONS || room() == CLOCK || room() == LISTGROUND ? View.VISIBLE : View.GONE);
         if (room() == HIDDEN) {
             fillHidden();
             return;
@@ -517,6 +520,10 @@ public final class Tune extends Activity {
         }
         if (room() == FONTS) {
             fillFonts();
+            return;
+        }
+        if (room() == LISTGROUND) {
+            fillListGround();
             return;
         }
         if (room() == CLOCK) {
@@ -1636,6 +1643,80 @@ public final class Tune extends Activity {
             line.addView(gone);
             rows.addView(line);
         }
+    }
+
+    /**
+     * The list of every app on a ground of the owner's own: a colour by its
+     * hue, saturation, brightness and opacity, seen at once on a piece of
+     * the list above; its words turn dark or light as the colour asks.
+     */
+    private void fillListGround() {
+        final View piece = new View(this) {
+            private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+            @Override
+            protected void onDraw(android.graphics.Canvas c) {
+                float w = getWidth();
+                float h = getHeight();
+                float r = dp(24);
+                paint.setShader(new android.graphics.LinearGradient(0f, 0f, 0f, h, 0xFF3A2E1C, 0xFF15140F,
+                    android.graphics.Shader.TileMode.CLAMP));
+                c.drawRoundRect(0f, 0f, w, h, r, r, paint);
+                paint.setShader(null);
+                paint.setColor(Tone.listGround());
+                c.drawRoundRect(0f, 0f, w, h, r, r, paint);
+                String[] names = {"Calendar", "Camera", "Maps"};
+                int[] dots = {0xFF4A7BE0, 0xFFE0703A, 0xFF4CAF6A};
+                paint.setTextSize(19f * scaled);
+                for (int i = 0; i < names.length; i++) {
+                    float y = dp(34) + i * dp(46);
+                    paint.setColor(dots[i]);
+                    c.drawCircle(dp(40), y, dp(15), paint);
+                    paint.setColor(Tone.listInk());
+                    c.drawText(names[i], dp(72), y + dp(7), paint);
+                }
+            }
+        };
+        window.removeAllViews();
+        window.setVisibility(View.VISIBLE);
+        window.addView(piece, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(150)));
+        rows.addView(row(toggle("A colour of my own", "Off, the list stands on the theme's own ground",
+            Keep.LIST_OWN, false)));
+        groundSlider("Hue", Keep.LIST_HUE, 0, 360, 38, "\u00B0", piece);
+        groundSlider("Saturation", Keep.LIST_SAT, 0, 100, 30, "%", piece);
+        groundSlider("Brightness", Keep.LIST_VAL, 0, 100, 45, "%", piece);
+        groundSlider("Opacity", Keep.LIST_ALPHA, 20, 100, 100, "%", piece);
+    }
+
+    private void groundSlider(String title, final String key, int least, int most, int fallback, final String unit,
+                              final View piece) {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setPadding(dp(24), dp(6), dp(24), dp(6));
+        LinearLayout top = new LinearLayout(this);
+        TextView name = new TextView(this);
+        name.setText(title);
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 20f * scaled);
+        name.setTextColor(Tone.onSurface());
+        top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView value = new TextView(this);
+        value.setText(Keep.number(this, key, fallback) + unit);
+        value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        value.setTextColor(Tone.primary());
+        top.addView(value);
+        made.addView(top);
+        made.addView(new Slide(this, least, most, Keep.number(this, key, fallback), new Slide.Moved() {
+            public void moved(int at, boolean done) {
+                value.setText(at + unit);
+                Keep.saveNumber(Tune.this, key, at);
+                if (!Keep.flag(Tune.this, Keep.LIST_OWN, false)) {
+                    Keep.saveFlag(Tune.this, Keep.LIST_OWN, true);
+                }
+                Tone.read(Tune.this);
+                piece.invalidate();
+            }
+        }));
+        rows.addView(made);
     }
 
     /** The typeface of every name and every word of the home screen and its settings. */

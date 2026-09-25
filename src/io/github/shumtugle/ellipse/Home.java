@@ -3813,7 +3813,14 @@ public final class Home extends Activity {
             lately.add(door);
             notes.add(note);
         }
-        fresh.show(recent, lately, notes);
+        List<Apps.Door> most = new ArrayList<>();
+        for (String name : Keep.frequent(this)) {
+            Apps.Door door = found.door(name);
+            if (door != null && most.size() < 12) {
+                most.add(door);
+            }
+        }
+        fresh.show(most, recent, lately, notes);
     }
 
     // ------------------------------------------------------------- pull

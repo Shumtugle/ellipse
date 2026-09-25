@@ -78,6 +78,11 @@ final class Tone {
         accent = lead(rich, bright);
         veil = Math.round(255f * Math.min(100f, Math.max(55f, look[3])) / 100f);
         earth = Keep.ground(context) / 100f;
+        listOwn = Keep.flag(context, Keep.LIST_OWN, false);
+        listGround = (Math.round(255f * Keep.number(context, Keep.LIST_ALPHA, 100) / 100f) << 24)
+            | (Color.HSVToColor(new float[] {Keep.number(context, Keep.LIST_HUE, 38),
+            Keep.number(context, Keep.LIST_SAT, 30) / 100f, Keep.number(context, Keep.LIST_VAL, 45) / 100f})
+            & 0x00FFFFFF);
         hold();
         return was != accent || wasEarth != earth || wasVeil != veil || wasLight != light;
     }
@@ -115,7 +120,11 @@ final class Tone {
      * marks on a dark one or on the wallpaper.
      */
     static void dress(android.view.Window window, boolean onSurface) {
-        boolean dark = onSurface && light;
+        dressDark(window, onSurface && light);
+    }
+
+    /** The phone's bars in dark marks, or light ones. */
+    static void dressDark(android.view.Window window, boolean dark) {
         if (Build.VERSION.SDK_INT >= 30) {
             android.view.WindowInsetsController bars = window.getInsetsController();
             if (bars != null) {
@@ -258,6 +267,32 @@ final class Tone {
 
     static int onSurface() {
         return light ? shade(Math.min(0.5f, rich * 0.4f), 0.12f) : shade(rich * 0.07f, 0.96f);
+    }
+
+    /**
+     * The list of every app's own ground: black in the dark scheme, the
+     * light surface in the light one, or a colour of the owner's own.
+     */
+    private static int listGround;
+    private static boolean listOwn;
+
+    static int listGround() {
+        return listOwn ? listGround : (light ? surface() : 0xFF000000);
+    }
+
+    /** Words on the list's ground: the scheme's own, or, on a colour of the owner's, as that colour asks. */
+    static int listInk() {
+        if (!listOwn) {
+            return onSurface();
+        }
+        float alpha = (listGround >>> 24) / 255f;
+        boolean pale = Color.luminance(listGround | 0xFF000000) * alpha + 0.05f * (1f - alpha) > 0.42f;
+        return pale ? 0xFF1C1A17 : 0xFFF2EDE4;
+    }
+
+    /** Quiet words on the list's ground. */
+    static int listFaint() {
+        return listOwn ? (listInk() & 0x00FFFFFF) | 0x99000000 : faint();
     }
 
     /** Words on the wallpaper, under the icons: light in either scheme, for the wallpaper is its own. */

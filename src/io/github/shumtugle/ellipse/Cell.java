@@ -167,7 +167,12 @@ final class Cell extends View {
 
     /** Names on a surface of the theme, not on the wallpaper: its own words, no halo. */
     Cell onGround() {
-        words.setColor(Tone.onSurface());
+        return onGround(Tone.onSurface());
+    }
+
+    /** The same, in words of a given colour: for a ground of the owner's own. */
+    Cell onGround(int ink) {
+        words.setColor(ink);
         words.clearShadowLayer();
         invalidate();
         return this;

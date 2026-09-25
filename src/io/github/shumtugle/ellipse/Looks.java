@@ -36,7 +36,8 @@ final class Looks {
         Keep.GLASS_TONE, Keep.GLASS_CLEAR, Keep.WINDOW, Keep.TILE_ASPECT, Keep.CLOCK_FACE, Keep.CLOCK_PLATE,
         Keep.CLOCK_DIAL, Keep.CLOCK_FIELDS, Keep.CLOCK_GROUND, Keep.MENO_SECOND, Keep.MENO_LINES, Keep.RINGS_BIG,
         Keep.RINGS_LEVEL, Keep.RINGS_SECONDS, Keep.RINGS_DAY, Keep.RINGS_LIST, Keep.RINGS_PLACES, Keep.WIDGET_FRAME,
-        Keep.WIDGET_FRAME_WIDTH, Keep.WIDGET_FRAME_ROUND, Keep.WIDGET_GLAZE, Keep.CELL_SHAPE, Keep.ROW_HEIGHT,
+        Keep.WIDGET_FRAME_WIDTH, Keep.WIDGET_FRAME_ROUND, Keep.WIDGET_GLAZE, Keep.LIST_OWN, Keep.LIST_HUE,
+        Keep.LIST_SAT, Keep.LIST_VAL, Keep.LIST_ALPHA, Keep.CELL_SHAPE, Keep.ROW_HEIGHT,
         Keep.EDGES};
     private static final String[] STARTS = {"hue.", "size.", Keep.RING_KIND};
 

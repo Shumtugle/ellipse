@@ -14,8 +14,10 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * What is fresh: the applications last opened from here, and those put on
- * the phone or changed lately, lowered from the top over the home screen.
+ * What is fresh: the applications opened most from here, those last
+ * opened, and those put on the phone or changed lately, each under a tab
+ * of its own, lowered from the top over the home screen; it opens on the
+ * tab it was last left on.
  *
  * Every icon keeps its name; a fresh one says under it whether it is new
  * or updated, and an application signed with the same key as this home
@@ -35,9 +37,9 @@ final class Fresh extends FrameLayout {
         void lift(View from, Apps.Door door, int[] icon);
     }
 
+    private static final String MOST = "Frequent";
     private static final String RECENT = "Recent";
-    private static final String NEW = "New";
-    private static final String EMPTY = "Nothing opened or installed lately.";
+    private static final String NEW = "New and updated";
     private static final int COLUMNS = 4;
 
     private final View veil;
@@ -98,7 +100,7 @@ final class Fresh extends FrameLayout {
         return made;
     }
 
-    private void grid(List<Apps.Door> doors, List<String> notes) {
+    private void grid(List<Apps.Door> doors, List<String> notes, LinearLayout into) {
         int rows = (doors.size() + COLUMNS - 1) / COLUMNS;
         Grid grid = new Grid(getContext(), COLUMNS, rows);
         for (int i = 0; i < doors.size(); i++) {
@@ -120,12 +122,23 @@ final class Fresh extends FrameLayout {
             grid.put(cell, i % COLUMNS, i / COLUMNS);
         }
         float cell = iconSize + dp(notes == null ? 44 : 58);
-        sheet.addView(grid, new LinearLayout.LayoutParams(
+        into.addView(grid, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, Math.round(cell * rows)));
     }
 
-    /** Lowers itself from the top with what was opened and what is fresh. */
-    void show(List<Apps.Door> recent, List<Apps.Door> lately, List<String> notes) {
+    /** The three lists, as last lowered, for the tabs to turn between. */
+    private List<Apps.Door> most = new java.util.ArrayList<>();
+    private List<Apps.Door> recent = new java.util.ArrayList<>();
+    private List<Apps.Door> lately = new java.util.ArrayList<>();
+    private List<String> notes = new java.util.ArrayList<>();
+    private LinearLayout body;
+
+    /** Lowers itself from the top: the most opened, the last opened and the fresh, under their tabs. */
+    void show(List<Apps.Door> most, List<Apps.Door> recent, List<Apps.Door> lately, List<String> notes) {
+        this.most = most;
+        this.recent = recent;
+        this.lately = lately;
+        this.notes = notes;
         sheet.removeAllViews();
         GradientDrawable ground = new GradientDrawable();
         float r = dp(28);
@@ -133,23 +146,70 @@ final class Fresh extends FrameLayout {
         ground.setCornerRadii(new float[] {0f, 0f, 0f, 0f, r, r, r, r});
         sheet.setBackground(ground);
         sheet.setPadding(dp(8), top + dp(4), dp(8), dp(10));
-        if (!recent.isEmpty()) {
-            sheet.addView(caption(RECENT));
-            grid(recent, null);
+        int tab = Keep.number(getContext(), Keep.FRESH_TAB, 2);
+        final LinearLayout tabs = new LinearLayout(getContext());
+        String[] names = {MOST, RECENT, NEW};
+        for (int i = 0; i < names.length; i++) {
+            final int which = i;
+            TextView one = new TextView(getContext());
+            one.setText(names[i].toUpperCase(Locale.ROOT));
+            one.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+            one.setLetterSpacing(0.08f);
+            one.setGravity(Gravity.CENTER);
+            one.setSingleLine(true);
+            one.setPadding(dp(4), dp(12), dp(4), dp(12));
+            one.setOnClickListener(new OnClickListener() {
+                public void onClick(View v) {
+                    v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    Keep.saveNumber(getContext(), Keep.FRESH_TAB, which);
+                    choose(tabs, which);
+                }
+            });
+            tabs.addView(one, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         }
-        if (!lately.isEmpty()) {
-            sheet.addView(caption(NEW));
-            grid(lately, notes);
+        sheet.addView(tabs);
+        body = new LinearLayout(getContext());
+        body.setOrientation(LinearLayout.VERTICAL);
+        sheet.addView(body);
+        choose(tabs, Math.max(0, Math.min(2, tab)));
+        lower();
+    }
+
+    /** A tab chosen: its word in the accent and underlined, its list below. */
+    private void choose(LinearLayout tabs, int which) {
+        for (int i = 0; i < tabs.getChildCount(); i++) {
+            TextView one = (TextView) tabs.getChildAt(i);
+            boolean on = i == which;
+            one.setTextColor(on ? Tone.onSurface() : Tone.faint());
+            if (on) {
+                GradientDrawable line = new GradientDrawable();
+                line.setColor(Tone.primary());
+                android.graphics.drawable.LayerDrawable under = new android.graphics.drawable.LayerDrawable(
+                    new android.graphics.drawable.Drawable[] {line});
+                under.setLayerGravity(0, Gravity.BOTTOM | Gravity.FILL_HORIZONTAL);
+                under.setLayerHeight(0, dp(3));
+                one.setBackground(under);
+            } else {
+                one.setBackground(null);
+            }
         }
-        if (recent.isEmpty() && lately.isEmpty()) {
+        body.removeAllViews();
+        List<Apps.Door> doors = which == 0 ? most : which == 1 ? recent : lately;
+        if (doors.isEmpty()) {
             TextView none = new TextView(getContext());
-            none.setText(EMPTY);
+            none.setText(which == 0 ? "Nothing opened from here yet." : which == 1 ? "Nothing opened lately."
+                : "Nothing installed or updated lately.");
             none.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
             none.setTextColor(Tone.faint());
             none.setPadding(dp(16), dp(24), dp(16), dp(24));
-            sheet.addView(none);
+            body.addView(none);
+            return;
         }
-        /* A short grip at the foot: the sheet is pushed back up from anywhere. */
+        grid(doors, which == 2 ? notes : null, body);
+    }
+
+    /** A short grip at the foot, the sheet being pushed back up from anywhere; then the sheet lowered. */
+    private void lower() {
         View grip = new View(getContext());
         grip.setBackground(Tone.box(Tone.faint(), dp(2), 0f));
         LinearLayout.LayoutParams gripParams = new LinearLayout.LayoutParams(dp(32), dp(4));

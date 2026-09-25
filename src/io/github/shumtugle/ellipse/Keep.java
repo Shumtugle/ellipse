@@ -486,6 +486,19 @@ final class Keep {
     static final int THEME_LIGHT = 1;
     static final int THEME_PHONE = 2;
 
+    /**
+     * The list of every app on a colour of the owner's own: whether it is,
+     * and the colour's hue in degrees, its saturation, brightness and
+     * opacity in percent.
+     */
+    static final String LIST_OWN = "list_own";
+    static final String LIST_HUE = "list_hue";
+    static final String LIST_SAT = "list_sat";
+    static final String LIST_VAL = "list_val";
+    static final String LIST_ALPHA = "list_alpha";
+    /** Which of its three the panel of fresh apps opens on. */
+    static final String FRESH_TAB = "fresh_tab";
+
     /** How high a row of the grid stands, in percent of its full share of the screen. */
     static final String ROW_HEIGHT = "row_height";
 
@@ -860,7 +873,57 @@ final class Keep {
         return list;
     }
 
+    private static final String USES = "uses";
+    private static final int USES_KEPT = 200;
+
+    /** How many times each application was opened from here, the most first. */
+    static List<String> frequent(Context context) {
+        final java.util.Map<String, Integer> counts = uses(context);
+        List<String> list = new ArrayList<>();
+        for (String token : counts.keySet()) {
+            if (Apps.nameOf(token) != null) {
+                list.add(token);
+            }
+        }
+        java.util.Collections.sort(list, new java.util.Comparator<String>() {
+            public int compare(String a, String b) {
+                return counts.get(b) - counts.get(a);
+            }
+        });
+        return list;
+    }
+
+    private static java.util.Map<String, Integer> uses(Context context) {
+        java.util.Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+        for (String line : store(context).getString(USES, "").split("\n")) {
+            int cut = line.lastIndexOf('\t');
+            if (cut > 0) {
+                try {
+                    counts.put(line.substring(0, cut), Integer.parseInt(line.substring(cut + 1)));
+                } catch (NumberFormatException broken) {
+                    // A line that says nothing is left out.
+                }
+            }
+        }
+        return counts;
+    }
+
     static void opened(Context context, String token) {
+        /* Counted too, for the most opened; the least counted go when there are too many. */
+        java.util.Map<String, Integer> counts = uses(context);
+        Integer times = counts.get(token);
+        counts.put(token, times == null ? 1 : times + 1);
+        List<java.util.Map.Entry<String, Integer>> all = new ArrayList<>(counts.entrySet());
+        java.util.Collections.sort(all, new java.util.Comparator<java.util.Map.Entry<String, Integer>>() {
+            public int compare(java.util.Map.Entry<String, Integer> a, java.util.Map.Entry<String, Integer> b) {
+                return b.getValue() - a.getValue();
+            }
+        });
+        StringBuilder kept = new StringBuilder();
+        for (int i = 0; i < Math.min(USES_KEPT, all.size()); i++) {
+            kept.append(all.get(i).getKey()).append('\t').append(all.get(i).getValue()).append('\n');
+        }
+        store(context).edit().putString(USES, kept.toString()).apply();
         StringBuilder out = new StringBuilder(token);
         int count = 1;
         for (String was : recent(context)) {

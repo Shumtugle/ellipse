@@ -421,7 +421,8 @@ final class Drawer extends FrameLayout {
                 page.setPadding(dp(8), 0, dp(8), 0);
                 pager.addView(page);
             }
-            final Cell cell = new Cell(getContext(), doors.get(i), gridIcon, Style.namesInList).onGround();
+            final Cell cell = new Cell(getContext(), doors.get(i), gridIcon, Style.namesInList)
+                .onGround(Tone.listInk());
             cell.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     opener.open(cell, cell.door, cell.localIcon());
@@ -443,7 +444,7 @@ final class Drawer extends FrameLayout {
      * made; in the light one, the light surface, so its words can be read.
      */
     private void ground() {
-        setBackgroundColor(Tone.light() ? Tone.surface() : Color.BLACK);
+        setBackgroundColor(Tone.listGround());
     }
 
     void tint() {
@@ -522,7 +523,9 @@ final class Drawer extends FrameLayout {
     /** The phone's bars dressed for what stands under them: the list's surface, or the wallpaper. */
     private void bars() {
         if (getContext() instanceof android.app.Activity) {
-            Tone.dress(((android.app.Activity) getContext()).getWindow(), shown);
+            /* Over the list, the bars' marks as dark as its words are. */
+            Tone.dressDark(((android.app.Activity) getContext()).getWindow(),
+                shown && Color.luminance(Tone.listInk()) < 0.5f);
         }
     }
 

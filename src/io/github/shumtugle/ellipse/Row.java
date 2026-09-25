@@ -37,7 +37,7 @@ final class Row extends View {
     }
 
     void tint() {
-        words.setColor(Tone.onSurface());
+        words.setColor(Tone.listInk());
         setBackground(Tone.touch(null, 0f));
         invalidate();
     }
