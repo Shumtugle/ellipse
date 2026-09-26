@@ -1588,16 +1588,25 @@ public final class Home extends Activity {
         }
         final Bitmap front = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
         root.draw(new Canvas(front));
+        /* The wallpaper under the screen: the factory's own, drawn again, when the phone's wallpaper is the
+           one it set last; else the phone's own picture, read from its file where that is allowed. */
+        android.app.WallpaperManager walls = android.app.WallpaperManager.getInstance(this);
+        int now = walls.getWallpaperId(android.app.WallpaperManager.FLAG_SYSTEM);
+        final boolean ours = now > 0 && now == Keep.number(this, Keep.GROUND_WALL, -1);
         android.graphics.drawable.Drawable seen = null;
-        try {
-            if (Copy.wallpaperReadable()) {
-                seen = android.app.WallpaperManager.getInstance(this).getDrawable();
+        if (!ours && Copy.wallpaperReadable()) {
+            try (android.os.ParcelFileDescriptor file = walls.getWallpaperFile(android.app.WallpaperManager.FLAG_SYSTEM)) {
+                if (file != null) {
+                    Bitmap picture = android.graphics.BitmapFactory.decodeFileDescriptor(file.getFileDescriptor());
+                    if (picture != null) {
+                        seen = new android.graphics.drawable.BitmapDrawable(getResources(), picture);
+                    }
+                }
+            } catch (java.io.IOException | RuntimeException unseen) {
+                seen = null;
             }
-        } catch (RuntimeException unseen) {
-            seen = null;
         }
         final android.graphics.drawable.Drawable wall = seen;
-        final boolean ours = Keep.flag(this, Keep.GROUND_WORN, false);
         final Ground ground = Ground.kept(this);
         final String date = new java.text.SimpleDateFormat("EEEE", Words.locale()).format(new java.util.Date());
         final String day = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG, Words.locale())

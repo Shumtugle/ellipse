@@ -526,6 +526,8 @@ final class Keep {
     static final String TURN_AFTER = "wall_turns_after";
     static final String TURN_FROM = "wall_turns_from";
     static final String GROUND_WORN = "ground_worn";
+    /** The number the phone gave the wallpaper the factory set last, to know it again. */
+    static final String GROUND_WALL = "ground_wall";
 
     /** Whether copies keep the wallpaper's pictures. */
     static final String COPY_WALLPAPER = "copy_wallpaper";

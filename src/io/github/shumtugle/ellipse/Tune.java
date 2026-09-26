@@ -1264,8 +1264,11 @@ public final class Tune extends Activity {
                 boolean set;
                 try {
                     android.graphics.Bitmap made = g.draw(w, h);
-                    android.app.WallpaperManager.getInstance(Tune.this).setBitmap(made, null, true, where);
+                    int id = android.app.WallpaperManager.getInstance(Tune.this).setBitmap(made, null, true, where);
                     Keep.saveFlag(Tune.this, Keep.GROUND_WORN, true);
+                    if ((where & android.app.WallpaperManager.FLAG_SYSTEM) != 0) {
+                        Keep.saveNumber(Tune.this, Keep.GROUND_WALL, id);
+                    }
                     set = true;
                 } catch (Exception | OutOfMemoryError failed) {
                     set = false;

@@ -111,8 +111,9 @@ public final class Turn extends BroadcastReceiver {
         if (Keep.flag(context, Keep.GROUND_LOCK, true)) {
             where |= WallpaperManager.FLAG_LOCK;
         }
-        WallpaperManager.getInstance(context).setBitmap(made, null, true, where);
+        int id = WallpaperManager.getInstance(context).setBitmap(made, null, true, where);
         made.recycle();
+        Keep.saveNumber(context, Keep.GROUND_WALL, id);
         ground.keep(context);
         Keep.saveFlag(context, Keep.GROUND_WORN, true);
     }
