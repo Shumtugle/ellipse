@@ -991,6 +991,7 @@ public final class Tune extends Activity {
             TextView line = (TextView) deed((on ? "\u25CF  " : "\u25CB  ") + names.get(i), new Runnable() {
                 public void run() {
                     Keep.saveWord(Tune.this, Keep.ICON_PACK, key);
+                    Keep.saveWord(Tune.this, Keep.ICON_PACK_NAME, "");
                     Style.read(Tune.this);
                     fill();
                 }
@@ -998,7 +999,24 @@ public final class Tune extends Activity {
             line.setTextColor(on ? Tone.primary() : Tone.onSurface());
             rows.addView(line);
         }
-        if (packs.isEmpty()) {
+        if (pack != null && !pack.isEmpty() && !packs.containsKey(pack)) {
+            /* Chosen, but not on the phone: it waits, and can be found in the store. */
+            String named = Keep.word(this, Keep.ICON_PACK_NAME);
+            final String wanted = pack;
+            TextView waits = (TextView) deed("\u25CF  " + (named == null ? pack : named), new Runnable() {
+                public void run() {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW,
+                            android.net.Uri.parse("market://details?id=" + wanted)));
+                    } catch (RuntimeException none) {
+                        said("There is no store on this phone");
+                    }
+                }
+            });
+            waits.setTextColor(Tone.primary());
+            rows.addView(waits);
+            note("Not on the phone. The icons take this pack once it is installed; a touch looks for it in the store.");
+        } else if (packs.isEmpty()) {
             note("No pack of icons is on the phone.");
         }
         caption("WIDGET FRAMES");
@@ -2033,7 +2051,8 @@ public final class Tune extends Activity {
                     told.append(done.clock ? " The widget clock stands as this home screen's own, in its face."
                         : " This home screen's own clock is put away; the widget shelf brings it back.");
                     if (done.packMissing != null) {
-                        told.append(" Its pack of icons is not on this phone: ").append(done.packMissing).append('.');
+                        told.append(" Its pack of icons, ").append(done.packMissing)
+                            .append(", is not on this phone: it is chosen, and the icons take it once it is installed.");
                     }
                     if (done.links > 0) {
                         told.append(" Shortcuts and links: ").append(done.links).append('.');

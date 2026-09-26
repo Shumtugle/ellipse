@@ -241,6 +241,8 @@ final class Keep {
     static final String ICON_TINT = "icon_tint";
     /** The pack of icons read, by its package; none, the phone's own icons. */
     static final String ICON_PACK = "icon_pack";
+    /** The name a pack was chosen by, for one the phone does not have yet. */
+    static final String ICON_PACK_NAME = "icon_pack_name";
 
     /** A word kept under a key, or none. */
     static String word(Context context, String key) {

@@ -216,6 +216,10 @@ public final class Home extends Activity {
 
         public void onPackageAdded(String name, UserHandle user) {
             Marks.learn(Home.this, true);
+            /* The pack of icons chosen may be the one just installed. */
+            if (name.equals(Keep.word(Home.this, Keep.ICON_PACK))) {
+                Style.read(Home.this);
+            }
             if (Keep.flag(Home.this, Keep.AUTO_ADD, false)) {
                 setDown(name, Apps.serialOf(user));
             }

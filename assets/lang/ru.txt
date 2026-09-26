@@ -471,3 +471,5 @@ Sticker = Наклейка
 These widgets are to be added again, for the phone asks first: = Эти виджеты нужно добавить заново — телефон сначала спрашивает разрешения:
 Allow Ellipse to make widgets always, and a restore makes them itself. = Разрешите Ellipse создавать виджеты всегда, и восстановление сделает их само.
 Restored = Восстановлено
+There is no store on this phone = На телефоне нет магазина приложений
+Not on the phone. The icons take this pack once it is installed; a touch looks for it in the store. = Этого пакета нет на телефоне. Значки наденут его, как только он будет установлен; касание ищет его в магазине.

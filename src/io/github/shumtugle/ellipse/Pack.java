@@ -129,7 +129,10 @@ final class Pack {
         try {
             res = context.getPackageManager().getResourcesForApplication(now);
         } catch (PackageManager.NameNotFoundException gone) {
+            /* A pack chosen but not on the phone waits: it is looked for
+               again at the next reading, and taken once it is installed. */
             res = null;
+            chosen = "";
             return;
         }
         try {
@@ -196,6 +199,12 @@ final class Pack {
         int close = said.indexOf('}');
         String inside = open >= 0 && close > open ? said.substring(open + 1, close) : said;
         return ComponentName.unflattenFromString(inside);
+    }
+
+    /** Whether a pack is chosen that the phone does not have: kept, waiting to be installed. */
+    static boolean waiting(Context context) {
+        String wanted = Keep.word(context, Keep.ICON_PACK);
+        return wanted != null && !wanted.isEmpty() && !installed(context).containsKey(wanted);
     }
 
     /** Whether a pack is chosen and read. */

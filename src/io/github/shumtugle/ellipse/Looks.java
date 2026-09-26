@@ -32,7 +32,7 @@ final class Looks {
     /** What a look holds, word by word, and the words that begin what it holds. */
     private static final String[] WORDS = {"hue", "sat", "val", "solid", "ground", "look_from", "icon_shape", "zoom",
         Keep.THEME, Keep.ICON_SIZE, Keep.ICON_FILL, Keep.NAMES_SCREENS, Keep.NAMES_LIST, Keep.NAME_SIZE, Keep.FONT,
-        Keep.ICON_TINT, Keep.NAME_COLOUR, Keep.ICON_PACK, Keep.NAME_LINES_SCREENS, Keep.NAME_LINES_LIST, Keep.FOLDER_FACE, Keep.FOLDER_GROUND, Keep.RIM_KIND, Keep.RIM_WIDTH, Keep.GLAZE,
+        Keep.ICON_TINT, Keep.NAME_COLOUR, Keep.ICON_PACK, Keep.ICON_PACK_NAME, Keep.NAME_LINES_SCREENS, Keep.NAME_LINES_LIST, Keep.FOLDER_FACE, Keep.FOLDER_GROUND, Keep.RIM_KIND, Keep.RIM_WIDTH, Keep.GLAZE,
         Keep.GLASS_TONE, Keep.GLASS_CLEAR, Keep.WINDOW, Keep.TILE_ASPECT, Keep.CLOCK_FACE, Keep.CLOCK_PLATE,
         Keep.CLOCK_DIAL, Keep.CLOCK_FIELDS, Keep.CLOCK_GROUND, Keep.MENO_SECOND, Keep.MENO_LINES, Keep.RINGS_BIG,
         Keep.RINGS_LEVEL, Keep.RINGS_SECONDS, Keep.RINGS_DAY, Keep.RINGS_LIST, Keep.RINGS_PLACES, Keep.WIDGET_FRAME,
@@ -226,7 +226,7 @@ final class Looks {
             // It is put on all the same; only it cannot be taken off again.
         }
         String[] words = {"icon_shape", Keep.ICON_FILL, Keep.TILE_ASPECT, Keep.WINDOW, Keep.ICON_TINT,
-            Keep.ICON_PACK, Keep.RIM_KIND, Keep.RIM_WIDTH, Keep.GLAZE, Keep.GLASS_TONE, Keep.GLASS_CLEAR,
+            Keep.ICON_PACK, Keep.ICON_PACK_NAME, Keep.RIM_KIND, Keep.RIM_WIDTH, Keep.GLAZE, Keep.GLASS_TONE, Keep.GLASS_CLEAR,
             Keep.FOLDER_FACE, Keep.FOLDER_GROUND, Keep.FONT, Keep.NAME_COLOUR, "look_from", "ground", "solid",
             Keep.CLOCK_FACE, Keep.CLOCK_PLATE, Keep.WIDGET_FRAME, Keep.WIDGET_FRAME_WIDTH, Keep.WIDGET_GLAZE,
             Keep.LIST_OWN};

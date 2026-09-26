@@ -83,8 +83,9 @@ final class Foreign {
         Boolean names;
         Boolean dock;
         Float tile;
-        /** The pack of icons it read, by its package; none if it read none. */
+        /** The pack of icons it read, by its package and, where told, its name; none if it read none. */
         String pack;
+        String packName;
         /* The screens' points, their endless turning, no margins at all; and
            the list of every app: pages or lines, its grid, endless, names. */
         Boolean dots;
@@ -195,6 +196,7 @@ final class Foreign {
                         found.home = seen.home;
                     }
                     found.pack = seen.pack;
+                    found.packName = seen.packName;
                     found.dots = seen.dots;
                     found.endless = seen.endless;
                     found.edgeless = seen.edgeless;
@@ -295,11 +297,15 @@ final class Foreign {
         /* The other shape keeps its pack as its name, its kind, its package, and a flag, by colons. */
         Matcher theme = Pattern.compile("name=\"theme_icon_pack\">([^<]+)<").matcher(said);
         if (theme.find() && into.pack == null) {
-            for (String part : theme.group(1).split(":")) {
+            String[] parts = theme.group(1).split(":");
+            for (String part : parts) {
                 String one = part.trim();
                 if (one.contains(".") && !one.contains(" ")) {
                     into.pack = one;
                 }
+            }
+            if (into.pack != null && parts.length > 0 && !parts[0].trim().isEmpty()) {
+                into.packName = parts[0].trim();
             }
         }
         Matcher shape = Pattern.compile("name=\"homeIconAppearanceKey\">[^<]*?path:([^;<]+)").matcher(said);
@@ -855,11 +861,13 @@ final class Foreign {
         }
         /* Its pack of icons, if it read one and the pack is on this phone. */
         if (layout.pack != null && !layout.pack.isEmpty()) {
+            /* Chosen either way: a pack not on the phone waits, and is taken once installed. */
+            Keep.saveWord(context, Keep.ICON_PACK, layout.pack);
+            Keep.saveWord(context, Keep.ICON_PACK_NAME, layout.packName == null ? layout.pack : layout.packName);
             if (Pack.installed(context).containsKey(layout.pack)) {
-                Keep.saveWord(context, Keep.ICON_PACK, layout.pack);
                 report.look++;
             } else {
-                report.packMissing = layout.pack;
+                report.packMissing = layout.packName == null ? layout.pack : layout.packName;
             }
         }
         return report;

@@ -81,7 +81,7 @@ def readable(s):
         return False
     if s.endswith(('.txt', '.json', '.png', '.xml', '.db')):
         return False
-    if s.startswith((' ', '.')) or s.endswith(' '):
+    if s.startswith((' ', '.', ',')) or s.endswith(' '):
         return False
     if s in ('UTF-8', 'HORIZONTAL', 'NONE', 'NULL', 'EE', 'EE d', 'Aa', 'Meno', 'Ellipse'):
         return False

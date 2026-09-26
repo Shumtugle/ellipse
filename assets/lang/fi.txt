@@ -471,3 +471,5 @@ Sticker = Tarra
 These widgets are to be added again, for the phone asks first: = Nämä widgetit on lisättävä uudelleen, sillä puhelin kysyy ensin:
 Allow Ellipse to make widgets always, and a restore makes them itself. = Salli Ellipsen luoda widgetit aina, niin palautus tekee ne itse.
 Restored = Palautettu
+There is no store on this phone = Puhelimessa ei ole sovelluskauppaa
+Not on the phone. The icons take this pack once it is installed; a touch looks for it in the store. = Ei puhelimessa. Kuvakkeet ottavat paketin käyttöön, kun se asennetaan; kosketus etsii sen kaupasta.
