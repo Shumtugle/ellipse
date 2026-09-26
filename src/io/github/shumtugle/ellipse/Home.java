@@ -3754,7 +3754,7 @@ public final class Home extends Activity {
     private List<Long> thrown() {
         List<Long> seeds = new ArrayList<>();
         for (int i = 0; i < 24; i++) {
-            seeds.add(dice.nextLong() & 0xFFFFFFFFFFL);
+            seeds.add(Omen.fresh(dice));
         }
         return seeds;
     }

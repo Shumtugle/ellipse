@@ -91,14 +91,41 @@ final class Omen extends Drawable {
         }
     }
 
-    private final List<Part> parts;
+    private final List<Part> parts = new ArrayList<>();
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int colour = 0xFFFFFFFF;
+    /** A being's one outline, a body and what grew on it, in grid units; none for a mark of the first kinds. */
+    private Path silhouette;
+    private boolean solid;
+    /** What is cut from a solid being, or drawn thin within an outlined one: eyes, a beat, facets. */
+    private final List<Part> holes = new ArrayList<>();
 
     Omen(long seed) {
-        parts = throwOf(seed);
+        Random r = new Random(seed & FIRST);
+        int kind = pickKind(r, second(seed));
+        if (kind == BEING) {
+            being(r);
+        } else {
+            recipe(kind, r, parts);
+        }
         paint.setStrokeCap(Paint.Cap.ROUND);
         paint.setStrokeJoin(Paint.Join.ROUND);
+    }
+
+    /**
+     * Seeds of the second dice carry this bit: they may throw beings too. The
+     * seeds kept before it came throw exactly as they always did.
+     */
+    static final long SECOND = 0x4000000000000000L;
+    private static final long FIRST = ~SECOND;
+
+    private static boolean second(long seed) {
+        return (seed & SECOND) != 0;
+    }
+
+    /** A fresh seed of the dice as it throws now. */
+    static long fresh(Random dice) {
+        return (dice.nextLong() & 0xFFFFFFFFFFL) | SECOND;
     }
 
     /** The mark a kept word names; or none if the word is not a mark's. */
@@ -117,23 +144,26 @@ final class Omen extends Drawable {
 
     /** Which of the kinds a seed throws, by its first choice. */
     static int kindOf(long seed) {
-        Random r = new Random(seed);
-        return pickKind(r);
+        return pickKind(new Random(seed & FIRST), second(seed));
     }
 
     private static final int[] WEIGHTS = {3, 3, 3, 1, 1, 2, 3, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1};
+    /** The second dice: the same kinds, and beings as often as a third of all. */
+    private static final int[] WEIGHTS_SECOND = {3, 3, 3, 1, 1, 2, 3, 1, 2, 1, 2, 2, 1, 1, 1, 1, 1, 14};
+    private static final int BEING = 17;
 
-    private static int pickKind(Random r) {
+    private static int pickKind(Random r, boolean second) {
+        int[] weights = second ? WEIGHTS_SECOND : WEIGHTS;
         int total = 0;
-        for (int w : WEIGHTS) {
+        for (int w : weights) {
             total += w;
         }
         int pick = r.nextInt(total);
-        for (int i = 0; i < WEIGHTS.length; i++) {
-            if (pick < WEIGHTS[i]) {
+        for (int i = 0; i < weights.length; i++) {
+            if (pick < weights[i]) {
                 return i;
             }
-            pick -= WEIGHTS[i];
+            pick -= weights[i];
         }
         return 0;
     }
@@ -141,21 +171,21 @@ final class Omen extends Drawable {
     /** Marks like a chosen one: the same kind of thing, its numbers thrown otherwise. */
     static List<Long> like(long seed, int count) {
         int kind = kindOf(seed);
+        long mark = seed & SECOND;
         List<Long> found = new ArrayList<>();
-        long next = seed * 7919L;
+        long next = (seed & FIRST) * 7919L;
         while (found.size() < count) {
             next++;
-            if (kindOf(next) == kind) {
-                found.add(next);
+            long one = (next & FIRST) | mark;
+            if (kindOf(one) == kind) {
+                found.add(one);
             }
         }
         return found;
     }
 
-    private static List<Part> throwOf(long seed) {
-        Random r = new Random(seed);
-        List<Part> p = new ArrayList<>();
-        switch (pickKind(r)) {
+    private static void recipe(int kind, Random r, List<Part> p) {
+        switch (kind) {
             case 0: stack(r, p); break;
             case 1: attach(r, p); break;
             case 2: nest(r, p); break;
@@ -174,7 +204,6 @@ final class Omen extends Drawable {
             case 15: crossed(r, p); break;
             default: whirl(r, p); break;
         }
-        return p;
     }
 
     private static double one(Random r, double... of) {
@@ -666,6 +695,344 @@ final class Omen extends Drawable {
         p.add(Part.shape(PATH, false, line));
     }
 
+    // ------------------------------------------------------------ beings
+
+    private static final String[] BODIES = {"cloud", "circle", "heart", "drop", "gem", "peak", "box"};
+    private static final int[] BODY_WEIGHTS = {5, 3, 2, 1, 1, 1, 2};
+
+    /** What may grow on each body, at each point, with how likely; null is nothing there. */
+    private static Object[][] rules(String body, String at) {
+        switch (body + "." + at) {
+            case "cloud.top": return new Object[][] {{"cat_ears", 3}, {"round_ears", 1}, {"long_ears", 1},
+                {"horns", 1}, {null, 5}};
+            case "cloud.below": return new Object[][] {{"trunk", 4}, {"legs4", 3}, {"legs2", 2}, {"rain", 2},
+                {"bolt", 2}, {null, 2}};
+            case "cloud.side": return new Object[][] {{"tail", 3}, {"beak", 2}, {"elephant", 1}, {"speech", 2},
+                {"head", 3}, {null, 4}};
+            case "cloud.within": return new Object[][] {{"eyes", 3}, {"eye", 1}, {null, 5}};
+            case "circle.top": return new Object[][] {{"cat_ears", 2}, {"round_ears", 2}, {"feelers", 1},
+                {"horns", 1}, {null, 4}};
+            case "circle.below": return new Object[][] {{"string", 3}, {"legs2", 1}, {null, 4}};
+            case "circle.side": return new Object[][] {{"beak", 2}, {"tail", 1}, {"handle", 1}, {"speech", 1},
+                {null, 4}};
+            case "circle.within": return new Object[][] {{"eyes", 3}, {"beat", 1}, {"eye", 1}, {null, 3}};
+            case "heart.top": return new Object[][] {{"wings", 2}, {null, 5}};
+            case "heart.side": return new Object[][] {{"arrow", 2}, {null, 4}};
+            case "heart.within": return new Object[][] {{"beat", 3}, {"plus", 1}, {null, 3}};
+            case "drop.within": return new Object[][] {{"eyes", 2}, {"shine", 2}, {null, 2}};
+            case "gem.top": return new Object[][] {{"spark", 1}, {null, 3}};
+            case "gem.within": return new Object[][] {{"facets", 5}, {null, 1}};
+            case "peak.top": return new Object[][] {{"flag", 2}, {null, 4}};
+            case "peak.below": return new Object[][] {{"trunk", 3}, {null, 3}};
+            case "peak.within": return new Object[][] {{"eye", 2}, {"snow", 2}, {null, 3}};
+            case "box.top": return new Object[][] {{"steam", 3}, {"lid", 1}, {null, 3}};
+            case "box.below": return new Object[][] {{"legs4", 1}, {null, 5}};
+            case "box.side": return new Object[][] {{"handle", 4}, {"speech", 1}, {null, 3}};
+            case "box.within": return new Object[][] {{"eyes", 1}, {"beat", 1}, {null, 4}};
+            default: return new Object[][] {{null, 1}};
+        }
+    }
+
+    private static String weighted(Random r, Object[][] choices) {
+        int total = 0;
+        for (Object[] c : choices) {
+            total += (Integer) c[1];
+        }
+        int pick = r.nextInt(total);
+        for (Object[] c : choices) {
+            int w = (Integer) c[1];
+            if (pick < w) {
+                return (String) c[0];
+            }
+            pick -= w;
+        }
+        return null;
+    }
+
+    private static boolean is(String what, String... any) {
+        for (String one : any) {
+            if (one.equals(what)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * A body, and what grows on it at its points: above, below, at a side,
+     * within. What grows joins the body's outline, so a cloud with ears and
+     * a tail is one creature. The rules keep it from being a mixer: weather
+     * is weather; a tree or a balloon wears nothing else; four legs carry no
+     * ears on their back and want a head half the time; a beat keeps ears
+     * away; two things outside at most, one within.
+     */
+    private void being(Random r) {
+        int pick = r.nextInt(15);
+        String body = "cloud";
+        for (int i = 0; i < BODIES.length; i++) {
+            if (pick < BODY_WEIGHTS[i]) {
+                body = BODIES[i];
+                break;
+            }
+            pick -= BODY_WEIGHTS[i];
+        }
+        String top = weighted(r, rules(body, "top"));
+        String below = weighted(r, rules(body, "below"));
+        String side = weighted(r, rules(body, "side"));
+        String within = weighted(r, rules(body, "within"));
+        if (is(below, "rain", "bolt", "trunk", "string")) {
+            top = null;
+            side = null;
+            if (!"string".equals(below)) {
+                within = null;
+            }
+        }
+        if (is(below, "legs4", "legs2") && is(top, "cat_ears", "long_ears", "round_ears", "feelers")) {
+            top = null;
+        }
+        if ("beat".equals(within)) {
+            top = null;
+        }
+        if ("legs4".equals(below) && side == null && "cloud".equals(body) && r.nextDouble() < 0.5) {
+            side = "head";
+        }
+        if ("head".equals(side)) {
+            top = null;
+            within = null;
+        }
+        if ("speech".equals(side)) {
+            top = null;
+            below = null;
+        }
+        if (top != null && below != null && side != null) {
+            side = null;
+        }
+        solid = r.nextDouble() < 0.3;
+
+        /* Room left for what grows on it. */
+        double y0 = 3.5 + (is(top, "cat_ears", "long_ears", "horns", "feelers", "wings", "steam", "flag", "spark",
+            "round_ears") ? 4.5 : 0) + ("long_ears".equals(top) ? 2 : 0);
+        double y1 = 20.5 - (is(below, "trunk", "legs4", "legs2", "rain", "bolt", "string") ? 6.5 : 0);
+        double x0 = 3.5 + (is(side, "beak", "elephant") ? 3 : "head".equals(side) ? 5 : 0);
+        double x1 = 20.5 - (is(side, "tail", "handle", "arrow", "speech") ? 4 : 0);
+        if (is(body, "circle", "drop", "gem")) {
+            double sz = Math.min(x1 - x0, y1 - y0);
+            double cx = (x0 + x1) / 2;
+            double cy = (y0 + y1) / 2;
+            double half = "drop".equals(body) ? sz * 0.4 : sz / 2;
+            x0 = cx - half;
+            x1 = cx + half;
+            y0 = cy - sz / 2;
+            y1 = cy + sz / 2;
+        }
+        double w = x1 - x0;
+        double h = y1 - y0;
+        double cx = (x0 + x1) / 2;
+        Path shape = new Path();
+        switch (body) {
+            case "cloud": {
+                double base = y1 - h * 0.28;
+                oval(shape, x0 + w * 0.26, base - h * 0.08, h * 0.36, h * 0.36);
+                oval(shape, cx, y0 + h * 0.42, h * 0.44, h * 0.44);
+                oval(shape, x1 - w * 0.26, base - h * 0.06, h * 0.34, h * 0.34);
+                Path floor = new Path();
+                floor.addRoundRect(new RectF((float) (x0 + w * 0.08), (float) (base - h * 0.1), (float) (x1 - w * 0.08),
+                    (float) y1), (float) (h * 0.26), (float) (h * 0.26), Path.Direction.CW);
+                shape.op(floor, Path.Op.UNION);
+                break;
+            }
+            case "circle":
+                oval(shape, cx, (y0 + y1) / 2, w / 2, h / 2);
+                break;
+            case "heart": {
+                List<double[]> round = new ArrayList<>();
+                for (int k = 0; k < 64; k++) {
+                    double t = 2 * Math.PI * k / 64;
+                    double x = 16 * Math.pow(Math.sin(t), 3);
+                    double y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+                    round.add(new double[] {x0 + (x + 17) / 34 * w, y0 + (y + 17.5) / 30 * h});
+                }
+                add(shape, round);
+                break;
+            }
+            case "drop": {
+                double rad = w / 2;
+                double cy = y1 - rad;
+                oval(shape, cx, cy, rad, rad);
+                double a = Math.asin(Math.min(1, rad / Math.max(0.1, cy - y0)));
+                add(shape, pts(cx, y0, cx - rad * Math.cos(a), cy - rad * Math.sin(a), cx + rad * Math.cos(a),
+                    cy - rad * Math.sin(a)));
+                break;
+            }
+            case "gem": {
+                double t = y0 + h * 0.3;
+                add(shape, pts(x0 + 3, y0, x1 - 3, y0, x1, t, cx, y1, x0, t));
+                break;
+            }
+            case "peak":
+                add(shape, pts(cx, y0, x1, y1, x0, y1));
+                break;
+            default: {
+                Path box = new Path();
+                box.addRoundRect(new RectF((float) x0, (float) y0, (float) x1, (float) y1), 2f, 2f,
+                    Path.Direction.CW);
+                shape.op(box, Path.Op.UNION);
+                break;
+            }
+        }
+
+        /* Above. */
+        if ("cat_ears".equals(top)) {
+            for (int s = -1; s <= 1; s += 2) {
+                double bx = cx + s * w * 0.28;
+                add(shape, pts(bx - 3, y0 + 2.5, bx + 3, y0 + 2.5, bx + s * 1.2, y0 - 4));
+            }
+        } else if ("round_ears".equals(top)) {
+            for (int s = -1; s <= 1; s += 2) {
+                oval(shape, cx + s * w * 0.34, y0 + 0.6, 2.8, 2.8);
+            }
+        } else if ("long_ears".equals(top)) {
+            for (int s = -1; s <= 1; s += 2) {
+                oval(shape, cx + s * 2.6, y0 - 2.25, 1.7, 4.25);
+            }
+        } else if ("horns".equals(top)) {
+            for (int s = -1; s <= 1; s += 2) {
+                double bx = cx + s * w * 0.22;
+                parts.add(Part.shape(PATH, false, pts(bx, y0 + 1.5, bx + s * 1.5, y0 - 1.5, bx + s * 3.8, y0 - 3)));
+            }
+        } else if ("feelers".equals(top)) {
+            for (int s = -1; s <= 1; s += 2) {
+                parts.add(Part.line(cx + s * 1.5, y0 + 0.5, cx + s * 4, y0 - 3));
+                parts.add(new Part(DISC, cx + s * 4 - 1.2, y0 - 4.6, cx + s * 4 + 1.2, y0 - 2.2, true, 0));
+            }
+        } else if ("wings".equals(top)) {
+            for (int s = -1; s <= 1; s += 2) {
+                double wx = cx + s * w * 0.42;
+                parts.add(Part.shape(PATH, false, pts(wx, y0 + 3, wx + s * 3.5, y0 - 1.5, wx + s * 2, y0 + 1,
+                    wx + s * 4.2, y0 + 1.5, wx + s * 1.4, y0 + 4.5)));
+            }
+        } else if ("steam".equals(top)) {
+            for (int k = -1; k <= 1; k += 2) {
+                double x = cx + k * 2.4;
+                parts.add(Part.shape(PATH, false, pts(x, y0 - 1, x + 1, y0 - 2.3, x, y0 - 3.6, x + 1, y0 - 4.9)));
+            }
+        } else if ("lid".equals(top)) {
+            parts.add(Part.line(x0 - 0.5, y0 - 1.5, x1 + 0.5, y0 - 1.5));
+            parts.add(Part.line(cx - 1.5, y0 - 3.3, cx + 1.5, y0 - 3.3));
+        } else if ("flag".equals(top)) {
+            parts.add(Part.line(cx, y0 + 0.5, cx, y0 - 4.2));
+            add(shape, pts(cx, y0 - 4.4, cx + 3.6, y0 - 3.4, cx, y0 - 2.3));
+        } else if ("spark".equals(top)) {
+            List<double[]> star = new ArrayList<>();
+            for (int k = 0; k < 8; k++) {
+                double a = -Math.PI / 2 + Math.PI * k / 4;
+                star.add(turn(x1 + 0.5, y0 - 2, k % 2 == 0 ? 2.2 : 0.8, a));
+            }
+            parts.add(Part.shape(POLY, true, star));
+        }
+
+        /* Below. */
+        if ("trunk".equals(below)) {
+            parts.add(Part.line(cx, y1 - 0.5, cx, 21));
+            if (r.nextDouble() < 0.5) {
+                parts.add(Part.line(cx, y1 + 3, cx + 2.2, y1 + 1.2));
+            }
+        } else if ("legs2".equals(below)) {
+            for (int s = -1; s <= 1; s += 2) {
+                parts.add(Part.line(cx + s * 2.2, y1 - 0.5, cx + s * 2.6, 21));
+            }
+        } else if ("legs4".equals(below)) {
+            for (double k = 0.2; k < 0.9; k += 0.2) {
+                parts.add(Part.line(x0 + w * k, y1 - 0.5, x0 + w * k, 21));
+            }
+        } else if ("string".equals(below)) {
+            parts.add(Part.shape(PATH, false, pts(cx, y1, cx - 1, y1 + 2.2, cx + 0.8, y1 + 4.2, cx, 21)));
+        } else if ("rain".equals(below)) {
+            double[] xs = {cx - 4, cx, cx + 4};
+            for (int k = 0; k < 3; k++) {
+                parts.add(Part.line(xs[k] + 0.8, y1 + 1.6 + (k % 2) * 1.2, xs[k] - 0.8, y1 + 4.4 + (k % 2) * 1.2));
+            }
+        } else if ("bolt".equals(below)) {
+            parts.add(Part.shape(PATH, false, pts(cx + 1, y1 - 0.5, cx - 1.6, y1 + 3, cx + 1.4, y1 + 3, cx - 1.2, 21)));
+        }
+
+        /* At a side. */
+        if ("tail".equals(side)) {
+            parts.add(Part.shape(PATH, false, pts(x1 - 0.8, y1 - 2.5, x1 + 2.5, y1 - 3.5, x1 + 3.4, y1 - 6.5,
+                x1 + 2.2, y1 - 8.5)));
+        } else if ("beak".equals(side)) {
+            double by = y0 + h * 0.42;
+            add(shape, pts(x0 + 1, by - 2, x0 - 3.2, by, x0 + 1, by + 2));
+        } else if ("elephant".equals(side)) {
+            double by = y0 + h * 0.45;
+            parts.add(Part.shape(PATH, false, pts(x0 + 0.5, by, x0 - 2, by + 2, x0 - 2.5, by + 5, x0 - 1, by + 6.5)));
+        } else if ("speech".equals(side)) {
+            add(shape, pts(x0 + 3, y1 - 1, x0 + 7, y1 - 1, x0 + 1.5, y1 + 3.2));
+        } else if ("head".equals(side)) {
+            double hx = x0 - 1.2;
+            double hy = y0 + h * 0.3;
+            oval(shape, hx - 0.4, hy + 0.1, 3.0, 3.1);
+            oval(shape, hx + 1.5, hy - 2.8, 1.1, 1.4);
+            holes.add(new Part(DISC, hx - 2.1, hy - 1.1, hx - 0.3, hy + 0.7, true, 0));
+        } else if ("handle".equals(side)) {
+            double hy = (y0 + y1) / 2;
+            parts.add(Part.arc(x1 - 3.5, hy - 3.5, x1 + 3.5, hy + 3.5, 270, 180));
+        } else if ("arrow".equals(side)) {
+            parts.add(Part.line(x0 - 1.5, y1 - 0.5, x1 + 2.5, y0 + 0.5));
+            parts.add(Part.line(x1 + 2.5, y0 + 0.5, x1 - 0.4, y0 + 0.9));
+            parts.add(Part.line(x1 + 2.5, y0 + 0.5, x1 + 2.1, y0 + 3.4));
+        }
+
+        /* Within. */
+        double iy = y0 + h * 0.5;
+        if ("eyes".equals(within)) {
+            for (int s = -1; s <= 1; s += 2) {
+                double ex = cx + s * w * 0.17;
+                holes.add(new Part(DISC, ex - 1.25, iy - 1.25, ex + 1.25, iy + 1.25, true, 0));
+            }
+        } else if ("eye".equals(within)) {
+            double ey = iy + ("peak".equals(body) ? 1.2 : 0);
+            holes.add(new Part(DISC, cx - 1.7, ey - 1.7, cx + 1.7, ey + 1.7, true, 0));
+        } else if ("beat".equals(within)) {
+            double a = x0 + w * 0.18;
+            double span = w * 0.64;
+            holes.add(Part.shape(PATH, false, pts(a, iy, a + span * 0.3, iy, a + span * 0.42, iy - 3,
+                a + span * 0.56, iy + 3, a + span * 0.68, iy, a + span, iy)));
+        } else if ("plus".equals(within)) {
+            holes.add(new Part(PLUS, cx - 2.6, iy - 3.4, cx + 2.6, iy + 1.8, false, 0));
+        } else if ("shine".equals(within)) {
+            double rad = w / 2 - 2.3;
+            double cy = y1 - w / 2;
+            holes.add(Part.arc(cx - rad, cy - rad, cx + rad, cy + rad, 110, 60));
+        } else if ("facets".equals(within)) {
+            double t = y0 + h * 0.3;
+            holes.add(Part.line(x0 + 0.5, t, x1 - 0.5, t));
+            holes.add(Part.shape(PATH, false, pts(x0 + 3, y0 + 0.4, cx - 1.8, t, cx, y1 - 0.8, cx + 1.8, t,
+                x1 - 3, y0 + 0.4)));
+        } else if ("snow".equals(within)) {
+            holes.add(Part.shape(PATH, false, pts(cx - 2.6, y0 + 5.2, cx - 1, y0 + 6.4, cx + 0.6, y0 + 5.2,
+                cx + 2.4, y0 + 6.4)));
+        }
+        silhouette = shape;
+    }
+
+    private static void oval(Path into, double cx, double cy, double rx, double ry) {
+        Path one = new Path();
+        one.addOval(new RectF((float) (cx - rx), (float) (cy - ry), (float) (cx + rx), (float) (cy + ry)),
+            Path.Direction.CW);
+        into.op(one, Path.Op.UNION);
+    }
+
+    private static void add(Path into, List<double[]> at) {
+        Path one = new Path();
+        one.moveTo((float) at.get(0)[0], (float) at.get(0)[1]);
+        for (int i = 1; i < at.size(); i++) {
+            one.lineTo((float) at.get(i)[0], (float) at.get(i)[1]);
+        }
+        one.close();
+        into.op(one, Path.Op.UNION);
+    }
+
     // ------------------------------------------------------------ drawing
 
     @Override
@@ -676,6 +1043,35 @@ final class Omen extends Drawable {
         canvas.translate(b.exactCenterX() - 12f * u, b.exactCenterY() - 12f * u);
         paint.setColor(colour);
         paint.setStrokeWidth(2f * u);
+        int layer = -1;
+        if (silhouette != null) {
+            if (solid) {
+                /* Cut marks need a layer of their own to cut through. */
+                layer = canvas.saveLayer(0, 0, 24f * u, 24f * u, null);
+            }
+            Path scaled = new Path(silhouette);
+            android.graphics.Matrix grow = new android.graphics.Matrix();
+            grow.setScale(u, u);
+            scaled.transform(grow);
+            paint.setStyle(solid ? Paint.Style.FILL_AND_STROKE : Paint.Style.STROKE);
+            canvas.drawPath(scaled, paint);
+        }
+        drawParts(canvas, parts, u, paint);
+        if (!holes.isEmpty()) {
+            Paint cut = new Paint(paint);
+            cut.setStrokeWidth(1.6f * u);
+            if (solid) {
+                cut.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.CLEAR));
+            }
+            drawParts(canvas, holes, u, cut);
+        }
+        if (layer >= 0) {
+            canvas.restoreToCount(layer);
+        }
+        canvas.restore();
+    }
+
+    private static void drawParts(Canvas canvas, List<Part> parts, float u, Paint paint) {
         Path path = new Path();
         RectF box = new RectF();
         for (Part part : parts) {
@@ -737,7 +1133,6 @@ final class Omen extends Drawable {
                     break;
             }
         }
-        canvas.restore();
     }
 
     @Override
