@@ -479,3 +479,4 @@ No error is kept = Сохранённой ошибки нет
 Copy = Копировать
 Copied: paste it into a message = Скопировано: вставьте в сообщение
 Send a copy = Отправить копию
+Black, embossed = Чёрный с тиснением

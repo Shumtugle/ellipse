@@ -163,7 +163,7 @@ final class Looks {
     }
 
     /** The ready presets, by their names; the first is the home screen as it first comes. */
-    static final String[] READY = {"Material 3", "Wood", "Steel", "Meno", "Rings", "Paper"};
+    static final String[] READY = {"Material 3", "Wood", "Steel", "Meno", "Rings", "Paper", "Walnut", "Gold"};
     static final String[] READY_ABOUT = {
         "The home screen as it first comes: icons in the phone's own shape and colours, the first clock, "
             + "no rims or frames",
@@ -171,7 +171,11 @@ final class Looks {
         "Squircles with a rim of steel, the plate clock in steel, frames of steel, a cool grey-blue accent",
         "The glass card clock, round icons with a fine rim of glass, frames of glass, a dark ground",
         "The rings, and round icons of glass with its gleam, like small rings; no frames, the rings hang free",
-        "The paper tile, no rim; with the owner's own pack of masks, if it is on the phone"};
+        "The paper tile, no rim; with the owner's own pack of masks, if it is on the phone",
+        "Wide tiles rimmed in wood and glazed, each app drawn as a light symbol in a round window; the plate "
+            + "clock in wood with a black dial, frames of wood, names in sand",
+        "Tiles rimmed in gold and glazed, symbols in round windows, a gold accent; the plate clock in gold "
+            + "with a black embossed dial, frames of gold"};
 
     /** The pack of masks the paper preset wears, if the phone has it. */
     private static final String PAPER_PACK = "Stylisha.superellipsy.icon.mask";
@@ -205,6 +209,24 @@ final class Looks {
                 dress(context, has ? new Object[] {"icon_shape", Shape.PAPER, Keep.ICON_PACK, PAPER_PACK}
                     : new Object[] {"icon_shape", Shape.PAPER});
                 break;
+            case 6:
+                dress(context, new Object[] {"icon_shape", Shape.ROUNDED, Keep.ICON_FILL, 101, Keep.TILE_ASPECT, 135,
+                    Keep.WINDOW, Shape.WINDOW_ROUND, Keep.ICON_TINT, 1, Keep.RIM_KIND, Rim.WOOD, Keep.RIM_WIDTH, 14,
+                    Keep.GLAZE, true, Keep.NAME_COLOUR, 6, "face.#all", "-1,1,0,3,0,",
+                    Keep.CLOCK_FACE, Home.FACE_PLATE, Keep.CLOCK_PLATE, Rim.WOOD, Keep.CLOCK_DIAL, Rim.BLACK,
+                    Keep.CLOCK_FIELDS, Rim.GLASS, "size.plate.dial", 140, "size.plate.hour", 140, "size.plate.row", 90,
+                    Keep.WIDGET_FRAME, Rim.WOOD, Keep.WIDGET_FRAME_WIDTH, 20, Keep.WIDGET_FRAME_ROUND, 48,
+                    Keep.WIDGET_GLAZE, true});
+                break;
+            case 7:
+                dress(context, new Object[] {"icon_shape", Shape.ROUNDED, Keep.TILE_ASPECT, 120,
+                    Keep.WINDOW, Shape.WINDOW_ROUND, Keep.ICON_TINT, 1, Keep.RIM_KIND, Rim.GOLD, Keep.RIM_WIDTH, 12,
+                    Keep.GLAZE, true, Keep.NAME_COLOUR, 6, "face.#all", "-1,1,0,3,0,",
+                    "look_from", Keep.FROM_OWN, "hue", 42f, "sat", 0.5f, "val", 0.88f,
+                    Keep.CLOCK_FACE, Home.FACE_PLATE, Keep.CLOCK_PLATE, Rim.GOLD, Keep.CLOCK_DIAL, Watch.EMBOSSED,
+                    Keep.CLOCK_FIELDS, Watch.DARK, Keep.WIDGET_FRAME, Rim.GOLD, Keep.WIDGET_FRAME_WIDTH, 14,
+                    Keep.WIDGET_FRAME_ROUND, 40, Keep.WIDGET_GLAZE, true});
+                break;
             default:
                 dress(context, new Object[0]);
                 break;
@@ -228,15 +250,16 @@ final class Looks {
         String[] words = {"icon_shape", Keep.ICON_FILL, Keep.TILE_ASPECT, Keep.WINDOW, Keep.ICON_TINT,
             Keep.ICON_PACK, Keep.ICON_PACK_NAME, Keep.RIM_KIND, Keep.RIM_WIDTH, Keep.GLAZE, Keep.GLASS_TONE, Keep.GLASS_CLEAR,
             Keep.FOLDER_FACE, Keep.FOLDER_GROUND, Keep.FONT, Keep.NAME_COLOUR, "look_from", "ground", "solid",
-            Keep.CLOCK_FACE, Keep.CLOCK_PLATE, Keep.WIDGET_FRAME, Keep.WIDGET_FRAME_WIDTH, Keep.WIDGET_GLAZE,
-            Keep.LIST_OWN};
+            Keep.CLOCK_FACE, Keep.CLOCK_PLATE, Keep.CLOCK_DIAL, Keep.CLOCK_FIELDS, Keep.WIDGET_FRAME,
+            Keep.WIDGET_FRAME_WIDTH, Keep.WIDGET_FRAME_ROUND, Keep.WIDGET_GLAZE, Keep.LIST_OWN, "face.#all"};
         SharedPreferences kept = store(context);
         SharedPreferences.Editor edit = kept.edit();
         for (String key : words) {
             edit.remove(key);
         }
         for (String key : kept.getAll().keySet()) {
-            if (key.startsWith("hue.first.") || key.startsWith("size.first.")) {
+            /* The touches of every face go with the dress; an app's own icon, chosen for it alone, stays. */
+            if (key.startsWith("hue.") || key.startsWith("size.")) {
                 edit.remove(key);
             }
         }

@@ -1306,13 +1306,21 @@ public final class Tune extends Activity {
                         paintMaterial(c, w, h, value);
                     }
                 }));
-            int[] made = new int[Rim.NAMES.length + 1];
-            String[] madeNames = new String[Rim.NAMES.length + 1];
+            /* Dark, black stamped, the rims' materials, and the palette's colours. */
+            int count = 2 + Rim.NAMES.length + Watch.COLOUR_NAMES.length;
+            int[] made = new int[count];
+            String[] madeNames = new String[count];
             made[0] = Watch.DARK;
             madeNames[0] = "Dark";
+            made[1] = Watch.EMBOSSED;
+            madeNames[1] = "Black, embossed";
             for (int i = 0; i < Rim.NAMES.length; i++) {
-                made[i + 1] = i;
-                madeNames[i + 1] = Rim.NAMES[i];
+                made[i + 2] = i;
+                madeNames[i + 2] = Rim.NAMES[i];
+            }
+            for (int i = 0; i < Watch.COLOUR_NAMES.length; i++) {
+                made[2 + Rim.NAMES.length + i] = Watch.COLOUR + i;
+                madeNames[2 + Rim.NAMES.length + i] = Watch.COLOUR_NAMES[i];
             }
             caption("DIAL");
             rows.addView(swatches(Keep.CLOCK_DIAL, Keep.number(this, Keep.CLOCK_DIAL, Watch.DARK), made, madeNames,
@@ -1338,7 +1346,7 @@ public final class Tune extends Activity {
         if (value == Watch.DARK) {
             p.setColor(0xFF1A1817);
         } else {
-            Rim.material(p, value, w, h);
+            Watch.ground(p, value, w, h);
         }
         boolean light = value != Watch.DARK && Watch.light(value);
         int ink = light ? 0xFF1C1A17 : 0xFFEFE7D6;

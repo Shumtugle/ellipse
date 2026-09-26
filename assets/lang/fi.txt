@@ -479,3 +479,4 @@ No error is kept = Virhettä ei ole tallessa
 Copy = Kopioi
 Copied: paste it into a message = Kopioitu: liitä se viestiin
 Send a copy = Lähetä kopio
+Black, embossed = Musta, kohokuvioitu

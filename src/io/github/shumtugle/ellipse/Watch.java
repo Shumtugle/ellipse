@@ -288,7 +288,66 @@ final class Watch extends View implements Timepiece {
     }
 
     /** Whether a material reads light, so what is written on it must be dark. */
+    /** Black stamped with a fine grid of small pyramids, as the dial of a dress watch is. */
+    static final int EMBOSSED = -2;
+    /** A plain colour of the palette, from this value up: the accent, orange, red, lilac, blue, green, sand, white. */
+    static final int COLOUR = 100;
+    static final String[] COLOUR_NAMES = {"Accent", "Orange", "Red", "Lilac", "Blue", "Green", "Sand", "White"};
+
+    /**
+     * What a dial or a window is filled with: a material of the rims, black
+     * stamped with pyramids, or a colour lit a little from above.
+     */
+    static void ground(Paint paint, int which, float w, float h) {
+        if (which >= COLOUR) {
+            int c = Rings.colour(which - COLOUR);
+            paint.setShader(new RadialGradient(w * 0.5f, h * 0.3f, Math.max(w, h) * 0.8f,
+                mix(c, 0xFFFFFFFF, 0.14f), mix(c, 0xFF000000, 0.28f), Shader.TileMode.CLAMP));
+        } else if (which == EMBOSSED) {
+            paint.setShader(stamp(Math.max(6f, Math.min(w, h) / 16f)));
+        } else {
+            Rim.material(paint, which, w, h);
+        }
+    }
+
+    private static int mix(int a, int b, float t) {
+        int r = Math.round(((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t);
+        int g = Math.round(((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t);
+        int bl = Math.round((a & 255) * (1 - t) + (b & 255) * t);
+        return 0xFF000000 | (r << 16) | (g << 8) | bl;
+    }
+
+    /** The pyramids' tile: four facets, lit from the upper left, repeated. */
+    private static Shader stamp(float size) {
+        int s = Math.max(4, Math.round(size));
+        android.graphics.Bitmap tile = android.graphics.Bitmap.createBitmap(s, s, android.graphics.Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(tile);
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        float m = s / 2f;
+        float in = s * 0.08f;
+        int[] facets = {0xFF2C2926, 0xFF1C1A18, 0xFF0B0A09, 0xFF211F1C};
+        float[][] tri = {{in, in, s - in, in}, {s - in, in, s - in, s - in}, {s - in, s - in, in, s - in},
+            {in, s - in, in, in}};
+        c.drawColor(0xFF0E0D0C);
+        for (int i = 0; i < 4; i++) {
+            android.graphics.Path f = new android.graphics.Path();
+            f.moveTo(tri[i][0], tri[i][1]);
+            f.lineTo(tri[i][2], tri[i][3]);
+            f.lineTo(m, m);
+            f.close();
+            p.setColor(facets[i]);
+            c.drawPath(f, p);
+        }
+        return new android.graphics.BitmapShader(tile, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
+    }
+
     static boolean light(int which) {
+        if (which >= COLOUR) {
+            return android.graphics.Color.luminance(Rings.colour(which - COLOUR)) > 0.45f;
+        }
+        if (which == EMBOSSED) {
+            return false;
+        }
         switch (which) {
             case Rim.METAL:
             case Rim.GOLD:
@@ -324,7 +383,7 @@ final class Watch extends View implements Timepiece {
             canvas.save();
             canvas.translate(box.left, box.top);
             Paint made = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-            Rim.material(made, fields, box.width(), box.height());
+            ground(made, fields, box.width(), box.height());
             canvas.drawRoundRect(new RectF(0, 0, box.width(), box.height()), r, r, made);
             canvas.restore();
         }
@@ -352,7 +411,7 @@ final class Watch extends View implements Timepiece {
             canvas.save();
             canvas.translate(cx - inner, cy - inner);
             Paint made = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-            Rim.material(made, dial, inner * 2f, inner * 2f);
+            ground(made, dial, inner * 2f, inner * 2f);
             canvas.drawCircle(inner, inner, inner, made);
             canvas.restore();
             paint.setShader(new RadialGradient(cx, cy, inner, 0x00000000, 0x55000000, Shader.TileMode.CLAMP));

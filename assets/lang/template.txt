@@ -411,6 +411,7 @@ PLACES = PLACES
 Put every ring back in the chain = Put every ring back in the chain
 LINES = LINES
 PLATE = PLATE
+Black, embossed = Black, embossed
 WINDOWS = WINDOWS
 Darkening = Darkening
 Line strength = Line strength
