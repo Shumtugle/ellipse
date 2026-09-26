@@ -674,16 +674,38 @@ public final class Tune extends Activity {
                 }
             });
         } else if (line.kind == CHOICE) {
-            final TextView value = new TextView(this);
-            value.setText(valueOf(line));
-            value.setTextColor(Tone.primary());
-            value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
-            made.addView(value);
-            made.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    ask(line, made, value);
-                }
-            });
+            /* The value stands under the title, never beside it: the row keeps its whole width for words.
+               Two or three short things to choose from are all seen at once, one pill across. */
+            if (segmented(line)) {
+                words.addView(segments(line), 1);
+            } else {
+                LinearLayout pill = new LinearLayout(this);
+                pill.setGravity(Gravity.CENTER_VERTICAL);
+                pill.setPadding(dp(14), dp(7), dp(8), dp(7));
+                pill.setBackground(Tone.box(Tone.primaryContainer(), dp(18), 0f));
+                final TextView value = new TextView(this);
+                value.setText(valueOf(line));
+                value.setTextColor(Tone.onPrimaryContainer());
+                value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+                value.setSingleLine(true);
+                value.setEllipsize(android.text.TextUtils.TruncateAt.END);
+                pill.addView(value, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                Glyph down = new Glyph(this, Glyph.CHEVRON, dp(18));
+                down.tint(Tone.onPrimaryContainer());
+                LinearLayout.LayoutParams downAt = new LinearLayout.LayoutParams(dp(18), dp(18));
+                downAt.setMargins(dp(4), 0, 0, 0);
+                pill.addView(down, downAt);
+                LinearLayout.LayoutParams pillAt = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                pillAt.setMargins(0, dp(8), 0, dp(4));
+                words.addView(pill, 1, pillAt);
+                made.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        ask(line, made, value);
+                    }
+                });
+            }
         } else if (line.kind == ROOM) {
             made.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
@@ -700,6 +722,64 @@ public final class Tune extends Activity {
             });
         }
         return made;
+    }
+
+    /** Whether a choice is shown as one pill of all its values: two or three, each short, none leading on. */
+    private boolean segmented(Line line) {
+        if (line.names == null || line.names.length < 2 || line.names.length > 3) {
+            return false;
+        }
+        for (int i = 0; i < line.names.length; i++) {
+            if (line.values[i] == Keep.DO_APP || Words.t(line.names[i]).length() > 26) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** A choice's values side by side in one outlined pill; the one chosen filled and ticked. */
+    private View segments(final Line line) {
+        final LinearLayout band = new LinearLayout(this);
+        band.setPadding(dp(3), dp(3), dp(3), dp(3));
+        band.setBackground(Tone.box(0x00000000, dp(24), dp(1f)));
+        final int now = current(line);
+        for (int i = 0; i < line.names.length; i++) {
+            final int value = line.values[i];
+            boolean on = value == now;
+            TextView one = new TextView(this);
+            one.setText(on ? "\u2713  " + Words.t(line.names[i]) : Words.t(line.names[i]));
+            one.setGravity(Gravity.CENTER);
+            one.setMaxLines(2);
+            one.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
+            one.setTextColor(on ? Tone.onPrimaryContainer() : Tone.faint());
+            if (on) {
+                one.setTypeface(Style.bold());
+                one.setBackground(Tone.box(Tone.primaryContainer(), dp(21), 0f));
+            } else {
+                one.setBackground(Tone.touch(null, dp(21)));
+            }
+            one.setPadding(dp(8), dp(9), dp(8), dp(9));
+            one.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    if (value == current(line)) {
+                        return;
+                    }
+                    asking = line;
+                    askingValue = null;
+                    pick(value);
+                    ViewGroup holder = (ViewGroup) band.getParent();
+                    int at = holder.indexOfChild(band);
+                    holder.removeViewAt(at);
+                    holder.addView(segments(line), at);
+                }
+            });
+            band.addView(one, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        }
+        LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT);
+        at.setMargins(0, dp(10), 0, dp(6));
+        band.setLayoutParams(at);
+        return band;
     }
 
     private int current(Line line) {
@@ -742,7 +822,9 @@ public final class Tune extends Activity {
         if (asking == null) {
             return;
         }
-        menu.choose(0, value);
+        if (menu.shown()) {
+            menu.choose(0, value);
+        }
         Keep.saveNumber(this, asking.key, value);
         /* The lock needs the phone's leave, as an accessibility service, when it is to lock that way. */
         if (value == Keep.DO_LOCK && Keep.number(this, Keep.LOCK_WAY, Keep.LOCK_SERVICE) == Keep.LOCK_SERVICE
@@ -757,7 +839,9 @@ public final class Tune extends Activity {
             show(1);
             return;
         }
-        askingValue.setText(valueOf(asking));
+        if (askingValue != null) {
+            askingValue.setText(valueOf(asking));
+        }
         if (Keep.THEME.equals(asking.key)) {
             /* A new ground for everything: the settings are made again in it. */
             Tone.read(this);
