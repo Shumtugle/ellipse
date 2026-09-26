@@ -252,6 +252,7 @@ public final class Home extends Activity {
         /* The screen's sleep and waking, for a ground to turn while it sleeps. */
         android.content.IntentFilter night = new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF);
         night.addAction(Intent.ACTION_SCREEN_ON);
+        night.addAction(Intent.ACTION_WALLPAPER_CHANGED);
         registerReceiver(sleep, night);
         Lapse.watch(this);
         super.onCreate(saved);
@@ -1591,8 +1592,8 @@ public final class Home extends Activity {
         /* The wallpaper under the screen: the factory's own, drawn again, when the phone's wallpaper is the
            one it set last; else the phone's own picture, read from its file where that is allowed. */
         android.app.WallpaperManager walls = android.app.WallpaperManager.getInstance(this);
-        int now = walls.getWallpaperId(android.app.WallpaperManager.FLAG_SYSTEM);
-        final boolean ours = now > 0 && now == Keep.number(this, Keep.GROUND_WALL, -1);
+        /* The factory's word that the wallpaper is its own: taken back whenever another sets one. */
+        final boolean ours = Keep.flag(this, Keep.GROUND_WORN, false);
         android.graphics.drawable.Drawable seen = null;
         if (!ours && Copy.wallpaperReadable()) {
             try (android.os.ParcelFileDescriptor file = walls.getWallpaperFile(android.app.WallpaperManager.FLAG_SYSTEM)) {
@@ -1669,7 +1670,12 @@ public final class Home extends Activity {
 
     private final android.content.BroadcastReceiver sleep = new android.content.BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
-            if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+            if (Intent.ACTION_WALLPAPER_CHANGED.equals(intent.getAction())) {
+                /* Another wallpaper, not set by the factory a moment ago: the factory's word is taken back. */
+                if (System.currentTimeMillis() - Keep.clock(context, Keep.GROUND_SET_AT) > 15000L) {
+                    Keep.saveFlag(context, Keep.GROUND_WORN, false);
+                }
+            } else if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
                 Turn.slept(context);
             } else {
                 Turn.woke(context);

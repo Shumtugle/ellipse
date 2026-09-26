@@ -229,8 +229,22 @@ final class Copy {
         Words.forget();
         try {
             JSONObject pictures = new JSONObject(words).optJSONObject("wallpapers");
-            if (pictures != null) {
+            if (pictures != null && pictures.length() > 0) {
                 rewall(context, pictures);
+            } else if (Keep.flag(context, Keep.GROUND_WORN, false)) {
+                /* No picture came, but the wallpaper was the factory's: its recipe came with the settings,
+                   so it is drawn again and set, away from the hand. */
+                final Context app = context.getApplicationContext();
+                final Ground ground = Ground.kept(app);
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            Turn.set(app, ground, true);
+                        } catch (Exception | OutOfMemoryError failed) {
+                            // The wallpaper stays as it is.
+                        }
+                    }
+                }).start();
             }
         } catch (JSONException broken) {
             // The wallpaper stays as it is.

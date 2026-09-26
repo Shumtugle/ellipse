@@ -528,6 +528,16 @@ final class Keep {
     static final String GROUND_WORN = "ground_worn";
     /** The number the phone gave the wallpaper the factory set last, to know it again. */
     static final String GROUND_WALL = "ground_wall";
+    /** When the factory last set the wallpaper, to tell its own change from another's. */
+    static final String GROUND_SET_AT = "ground_set_at";
+
+    static long clock(Context context, String key) {
+        return store(context).getLong(key, 0L);
+    }
+
+    static void saveClock(Context context, String key, long when) {
+        store(context).edit().putLong(key, when).apply();
+    }
 
     /** Whether copies keep the wallpaper's pictures. */
     static final String COPY_WALLPAPER = "copy_wallpaper";
