@@ -429,34 +429,45 @@ final class Copy {
      * The first start of a new version: the set-out the old one left is
      * copied aside before anything reads it, and the oldest such copies go.
      */
+    /**
+     * Once a day, at the first start of the day, the set-out and every
+     * setting copied aside, without the wallpaper: one copy only, today's,
+     * the day before's given up for it. The copies once made at every new
+     * version are given up too. Copies to keep are the owner's, made by hand.
+     */
     static void onUpdate(Context context) {
         SharedPreferences kept = context.getSharedPreferences(STORE, Context.MODE_PRIVATE);
         int now = versionCode(context);
-        int seen = kept.getInt(SEEN, -1);
-        if (seen == now) {
+        if (kept.getInt(SEEN, -1) != now) {
+            kept.edit().putInt(SEEN, now).commit();
+        }
+        if (kept.getAll().isEmpty()) {
             return;
         }
-        if (!kept.getAll().isEmpty()) {
-            try {
-                String stamp = new SimpleDateFormat("yyyyMMdd-HHmm", Locale.ROOT).format(new Date());
-                /* Made now, but what it holds is the old version's: it is named for that one. */
-                JSONObject copy = new JSONObject(write(context));
-                copy.put("version", seen < 0 ? "the version before" : seen / 10000 + "." + (seen / 100) % 100 + "."
-                    + seen % 100);
-                save(context, new File(dir(context), UPDATE + Math.max(0, seen) + "-" + stamp + ".json"),
-                    copy.toString(1));
-            } catch (JSONException | IOException unsaved) {
-                // Nothing to step back to this time.
-            }
-            List<File> copies = updates(context);
-            for (int i = KEPT; i < copies.size(); i++) {
-                copies.get(i).delete();
+        String today = new SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(new Date());
+        File made = new File(dir(context), DAILY + today + ".json");
+        if (made.isFile()) {
+            return;
+        }
+        try {
+            save(context, made, write(context));
+        } catch (JSONException | IOException unsaved) {
+            return;
+        }
+        File[] found = dir(context).listFiles();
+        if (found != null) {
+            for (File one : found) {
+                String name = one.getName();
+                if ((name.startsWith(DAILY) || name.startsWith(UPDATE)) && !one.equals(made)) {
+                    one.delete();
+                }
             }
         }
-        kept.edit().putInt(SEEN, now).commit();
     }
 
-    /** The copies made on updates, newest first. */
+    private static final String DAILY = "daily-";
+
+    /** The copy made today, or the last day the home screen was started. */
     static List<File> updates(Context context) {
         File[] found = dir(context).listFiles();
         List<File> copies = new ArrayList<>();
@@ -464,7 +475,7 @@ final class Copy {
             return copies;
         }
         for (File one : found) {
-            if (one.getName().startsWith(UPDATE)) {
+            if (one.getName().startsWith(DAILY)) {
                 copies.add(one);
             }
         }

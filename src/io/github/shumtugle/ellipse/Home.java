@@ -276,6 +276,8 @@ public final class Home extends Activity {
 
     @Override
     protected void onResume() {
+        /* The day's copy, if the home screen has stayed open since before the day began. */
+        Copy.onUpdate(this);
         super.onResume();
         if (Keep.zoom(this) != sizedAt) {
             recreate();

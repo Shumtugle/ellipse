@@ -2021,12 +2021,11 @@ public final class Tune extends Activity {
         }
         java.util.List<java.io.File> kept = Copy.updates(this);
         if (!kept.isEmpty()) {
-            caption("KEPT WHEN A NEW VERSION STARTED");
-            note("The set-out as the version before left it. Tap twice to bring one back.");
+            caption("KEPT AUTOMATICALLY, ONCE A DAY");
+            note("The set-out as it was at the first start of the day. Tap twice to bring it back.");
             for (final java.io.File one : kept) {
                 String[] what = Copy.about(one);
-                final String title = "As " + what[0] + " left it" + (what[1].isEmpty() ? ""
-                    : ", " + what[1].replace('T', ' '));
+                final String title = Words.t("As it was") + (what[1].isEmpty() ? "" : ", " + what[1].replace('T', ' '));
                 final TextView line = (TextView) deed(title, null);
                 line.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {

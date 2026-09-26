@@ -540,3 +540,6 @@ Keep the wallpaper in the copy = Säilytä taustakuva kopiossa
 The pictures of the home screen and the lock screen go into every copy, and come back with it = Kotinäytön ja lukitusnäytön kuvat kulkevat jokaisessa kopiossa ja palaavat sen mukana
 The phone lets an app read the wallpaper only if it may read all files. Ellipse reads nothing but the wallpaper. = Puhelin antaa sovelluksen lukea taustakuvan vain, jos se saa lukea kaikki tiedostot. Ellipse ei lue muuta kuin taustakuvan.
 Allow reading the wallpaper = Salli taustakuvan lukeminen
+KEPT AUTOMATICALLY, ONCE A DAY = TALLESSA AUTOMAATTISESTI, KERRAN PÄIVÄSSÄ
+The set-out as it was at the first start of the day. Tap twice to bring it back. = Asettelu sellaisena kuin se oli päivän ensimmäisellä käynnistyksellä. Napauta kahdesti palauttaaksesi.
+As it was = Kuten oli
