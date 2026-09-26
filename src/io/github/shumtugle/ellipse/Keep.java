@@ -568,7 +568,8 @@ final class Keep {
 
     /** The outline every icon is cut to; the phone's own at first. */
     static int shape(Context context) {
-        return store(context).getInt("icon_shape", Shape.SYSTEM);
+        int shape = store(context).getInt("icon_shape", Shape.SYSTEM);
+        return shape == Shape.RETIRED ? Shape.CIRCLE : shape;
     }
 
     static void saveShape(Context context, int shape) {

@@ -43,8 +43,8 @@ final class Shape {
      * owner's own old masks, its corners turned by a seventh of its height.
      */
     static final int PAPER = 8;
-    /** A round icon in a dark ring, standing on a slate plinth that hides its lower half. */
-    static final int MEDALLION = 9;
+    /** Once a medallion on a plinth, given up: its number stays unused, and an icon kept with it is round. */
+    static final int RETIRED = 9;
     /** A low, wide plate of polished metal with a bevel, the picture across it lit as a barrel is. */
     static final int CHROME = 10;
     /** A white sticker round a softly uneven outline, its shadow warm and set off down and right. */
@@ -52,7 +52,7 @@ final class Shape {
     static final int COUNT = 12;
     static final String[] NAMES = {"The phone's own", "Circle", "Squircle", "Rounded square",
         "Drop, lower right", "Drop, lower left", "Drop, upper left", "Drop, upper right", "Paper tile",
-        "Medallion", "Chrome", "Sticker"};
+        "", "Chrome", "Sticker"};
 
     /** How much wider than tall the chrome plate stands, and how wide against the square it is given. */
     private static final float CHROME_WIDE = 2.15f;
@@ -115,13 +115,6 @@ final class Shape {
                 float top = (h - tall) / 2f;
                 path.addRoundRect(new RectF(0, top, w, top + tall), tall * 0.14f, tall * 0.14f,
                     Path.Direction.CW);
-                break;
-            case MEDALLION:
-                path.addCircle(w / 2f, h * 0.42f, least * 0.34f, Path.Direction.CW);
-                Path plinth = new Path();
-                plinth.addRoundRect(new RectF(w * 0.04f, h * 0.5f, w * 0.96f, h * 0.86f), least * 0.05f,
-                    least * 0.05f, Path.Direction.CW);
-                path.op(plinth, Path.Op.UNION);
                 break;
             case CHROME:
                 float low = w / CHROME_WIDE;
@@ -641,14 +634,12 @@ final class Shape {
                 paper(canvas, side);
                 return;
             }
-            if (shape == MEDALLION || shape == CHROME || shape == STICKER) {
+            if (shape == CHROME || shape == STICKER) {
                 if (drawn == null || drawn.getHeight() != cast(side)[1]) {
                     int[] size = cast(side);
                     drawn = Bitmap.createBitmap(size[0], size[1], Bitmap.Config.ARGB_8888);
                     Canvas into = new Canvas(drawn);
-                    if (shape == MEDALLION) {
-                        medallion(into, size[0], size[1]);
-                    } else if (shape == CHROME) {
+                    if (shape == CHROME) {
                         chrome(into, size[0], size[1]);
                     } else {
                         sticker(into, size[0], size[1]);
@@ -822,39 +813,6 @@ final class Shape {
                 flat(into, hole);
             }
             into.restore();
-        }
-
-        /**
-         * The medallion: a slate plinth across the lower half, a soft
-         * shadow on it, and the round picture standing in a dark ring over it.
-         */
-        private void medallion(Canvas into, int w, int h) {
-            Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-            float least = Math.min(w, h);
-            RectF plinth = new RectF(w * 0.04f, h * 0.5f, w * 0.96f, h * 0.86f);
-            float corner = least * 0.05f;
-            p.setShader(new android.graphics.LinearGradient(0f, plinth.top, 0f, plinth.bottom, 0xFF4A5058, 0xFF2E3238,
-                android.graphics.Shader.TileMode.CLAMP));
-            into.drawRoundRect(plinth, corner, corner, p);
-            p.setShader(null);
-            p.setColor(0x1AFFFFFF);
-            into.drawRect(plinth.left + corner, plinth.top, plinth.right - corner, plinth.top + Math.max(1f, least * 0.012f), p);
-            p.setColor(0x59000000);
-            into.drawOval(new RectF(w * 0.24f, h * 0.73f, w * 0.76f, h * 0.81f), p);
-            float cx = w / 2f;
-            float cy = h * 0.42f;
-            float r = least * 0.3f;
-            Path round = new Path();
-            round.addCircle(cx, cy, r, Path.Direction.CW);
-            picture(into, round, new RectF(cx - r, cy - r, cx + r, cy + r));
-            float ring = least * 0.045f;
-            p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(ring);
-            p.setColor(0xFF2A2F35);
-            into.drawCircle(cx, cy, r + ring / 2f, p);
-            p.setStrokeWidth(Math.max(1f, least * 0.008f));
-            p.setColor(0x1FFFFFFF);
-            into.drawCircle(cx, cy, r + ring, p);
         }
 
         /**

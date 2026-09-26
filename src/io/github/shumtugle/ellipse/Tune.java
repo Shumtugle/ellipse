@@ -996,6 +996,9 @@ public final class Tune extends Activity {
         tiles.setOrientation(LinearLayout.HORIZONTAL);
         tiles.setPadding(dp(18), 0, dp(18), 0);
         for (int i = 0; i < Shape.COUNT; i++) {
+            if (i == Shape.RETIRED) {
+                continue;
+            }
             tiles.addView(tile(i));
         }
         across.addView(tiles);
