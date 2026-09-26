@@ -826,6 +826,60 @@ final class Keep {
         saveFolderItems(context, id, items);
     }
 
+    // ---------------------------------------------------------------- marks
+
+    private static final String OMENS = "omens_mine";
+    private static final String FOLDER_LOOK = "folderlook.";
+
+    /** The marks the owner has put on icons, the latest first, as their seeds. */
+    static List<Long> omens(Context context) {
+        List<Long> out = new ArrayList<>();
+        for (String one : store(context).getString(OMENS, "").split(",")) {
+            try {
+                out.add(Long.parseLong(one.trim()));
+            } catch (NumberFormatException empty) {
+                // Nothing there.
+            }
+        }
+        return out;
+    }
+
+    /** A mark kept among the owner's own, at their head; the oldest let go past forty-eight. */
+    static void keepOmen(Context context, long seed) {
+        List<Long> all = omens(context);
+        all.remove(seed);
+        all.add(0, seed);
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < Math.min(48, all.size()); i++) {
+            out.append(i > 0 ? "," : "").append(all.get(i));
+        }
+        store(context).edit().putString(OMENS, out.toString()).apply();
+    }
+
+    static void forgetOmen(Context context, long seed) {
+        List<Long> all = omens(context);
+        all.remove(seed);
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < all.size(); i++) {
+            out.append(i > 0 ? "," : "").append(all.get(i));
+        }
+        store(context).edit().putString(OMENS, out.toString()).apply();
+    }
+
+    /** One folder's own layout of small icons, by the word it is kept by; less than nought: as every folder. */
+    static int folderLook(Context context, String token) {
+        return store(context).getInt(FOLDER_LOOK + token, -1);
+    }
+
+    static void saveFolderLook(Context context, String token, int look) {
+        if (look < 0) {
+            store(context).edit().remove(FOLDER_LOOK + token).apply();
+        } else {
+            store(context).edit().putInt(FOLDER_LOOK + token, look).apply();
+        }
+        touch(context);
+    }
+
     // ---------------------------------------------------------------- runs
 
     /**

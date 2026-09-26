@@ -33,8 +33,16 @@ final class Stack extends Drawable {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final List<Apps.Door> doors;
 
+    /** This folder's own layout, or less than nought for the one every folder has. */
+    private final int own;
+
     Stack(List<Apps.Door> doors) {
+        this(doors, -1);
+    }
+
+    Stack(List<Apps.Door> doors, int own) {
         this.doors = doors;
+        this.own = own;
     }
 
     @Override
@@ -62,7 +70,7 @@ final class Stack extends Drawable {
         }
         /* Without a container the icons may take more of the place. */
         float room = ground ? 1f : 1.18f;
-        switch (layout) {
+        switch (own >= 0 ? own : layout) {
             case NINE:
                 for (int i = 0; i < Math.min(9, doors.size()); i++) {
                     one(canvas, i, cx + (i % 3 - 1) * size * 0.25f * room, cy + (i / 3 - 1) * size * 0.25f * room,

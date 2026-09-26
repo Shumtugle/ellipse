@@ -3378,6 +3378,7 @@ public final class Home extends Activity {
         /* Runs: an app's other ways in, chosen from the app. */
         groups.add(ways);
         choosingFace = false;
+        chooser.hold(null);
         chooser.hint(SEARCH_SHORTCUTS);
         chooser.show(new String[] {null, "Apps", "Runs"}, groups,
             Keep.number(this, Keep.MAKERS_VIEW, Keep.LINES) == Keep.PAGES);
@@ -3433,6 +3434,7 @@ public final class Home extends Activity {
         List<List<Chooser.Item>> groups = new ArrayList<>();
         groups.add(runs);
         choosingFace = false;
+        chooser.hold(null);
         chooser.hint(SEARCH_SHORTCUTS);
         chooser.show(new String[] {door.label.toString()}, groups, false);
     }
@@ -3536,7 +3538,8 @@ public final class Home extends Activity {
             return info == null ? null : info.loadIcon(getPackageManager());
         }
         if (isFolder(token)) {
-            return new Stack(faceDoors(token, folderDoors(token, new Apps(this), new java.util.HashSet<String>())));
+            return new Stack(faceDoors(token, folderDoors(token, new Apps(this), new java.util.HashSet<String>())),
+                Keep.folderLook(this, base(token)));
         }
         return null;
     }
@@ -3547,8 +3550,8 @@ public final class Home extends Activity {
      * not a blank. A folder given a picture or a symbol of its own wears it.
      */
     private android.graphics.drawable.Drawable folderFace(String token, List<Apps.Door> doors) {
-        Stack face = new Stack(faceDoors(token, doors));
         String kept = base(token);
+        Stack face = new Stack(faceDoors(token, doors), Keep.folderLook(this, kept));
         int[] own = Style.faceOf(kept);
         if (own[4] == 1 || Style.symbolOf(kept).length() > 0) {
             return Style.dress(this, kept, face, null);
@@ -3600,17 +3603,17 @@ public final class Home extends Activity {
             List<Chooser.Item> doors = new ArrayList<>();
             android.graphics.drawable.Drawable plain = getDrawable(R.drawable.sym_apps).mutate();
             plain.setTint(Tone.primary());
-            doors.add(new Chooser.Item(plain, PLAIN_BUTTON, 8000));
-            doors.add(new Chooser.Item(Shape.face(allRaw(), -1, Style.OWN), AS_AN_ICON, 8001));
+            doors.add(new Chooser.Item(plain, Words.t(PLAIN_BUTTON), 8000));
+            doors.add(new Chooser.Item(Shape.face(allRaw(), -1, Style.OWN), Words.t(AS_AN_ICON), 8001));
             groups.add(doors);
             captions.add("Door");
         }
         /* A folder's face is its apps in small: only a picture or a symbol is put in its place. */
         boolean folder = isFolder(token);
         List<Chooser.Item> colours = new ArrayList<>();
-        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, -1), AS_OTHERS, 1999));
-        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.OWN), THEIR_OWN, 2000));
-        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.ALL), IN_ACCENT, 2001));
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, -1), Words.t(AS_OTHERS), 1999));
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.OWN), Words.t(THEIR_OWN), 2000));
+        colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.ALL), Words.t(IN_ACCENT), 2001));
         if (!folder) {
             groups.add(colours);
             captions.add("Colour");
@@ -3618,7 +3621,7 @@ public final class Home extends Activity {
         List<Chooser.Item> inkings = new ArrayList<>();
         for (int m = 0; m < Shape.METHODS; m++) {
             inkings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.ALL, Marks.NONE, m),
-                Shape.METHOD_NAMES[m], 4000 + m));
+                Words.t(Shape.METHOD_NAMES[m]), 4000 + m));
         }
         if (!folder) {
             groups.add(inkings);
@@ -3627,24 +3630,49 @@ public final class Home extends Activity {
         int drawing = door != null ? Marks.of(door.name.getPackageName()) : Marks.NONE;
         if (drawing != Marks.NONE) {
             List<Chooser.Item> drawings = new ArrayList<>();
-            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1]), APPS_OWN, 3000));
-            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1], drawing), HOME_OWN, 3001));
+            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1]), Words.t(APPS_OWN), 3000));
+            drawings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1], drawing), Words.t(HOME_OWN), 3001));
             groups.add(drawings);
             captions.add("Drawing");
         }
+        if (folder) {
+            /* A folder's small icons laid out its own way, or as every folder's are. */
+            List<Chooser.Item> looks = new ArrayList<>();
+            List<Apps.Door> inside = faceDoors(token, folderDoors(token, new Apps(this),
+                new java.util.HashSet<String>()));
+            looks.add(new Chooser.Item(new Stack(inside), Words.t(AS_FOLDERS), 8099));
+            for (int l = 0; l < Stack.NAMES.length; l++) {
+                looks.add(new Chooser.Item(new Stack(inside, l), Words.t(Stack.NAMES[l]), 8100 + l));
+            }
+            groups.add(looks);
+            captions.add("Folder");
+        }
         /* A picture of the owner's own, from the phone's pictures. */
         List<Chooser.Item> pictures = new ArrayList<>();
-        pictures.add(new Chooser.Item(getDrawable(R.drawable.sym_photo_library), FROM_PICTURE, 5000));
+        pictures.add(new Chooser.Item(getDrawable(R.drawable.sym_photo_library), Words.t(FROM_PICTURE), 5000));
+        /* The dice of marks: a thing no symbol shows, found among thrown pictograms. */
+        pictures.add(new Chooser.Item(getDrawable(R.drawable.sym_casino), Words.t(FROM_DICE), 5002));
         if (mine[4] == 1) {
-            pictures.add(new Chooser.Item(Style.dress(this, token, rawIcon(token, door), null), DROP_PICTURE, 5001));
+            pictures.add(new Chooser.Item(Style.dress(this, token, rawIcon(token, door), null), Words.t(DROP_PICTURE), 5001));
         }
         groups.add(pictures);
         captions.add("Picture");
+        /* The marks put on icons before, to be taken again without throwing. */
+        List<Long> kept = Keep.omens(this);
+        if (!kept.isEmpty()) {
+            List<Chooser.Item> marks = new ArrayList<>();
+            for (int i = 0; i < kept.size(); i++) {
+                marks.add(new Chooser.Item(Shape.faceMark(rawIcon(token, door), -1, new Omen(kept.get(i))), "",
+                    9500 + i));
+            }
+            groups.add(marks);
+            captions.add("My marks");
+        }
         /* Symbols to put in the picture's place, found by their names. */
         List<Chooser.Item> symbols = new ArrayList<>();
         symbolNames = Folio.asset(this, "symbols.txt").trim().split("\\s+");
         if (Style.symbolOf(token).length() > 0) {
-            symbols.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1]), NO_SYMBOL, 6999));
+            symbols.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, mine[1]), Words.t(NO_SYMBOL), 6999));
         }
         for (int i = 0; i < symbolNames.length; i++) {
             int id = getResources().getIdentifier("sym_" + symbolNames[i], "drawable", getPackageName());
@@ -3657,11 +3685,82 @@ public final class Home extends Activity {
         captions.add("Symbols");
         choosingFace = true;
         faceToken = token;
+        faceDoor = door;
+        chooser.hold(omenHold);
         chooser.hint(SEARCH_SYMBOLS);
         chooser.show(captions.toArray(new String[0]), groups, true);
     }
 
     private String[] symbolNames = new String[0];
+    private Apps.Door faceDoor;
+    private static final String FROM_DICE = "From the dice";
+    private static final String AS_FOLDERS = "As every folder";
+    /** The marks shown on the dice's page now, by their seeds. */
+    private final List<Long> omenPage = new ArrayList<>();
+
+    /** Holding a mark: more marks like it. */
+    private final Chooser.Hold omenHold = new Chooser.Hold() {
+        public void held(int key) {
+            long seed;
+            if (key >= 9500) {
+                List<Long> kept = Keep.omens(Home.this);
+                if (key - 9500 >= kept.size()) {
+                    return;
+                }
+                seed = kept.get(key - 9500);
+            } else if (key >= 9000 && key - 9000 < omenPage.size()) {
+                seed = omenPage.get(key - 9000);
+            } else {
+                return;
+            }
+            chooser.close(false);
+            showOmens(Omen.like(seed, 24), MORE_LIKE);
+        }
+    };
+    private static final String MORE_LIKE = "More like it";
+    private static final String THROWN = "Thrown";
+    private static final java.util.Random dice = new java.util.Random();
+
+    /** A fresh page of marks from the dice. */
+    private List<Long> thrown() {
+        List<Long> seeds = new ArrayList<>();
+        for (int i = 0; i < 24; i++) {
+            seeds.add(dice.nextLong() & 0xFFFFFFFFFFL);
+        }
+        return seeds;
+    }
+
+    /**
+     * The dice's page: marks, each on this icon's own plate, as it would stand;
+     * a touch puts one on, holding one throws its kin, and the dice below
+     * throws a new page.
+     */
+    private void showOmens(List<Long> seeds, String caption) {
+        if (faceToken == null) {
+            return;
+        }
+        omenPage.clear();
+        omenPage.addAll(seeds);
+        android.graphics.drawable.Drawable raw = rawIcon(faceToken, faceDoor);
+        if (raw == null) {
+            raw = new android.graphics.drawable.ColorDrawable(Tone.primaryContainer());
+        }
+        List<Chooser.Item> marks = new ArrayList<>();
+        for (int i = 0; i < seeds.size(); i++) {
+            marks.add(new Chooser.Item(Shape.faceMark(raw, -1, new Omen(seeds.get(i))), "", 9000 + i));
+        }
+        List<Chooser.Item> again = new ArrayList<>();
+        again.add(new Chooser.Item(getDrawable(R.drawable.sym_casino), Words.t(THROW_AGAIN), 8998));
+        List<List<Chooser.Item>> groups = new ArrayList<>();
+        groups.add(marks);
+        groups.add(again);
+        choosingFace = true;
+        chooser.hold(omenHold);
+        chooser.hint(SEARCH_SYMBOLS);
+        chooser.show(new String[] {caption, null}, groups, true);
+    }
+
+    private static final String THROW_AGAIN = "Throw again";
     private static final String FROM_PICTURE = "From a picture";
     private static final String SEARCH_SYMBOLS = "Search symbols";
     private static final String SEARCH_SHORTCUTS = "Search shortcuts";
@@ -3720,6 +3819,27 @@ public final class Home extends Activity {
                 refuse(screens);
             }
             return;
+        } else if (key == 5002 || key == 8998) {
+            showOmens(thrown(), THROWN);
+            return;
+        } else if (key >= 8099 && key < 8110) {
+            Keep.saveFolderLook(this, faceToken, key == 8099 ? -1 : key - 8100);
+            Style.read(this);
+            stamp = Keep.stamp(this);
+            fill();
+            return;
+        } else if (key >= 9000 && key < 9500 && key - 9000 < omenPage.size()) {
+            long seed = omenPage.get(key - 9000);
+            symbol = Omen.WORD + seed;
+            image = 0;
+            Keep.keepOmen(this, seed);
+        } else if (key >= 9500) {
+            List<Long> kept = Keep.omens(this);
+            if (key - 9500 < kept.size()) {
+                symbol = Omen.WORD + kept.get(key - 9500);
+                image = 0;
+                Keep.keepOmen(this, kept.get(key - 9500));
+            }
         } else if (key == 5001) {
             image = 0;
         } else if (key == 6999) {

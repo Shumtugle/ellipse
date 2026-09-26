@@ -63,6 +63,18 @@ final class Chooser extends FrameLayout {
     private static final int COLUMNS = 4;
 
     private final Hand hand;
+
+    /** What holding a thing does, where holding means something; none elsewhere. */
+    interface Hold {
+        void held(int key);
+    }
+
+    private Hold hold;
+
+    /** Holding a thing does this until the chooser is shown again with nothing held. */
+    void hold(Hold what) {
+        hold = what;
+    }
     private final float iconSize;
     private final float density;
     private final float scaled;
@@ -273,6 +285,14 @@ final class Chooser extends FrameLayout {
                         hand.chosen(item.key);
                     }
                 });
+                if (hold != null) {
+                    cell.setOnLongClickListener(new OnLongClickListener() {
+                        public boolean onLongClick(View v) {
+                            hold.held(item.key);
+                            return true;
+                        }
+                    });
+                }
                 grid.put(cell, i % COLUMNS, i / COLUMNS);
             }
             float tall = iconSize + dp(60);

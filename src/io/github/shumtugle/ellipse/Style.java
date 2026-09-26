@@ -108,6 +108,10 @@ final class Style {
             }
         }
         String symbol = symbolOf(token);
+        Omen thrown = Omen.of(symbol);
+        if (thrown != null) {
+            return Shape.faceMark(raw, -1, thrown);
+        }
         if (symbol.length() > 0) {
             int id = context.getResources().getIdentifier("sym_" + symbol, "drawable", context.getPackageName());
             if (id != 0) {
