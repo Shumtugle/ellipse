@@ -925,98 +925,93 @@ public final class Tune extends Activity {
     }
 
     /**
-     * The ground at the head of the room, from edge to edge of the screen;
-     * and, in the first of the two rooms, the arrows back and forth through
-     * the throws and the round button of the dice, standing over its foot.
+     * The ground at the head of the room as a card, as wide as the settings
+     * allow, with the owner's own icons standing on it as they will on the
+     * screens; and, in the first of the two rooms, round buttons back and
+     * forth through the throws, and the dice, larger, in the accent, half
+     * over the card's foot.
      */
     private void groundWindow(boolean dice) {
         if (ground == null) {
             ground = Ground.kept(this);
         }
         window.removeAllViews();
-        window.setPadding(0, 0, 0, dp(8));
+        window.setPadding(dp(12), dp(4), dp(12), dp(4));
         FrameLayout stage = new FrameLayout(this);
+        int tall = dp(dice ? 300 : 250);
+        FrameLayout card = new FrameLayout(this);
+        card.setClipToOutline(true);
+        card.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            public void getOutline(View v, android.graphics.Outline o) {
+                o.setRoundRect(0, 0, v.getWidth(), v.getHeight(), dp(30));
+            }
+        });
         groundView = new android.widget.ImageView(this);
         groundView.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
-        stage.addView(groundView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(dice ? 290 : 240)));
+        card.addView(groundView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
+        /* The icons as they will stand on this ground. */
+        sample = new Sample(this);
+        sample.setBackground(null);
+        card.addView(sample, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT, android.view.Gravity.CENTER));
+        stage.addView(card, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, tall));
+        int under = 0;
         if (dice) {
-            stage.addView(arrow(true), arrowAt(dp(20)));
-            stage.addView(arrow(false), arrowAt(dp(124)));
-            TextView roll = new TextView(this);
-            roll.setText(Words.t("Random"));
-            roll.setGravity(android.view.Gravity.CENTER);
-            roll.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
-            roll.setTextColor(android.graphics.Color.luminance(Tone.primary()) > 0.4f ? 0xFF1C1A17 : 0xFFF5F1E8);
-            android.graphics.drawable.GradientDrawable round = new android.graphics.drawable.GradientDrawable();
-            round.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-            round.setColor(Tone.primary());
-            roll.setBackground(Tone.touch(round, dp(52)));
-            roll.setElevation(dp(6));
-            roll.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-                    throwDice();
-                }
-            });
-            FrameLayout.LayoutParams at = new FrameLayout.LayoutParams(dp(104), dp(104),
+            under = dp(62);
+            LinearLayout steps = new LinearLayout(this);
+            steps.addView(round(false), new LinearLayout.LayoutParams(dp(52), dp(52)));
+            View gap = new View(this);
+            steps.addView(gap, new LinearLayout.LayoutParams(dp(12), 1));
+            steps.addView(round(true), new LinearLayout.LayoutParams(dp(52), dp(52)));
+            FrameLayout.LayoutParams stepsAt = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM | android.view.Gravity.START);
+            stepsAt.leftMargin = dp(16);
+            stepsAt.bottomMargin = 0;
+            stage.addView(steps, stepsAt);
+            View roll = die();
+            FrameLayout.LayoutParams rollAt = new FrameLayout.LayoutParams(dp(76), dp(76),
                 android.view.Gravity.BOTTOM | android.view.Gravity.END);
-            at.rightMargin = dp(20);
-            stage.addView(roll, at);
+            rollAt.rightMargin = dp(20);
+            stage.addView(roll, rollAt);
         }
-        window.addView(stage, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(dice ? 340 : 240)));
+        window.addView(stage, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, tall + under));
         drawGround();
     }
 
-    private FrameLayout.LayoutParams arrowAt(int left) {
-        FrameLayout.LayoutParams at = new FrameLayout.LayoutParams(dp(92), dp(64),
-            android.view.Gravity.BOTTOM | android.view.Gravity.START);
-        at.leftMargin = left;
-        at.bottomMargin = dp(10);
-        return at;
-    }
-
-    /** A large outlined arrow, back or forth through the throws of the dice. */
-    private View arrow(final boolean back) {
+    /** A round tonal button with a fine chevron, back or forth through the throws of the dice. */
+    private View round(final boolean forth) {
         View made = new View(this) {
             private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-            private final android.graphics.Path shape = new android.graphics.Path();
+            private final android.graphics.Path chevron = new android.graphics.Path();
 
             @Override
             protected void onDraw(android.graphics.Canvas c) {
                 float w = getWidth();
                 float h = getHeight();
-                shape.reset();
-                float tip = w * 0.06f;
-                float neck = w * 0.48f;
-                float stem = h * 0.22f;
-                shape.moveTo(tip, h / 2f);
-                shape.lineTo(neck, h * 0.06f);
-                shape.lineTo(neck, h / 2f - stem);
-                shape.lineTo(w * 0.94f, h / 2f - stem);
-                shape.lineTo(w * 0.94f, h / 2f + stem);
-                shape.lineTo(neck, h / 2f + stem);
-                shape.lineTo(neck, h * 0.94f);
-                shape.close();
-                c.save();
-                if (!back) {
-                    c.scale(-1f, 1f, w / 2f, h / 2f);
-                }
                 paint.setStyle(android.graphics.Paint.Style.FILL);
-                paint.setColor(0x66000000);
-                c.drawPath(shape, paint);
+                paint.setColor(Tone.containerHigh());
+                c.drawCircle(w / 2f, h / 2f, Math.min(w, h) / 2f, paint);
                 paint.setStyle(android.graphics.Paint.Style.STROKE);
+                paint.setStrokeWidth(dp(2));
+                paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
                 paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
-                paint.setStrokeWidth(dp(3));
-                paint.setColor(0xFFF5F1E8);
-                c.drawPath(shape, paint);
-                c.restore();
+                paint.setColor(Tone.onSurface());
+                float s = Math.min(w, h) * 0.14f;
+                float dir = forth ? 1f : -1f;
+                chevron.reset();
+                chevron.moveTo(w / 2f - dir * s * 0.6f, h / 2f - s * 1.2f);
+                chevron.lineTo(w / 2f + dir * s * 0.6f, h / 2f);
+                chevron.lineTo(w / 2f - dir * s * 0.6f, h / 2f + s * 1.2f);
+                c.drawPath(chevron, paint);
             }
         };
-        made.setContentDescription(Words.t(back ? "Back" : "Forward"));
+        made.setElevation(dp(2));
+        made.setContentDescription(Words.t(forth ? "Forward" : "Back"));
         made.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-                if (back) {
+                if (!forth) {
                     if (throwAt > 0) {
                         throwAt--;
                         ground = Ground.of(thrown.get(throwAt));
@@ -1029,6 +1024,49 @@ public final class Tune extends Activity {
                 } else {
                     throwDice();
                 }
+            }
+        });
+        return made;
+    }
+
+    /** The dice: a round in the accent with a die drawn in its ink, five pips, turned a little. */
+    private View die() {
+        View made = new View(this) {
+            private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+            @Override
+            protected void onDraw(android.graphics.Canvas c) {
+                float w = getWidth();
+                float h = getHeight();
+                paint.setStyle(android.graphics.Paint.Style.FILL);
+                paint.setColor(Tone.primary());
+                c.drawCircle(w / 2f, h / 2f, Math.min(w, h) / 2f, paint);
+                int ink = android.graphics.Color.luminance(Tone.primary()) > 0.4f ? 0xFF1C1A17 : 0xFFF5F1E8;
+                float s = Math.min(w, h) * 0.2f;
+                c.save();
+                c.rotate(-12f, w / 2f, h / 2f);
+                paint.setStyle(android.graphics.Paint.Style.STROKE);
+                paint.setStrokeWidth(dp(2));
+                paint.setColor(ink);
+                c.drawRoundRect(w / 2f - s, h / 2f - s, w / 2f + s, h / 2f + s, s * 0.35f, s * 0.35f, paint);
+                paint.setStyle(android.graphics.Paint.Style.FILL);
+                float p = s * 0.16f;
+                float o = s * 0.52f;
+                c.drawCircle(w / 2f, h / 2f, p, paint);
+                c.drawCircle(w / 2f - o, h / 2f - o, p, paint);
+                c.drawCircle(w / 2f + o, h / 2f - o, p, paint);
+                c.drawCircle(w / 2f - o, h / 2f + o, p, paint);
+                c.drawCircle(w / 2f + o, h / 2f + o, p, paint);
+                c.restore();
+            }
+        };
+        made.setElevation(dp(6));
+        made.setContentDescription(Words.t("Random"));
+        made.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                v.animate().rotationBy(90f).setDuration(Pace.PRESS).start();
+                throwDice();
             }
         });
         return made;

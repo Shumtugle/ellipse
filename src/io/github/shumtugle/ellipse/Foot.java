@@ -115,18 +115,19 @@ final class Foot extends LinearLayout {
             protected void onDraw(android.graphics.Canvas c) {
                 float w = getWidth();
                 float h = getHeight();
+                /* The same round in the accent as the menu's button, a fine tick in its ink. */
                 paint.setStyle(android.graphics.Paint.Style.FILL);
-                paint.setColor(0xFF3DC96A);
+                paint.setColor(Tone.primary());
                 c.drawCircle(w / 2f, h / 2f, Math.min(w, h) / 2f, paint);
                 paint.setStyle(android.graphics.Paint.Style.STROKE);
                 paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
                 paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
-                paint.setStrokeWidth(Math.min(w, h) * 0.1f);
-                paint.setColor(0xFFFFFFFF);
+                paint.setStrokeWidth(Math.min(w, h) * 0.055f);
+                paint.setColor(android.graphics.Color.luminance(Tone.primary()) > 0.4f ? 0xFF1C1A17 : 0xFFF5F1E8);
                 tick.reset();
-                tick.moveTo(w * 0.29f, h * 0.52f);
-                tick.lineTo(w * 0.44f, h * 0.67f);
-                tick.lineTo(w * 0.72f, h * 0.36f);
+                tick.moveTo(w * 0.34f, h * 0.51f);
+                tick.lineTo(w * 0.45f, h * 0.62f);
+                tick.lineTo(w * 0.67f, h * 0.39f);
                 c.drawPath(tick, paint);
             }
         };
