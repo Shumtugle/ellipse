@@ -3551,12 +3551,42 @@ public final class Home extends Activity {
      */
     private android.graphics.drawable.Drawable folderFace(String token, List<Apps.Door> doors) {
         String kept = base(token);
-        Stack face = new Stack(faceDoors(token, doors), Keep.folderLook(this, kept));
+        Stack face = new Stack(faceDoors(token, doors), Keep.folderLook(this, kept), widgetPictures(token));
         int[] own = Style.faceOf(kept);
         if (own[4] == 1 || Style.symbolOf(kept).length() > 0) {
             return Style.dress(this, kept, face, null);
         }
         return face;
+    }
+
+    /** The pictures of a folder's widgets whose apps have no front door to show instead. */
+    private List<android.graphics.drawable.Drawable> widgetPictures(String token) {
+        List<android.graphics.drawable.Drawable> out = new ArrayList<>();
+        Apps found = null;
+        int dpi = getResources().getDisplayMetrics().densityDpi;
+        for (String item : Keep.folderItems(this, folderId(token))) {
+            if (!item.startsWith(WIDGET)) {
+                continue;
+            }
+            android.appwidget.AppWidgetProviderInfo info = widgetOf(item);
+            if (info == null || info.provider == null) {
+                continue;
+            }
+            if (found == null) {
+                found = new Apps(this);
+            }
+            if (found.ofPackage(info.provider.getPackageName()) == null) {
+                try {
+                    android.graphics.drawable.Drawable own = info.loadIcon(this, dpi);
+                    if (own != null) {
+                        out.add(Shape.face(own));
+                    }
+                } catch (RuntimeException unseen) {
+                    // Left out.
+                }
+            }
+        }
+        return out;
     }
 
     private List<Apps.Door> faceDoors(String token, List<Apps.Door> doors) {
@@ -3637,12 +3667,11 @@ public final class Home extends Activity {
         }
         if (folder) {
             /* A folder's small icons laid out its own way, or as every folder's are. */
+            /* Drawn as the settings draw them, in dots: a folder with little in it shows every layout too. */
             List<Chooser.Item> looks = new ArrayList<>();
-            List<Apps.Door> inside = faceDoors(token, folderDoors(token, new Apps(this),
-                new java.util.HashSet<String>()));
-            looks.add(new Chooser.Item(new Stack(inside), Words.t(AS_FOLDERS), 8099));
+            looks.add(new Chooser.Item(Stack.sketch(Stack.layout), Words.t(AS_FOLDERS), 8099));
             for (int l = 0; l < Stack.NAMES.length; l++) {
-                looks.add(new Chooser.Item(new Stack(inside, l), Words.t(Stack.NAMES[l]), 8100 + l));
+                looks.add(new Chooser.Item(Stack.sketch(l), Words.t(Stack.NAMES[l]), 8100 + l));
             }
             groups.add(looks);
             captions.add("Folder");

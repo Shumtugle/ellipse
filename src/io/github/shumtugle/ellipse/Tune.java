@@ -3397,53 +3397,7 @@ public final class Tune extends Activity {
 
     /** How a folder lays out what it holds, drawn as small round icons in the accent. */
     private void paintFolder(android.graphics.Canvas c, float w, float h, int value) {
-        android.graphics.Paint ground = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        ground.setColor(Tone.containerHigh());
-        c.drawCircle(w / 2f, h / 2f, Math.min(w, h) / 2f, ground);
-        android.graphics.Paint dot = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        float s = Math.min(w, h);
-        float cx = w / 2f;
-        float cy = h / 2f;
-        switch (value) {
-            case Stack.NINE:
-                for (int i = 0; i < 9; i++) {
-                    dot.setColor(i == 0 ? Tone.primary() : Tone.faint());
-                    c.drawCircle(cx + (i % 3 - 1) * s * 0.25f, cy + (i / 3 - 1) * s * 0.25f, s * 0.09f, dot);
-                }
-                break;
-            case Stack.RING:
-                for (int i = 0; i < 5; i++) {
-                    double a = -Math.PI / 2 + 2 * Math.PI * i / 5;
-                    dot.setColor(i == 0 ? Tone.primary() : Tone.faint());
-                    c.drawCircle(cx + (float) Math.cos(a) * s * 0.27f, cy + (float) Math.sin(a) * s * 0.27f,
-                        s * 0.1f, dot);
-                }
-                break;
-            case Stack.PILE:
-                for (int i = 2; i >= 0; i--) {
-                    float at = (1 - i) * s * 0.12f;
-                    dot.setColor(i == 0 ? Tone.primary() : Tone.faint());
-                    c.drawCircle(cx + at, cy + at, s * (0.23f - 0.02f * i), dot);
-                }
-                break;
-            case Stack.FAN:
-            case Stack.TOWER:
-                boolean fan = value == Stack.FAN;
-                float[] off = {-0.22f, 0.22f, 0f};
-                for (int k = 0; k < 3; k++) {
-                    dot.setColor(k == 2 ? Tone.primary() : Tone.faint());
-                    float r = s * (k == 2 ? 0.23f : 0.18f);
-                    c.drawCircle(cx + (fan ? off[k] * s : 0f), cy + (fan ? 0f : off[k] * s), r, dot);
-                }
-                break;
-            default:
-                for (int i = 0; i < 4; i++) {
-                    dot.setColor(i == 0 ? Tone.primary() : Tone.faint());
-                    c.drawCircle(cx + (i % 2 == 0 ? -1 : 1) * s * 0.17f, cy + (i < 2 ? -1 : 1) * s * 0.17f,
-                        s * 0.14f, dot);
-                }
-                break;
-        }
+        Stack.sketch(c, w, h, value);
     }
 
     private View tile(final int shape) {
