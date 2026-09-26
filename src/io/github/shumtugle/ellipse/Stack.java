@@ -80,6 +80,14 @@ final class Stack extends Drawable {
                 canvas.restore();
             }
         }
+        if (count() == 0) {
+            /* Nothing in it yet: its layout in faint dots, so an empty folder still shows its way. */
+            int layer = canvas.saveLayerAlpha(b.left, b.top, b.right, b.bottom, 110);
+            canvas.translate(b.left, b.top);
+            dots(canvas, b.width(), b.height(), own >= 0 ? own : layout);
+            canvas.restoreToCount(layer);
+            return;
+        }
         /* Without a container the icons may take more of the place. */
         float room = ground ? 1f : 1.18f;
         switch (own >= 0 ? own : layout) {
@@ -153,6 +161,11 @@ final class Stack extends Drawable {
         Paint ground = new Paint(Paint.ANTI_ALIAS_FLAG);
         ground.setColor(Tone.containerHigh());
         c.drawCircle(w / 2f, h / 2f, Math.min(w, h) / 2f, ground);
+        dots(c, w, h, layout);
+    }
+
+    /** The dots of a layout alone, without their ground. */
+    private static void dots(Canvas c, float w, float h, int layout) {
         Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
         float s = Math.min(w, h);
         float cx = w / 2f;
