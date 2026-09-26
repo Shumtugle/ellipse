@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="18200"
-    android:versionName="1.82.0">
+    android:versionCode="18300"
+    android:versionName="1.83.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -107,6 +107,19 @@
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:theme="@style/Ground">
+        <!-- The power to lock the phone, and no other, for a gesture to use. -->
+        <receiver
+            android:name=".Warden"
+            android:exported="true"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/warden" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Files handed to another app to be sent: a copy, read-only, by name. -->
         <provider
             android:name=".Handed"

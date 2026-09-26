@@ -633,6 +633,16 @@ final class Drawer extends FrameLayout {
             }).start();
     }
 
+    /** The search bar made ready to write in, the keyboard up. */
+    void seek() {
+        field.requestFocus();
+        android.view.inputmethod.InputMethodManager keys = (android.view.inputmethod.InputMethodManager)
+            getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (keys != null) {
+            keys.showSoftInput(field, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+
     /** Rises from the foot of the screen, always from the top of the alphabet. */
     void rise() {
         if (shown) {

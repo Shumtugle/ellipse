@@ -114,6 +114,17 @@ final class Keep {
     static final int DO_QUICK = 4;
     static final int DO_HOME = 5;
     static final int DO_LOCK = 6;
+    static final int DO_SEARCH = 7;
+    static final int DO_SETTINGS = 8;
+    /** An app of the owner's choosing, kept under the gesture's own word after "app.". */
+    static final int DO_APP = 9;
+    static final String ON_PINCH = "on_pinch";
+    static final String ON_TWO_UP = "on_two_up";
+    static final String ON_TWO_DOWN = "on_two_down";
+    /** How the phone is locked: through an accessibility service, or as a keeper of the phone. */
+    static final String LOCK_WAY = "lock_way";
+    static final int LOCK_SERVICE = 0;
+    static final int LOCK_KEEPER = 1;
 
     static boolean flag(Context context, String key, boolean fallback) {
         return store(context).getBoolean(key, fallback);

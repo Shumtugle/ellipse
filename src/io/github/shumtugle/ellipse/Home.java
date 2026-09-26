@@ -193,6 +193,10 @@ public final class Home extends Activity {
     private static final int PULL_CLOSE = 2;
     private static final int PULL_FRESH = 3;
     private static final int PULL_BAR = 4;
+    /** A pull that, let go far enough or fast enough, does what the gesture is given. */
+    private static final int PULL_DEED = 5;
+    private String pullKey;
+    private int pullDeed;
     /** Whether the phone's own shade was already asked for during this pull. */
     private boolean barAsked;
     /** How long a thing put on the phone or changed counts as fresh. */
@@ -389,11 +393,49 @@ public final class Home extends Activity {
         }
         /* Home on the home screen, nothing standing over it: what the
            settings ask for, by default back to the screen Home belongs to. */
-        int deed = Keep.number(this, Keep.ON_HOME, Keep.DO_HOME);
-        if (deed == Keep.DO_HOME) {
-            screens.show(Keep.home(this), true);
-        } else if (deed == Keep.DO_LIST) {
-            drawer.rise();
+        perform(Keep.ON_HOME, Keep.DO_HOME);
+    }
+
+    /** What a gesture is given, done: its word in the settings, and what it does if none was chosen. */
+    private void perform(String gesture, int otherwise) {
+        int deed = Keep.number(this, gesture, otherwise);
+        switch (deed) {
+            case Keep.DO_FRESH:
+                showFresh();
+                break;
+            case Keep.DO_LIST:
+                drawer.rise();
+                break;
+            case Keep.DO_SEARCH:
+                drawer.rise();
+                drawer.seek();
+                break;
+            case Keep.DO_NOTICES:
+                shade(false);
+                break;
+            case Keep.DO_QUICK:
+                shade(true);
+                break;
+            case Keep.DO_HOME:
+                screens.show(Keep.home(this), true);
+                break;
+            case Keep.DO_LOCK:
+                lock();
+                break;
+            case Keep.DO_SETTINGS:
+                startActivity(new Intent(this, Tune.class));
+                break;
+            case Keep.DO_APP:
+                Apps.Door door = new Apps(this).door(Keep.word(this, "app." + gesture) == null ? ""
+                    : Keep.word(this, "app." + gesture));
+                if (door != null) {
+                    launch(screens, door, new int[] {screens.getWidth() / 2, screens.getHeight() / 2, 1, 1});
+                } else {
+                    refuse(screens);
+                }
+                break;
+            default:
+                break;
         }
     }
 
@@ -436,12 +478,7 @@ public final class Home extends Activity {
             return;
         }
         if (lift == null) {
-            int deed = Keep.number(this, Keep.ON_BACK, Keep.DO_FRESH);
-            if (deed == Keep.DO_FRESH) {
-                showFresh();
-            } else if (deed == Keep.DO_LIST) {
-                drawer.rise();
-            }
+            perform(Keep.ON_BACK, Keep.DO_FRESH);
         }
     }
 
@@ -611,6 +648,20 @@ public final class Home extends Activity {
         root = new Floor(this);
         root.carrier(carrier);
         root.hand(pulling);
+        root.fingers(new Floor.Fingers() {
+            public boolean free() {
+                return lift == null && !menu.shown() && !drawer.shown() && !drawer.menuShown() && !tray.shown()
+                    && !shelf.shown() && !chooser.shown() && !fresh.shown() && (reach == null || reach.ended());
+            }
+
+            public void pinched() {
+                perform(Keep.ON_PINCH, Keep.DO_NOTHING);
+            }
+
+            public void swept(boolean up) {
+                perform(up ? Keep.ON_TWO_UP : Keep.ON_TWO_DOWN, Keep.DO_NOTHING);
+            }
+        });
         frame = new Frame(this, dp(24));
         root.addView(frame, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -1177,7 +1228,32 @@ public final class Home extends Activity {
 
     /** A double tap on the empty home screen: the phone is locked, if the settings ask for it. */
     private void doubleTap() {
-        if (Keep.number(this, Keep.ON_DOUBLE, Keep.DO_LOCK) != Keep.DO_LOCK) {
+        perform(Keep.ON_DOUBLE, Keep.DO_LOCK);
+    }
+
+    private static final String KEEPER_TEXT = "To lock the phone, Ellipse is to be allowed to lock it, and nothing "
+        + "more, as a keeper of the phone. The first unlock after may ask for the code rather than a finger.";
+
+    /**
+     * The phone locked, the way the settings choose: as a keeper of the
+     * phone, asked for the power once; or through the accessibility service.
+     */
+    private void lock() {
+        if (Keep.number(this, Keep.LOCK_WAY, Keep.LOCK_SERVICE) == Keep.LOCK_KEEPER) {
+            android.app.admin.DevicePolicyManager keeper = (android.app.admin.DevicePolicyManager)
+                getSystemService(Context.DEVICE_POLICY_SERVICE);
+            android.content.ComponentName me = new android.content.ComponentName(this, Warden.class);
+            if (keeper != null && keeper.isAdminActive(me)) {
+                keeper.lockNow();
+                return;
+            }
+            try {
+                startActivity(new Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                    .putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, me)
+                    .putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION, Words.t(KEEPER_TEXT)));
+            } catch (RuntimeException none) {
+                refuse(screens);
+            }
             return;
         }
         if (Latch.lock()) {
@@ -3984,15 +4060,24 @@ public final class Home extends Activity {
                     pull = PULL_CLOSE;
                 }
             } else if (up) {
-                if (Keep.number(Home.this, Keep.ON_UP, Keep.DO_LIST) == Keep.DO_LIST) {
+                int deed = Keep.number(Home.this, Keep.ON_UP, Keep.DO_LIST);
+                if (deed == Keep.DO_LIST) {
                     pull = PULL_OPEN;
                     drawer.begin();
+                } else if (deed != Keep.DO_NOTHING) {
+                    pull = PULL_DEED;
+                    pullKey = Keep.ON_UP;
+                    pullDeed = Keep.DO_LIST;
                 }
             } else {
                 int deed = Keep.number(Home.this, Keep.ON_DOWN, Keep.DO_NOTICES);
                 if (deed == Keep.DO_NOTICES || deed == Keep.DO_QUICK) {
                     pull = PULL_BAR;
                     barAsked = false;
+                } else if (deed != Keep.DO_NOTHING) {
+                    pull = PULL_DEED;
+                    pullKey = Keep.ON_DOWN;
+                    pullDeed = Keep.DO_NOTICES;
                 }
             }
             return pull != 0;
@@ -4026,6 +4111,12 @@ public final class Home extends Activity {
                 boolean away = speed < -throwing
                     || -by > Math.max(1f, fresh.sheetHeight()) * 0.25f;
                 fresh.let(away);
+            } else if (pull == PULL_DEED) {
+                boolean up = Keep.ON_UP.equals(pullKey);
+                boolean far = up ? (by < -dp(64) || speed < -throwing) : (by > dp(64) || speed > throwing);
+                if (far) {
+                    perform(pullKey, pullDeed);
+                }
             }
             pull = 0;
         }

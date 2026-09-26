@@ -30,6 +30,81 @@ final class Floor extends FrameLayout {
         void drop(float x, float y, boolean kept);
     }
 
+    /** Two fingers on bare screens: a pinch together, or both swept up or down. */
+    interface Fingers {
+        /** Whether two fingers are wanted now. */
+        boolean free();
+
+        void pinched();
+
+        void swept(boolean up);
+    }
+
+    private Fingers fingers;
+    private boolean twoWatching;
+    private boolean twoTaken;
+    private float twoGap;
+    private float twoY;
+
+    void fingers(Fingers fingers) {
+        this.fingers = fingers;
+    }
+
+    private static float gap(MotionEvent e) {
+        return (float) Math.hypot(e.getX(0) - e.getX(1), e.getY(0) - e.getY(1));
+    }
+
+    /**
+     * Two fingers watched: when the second comes down, how far apart they
+     * are and where they stand; once they come a third closer, or both go a
+     * long way up or down, the touch is theirs and what was under them is
+     * told it is over.
+     */
+    private boolean two(MotionEvent event) {
+        int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_DOWN) {
+            twoWatching = false;
+            twoTaken = false;
+            return false;
+        }
+        if (action == MotionEvent.ACTION_POINTER_DOWN && event.getPointerCount() == 2 && fingers != null
+            && !pulling && fingers.free()) {
+            twoWatching = true;
+            twoGap = Math.max(1f, gap(event));
+            twoY = (event.getY(0) + event.getY(1)) / 2f;
+            return false;
+        }
+        if (twoTaken) {
+            if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                twoTaken = false;
+                twoWatching = false;
+            }
+            return true;
+        }
+        if (twoWatching && action == MotionEvent.ACTION_MOVE && event.getPointerCount() >= 2) {
+            float now = gap(event);
+            float y = (event.getY(0) + event.getY(1)) / 2f;
+            float far = 90f * getResources().getDisplayMetrics().density;
+            if (now < twoGap * 0.66f) {
+                twoTaken = true;
+                cancelBelow(event);
+                fingers.pinched();
+                return true;
+            }
+            if (Math.abs(y - twoY) > far && Math.abs(now - twoGap) < twoGap * 0.3f) {
+                twoTaken = true;
+                cancelBelow(event);
+                fingers.swept(y < twoY);
+                return true;
+            }
+        }
+        if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL
+            || (action == MotionEvent.ACTION_POINTER_UP && event.getPointerCount() <= 2)) {
+            twoWatching = false;
+        }
+        return false;
+    }
+
     interface Hand {
         /** Whether a pull upward, or downward, is wanted now. */
         boolean pullable(boolean up);
@@ -145,6 +220,9 @@ final class Floor extends FrameLayout {
         taken = false;
         if (hand == null || still) {
             return super.dispatchTouchEvent(event);
+        }
+        if (two(event)) {
+            return true;
         }
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:

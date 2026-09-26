@@ -120,6 +120,14 @@ public final class Tune extends Activity {
     private static final int ABOUT = 6;
     private static final int HELP = 7;
     private static final int LAPSE = 8;
+    /** What any gesture may be given, by its name. */
+    private static final String[] DEED_NAMES = {"Nothing", "All apps", "Search apps", "Notifications",
+        "Quick settings", "Recent and new", "Home screen", "Lock the phone", "Ellipse settings", "Open an app\u2026"};
+    private static final int[] DEEDS = {Keep.DO_NOTHING, Keep.DO_LIST, Keep.DO_SEARCH, Keep.DO_NOTICES, Keep.DO_QUICK,
+        Keep.DO_FRESH, Keep.DO_HOME, Keep.DO_LOCK, Keep.DO_SETTINGS, Keep.DO_APP};
+    /** The room where an app is chosen for a gesture, and the gesture it is chosen for. */
+    private static final int APPS = 14;
+    private static String choosingFor;
 
     private static final String SEARCH = "Search settings";
     private static final String RESTART_LINE = "Restart launcher";
@@ -224,19 +232,21 @@ public final class Tune extends Activity {
                 };
             case HANDS:
                 return new Line[] {
-                    choice("Swipe up", "On bare screens", Keep.ON_UP, Keep.DO_LIST,
-                        new String[] {"All apps", "Nothing"}, new int[] {Keep.DO_LIST, Keep.DO_NOTHING}),
-                    choice("Swipe down", "On bare screens", Keep.ON_DOWN, Keep.DO_NOTICES,
-                        new String[] {"Notifications", "Quick settings", "Nothing"},
-                        new int[] {Keep.DO_NOTICES, Keep.DO_QUICK, Keep.DO_NOTHING}),
-                    choice("Back", "On bare screens", Keep.ON_BACK, Keep.DO_FRESH,
-                        new String[] {"Recent and new", "All apps", "Nothing"},
-                        new int[] {Keep.DO_FRESH, Keep.DO_LIST, Keep.DO_NOTHING}),
-                    choice("Double tap", "On the empty home screen", Keep.ON_DOUBLE, Keep.DO_LOCK,
-                        new String[] {"Lock the phone", "Nothing"}, new int[] {Keep.DO_LOCK, Keep.DO_NOTHING}),
-                    choice("Home button", "On bare screens", Keep.ON_HOME, Keep.DO_HOME,
-                        new String[] {"Home screen", "All apps", "Nothing"},
-                        new int[] {Keep.DO_HOME, Keep.DO_LIST, Keep.DO_NOTHING})
+                    choice("Swipe up", "On bare screens", Keep.ON_UP, Keep.DO_LIST, DEED_NAMES, DEEDS),
+                    choice("Swipe down", "On bare screens", Keep.ON_DOWN, Keep.DO_NOTICES, DEED_NAMES, DEEDS),
+                    choice("Two fingers up", "On bare screens", Keep.ON_TWO_UP, Keep.DO_NOTHING, DEED_NAMES, DEEDS),
+                    choice("Two fingers down", "On bare screens", Keep.ON_TWO_DOWN, Keep.DO_NOTHING, DEED_NAMES,
+                        DEEDS),
+                    choice("Pinch", "Two fingers drawn together, on bare screens", Keep.ON_PINCH, Keep.DO_NOTHING,
+                        DEED_NAMES, DEEDS),
+                    choice("Double tap", "On the empty home screen", Keep.ON_DOUBLE, Keep.DO_LOCK, DEED_NAMES,
+                        DEEDS),
+                    choice("Back", "On bare screens", Keep.ON_BACK, Keep.DO_FRESH, DEED_NAMES, DEEDS),
+                    choice("Home button", "On bare screens", Keep.ON_HOME, Keep.DO_HOME, DEED_NAMES, DEEDS),
+                    choice("Lock with", "An accessibility service locks at once; as a keeper of the phone, some "
+                        + "banks' apps do not mind it, but the first unlock may ask for the code",
+                        Keep.LOCK_WAY, Keep.LOCK_SERVICE, new String[] {"Accessibility service", "Keeper of the phone"},
+                        new int[] {Keep.LOCK_SERVICE, Keep.LOCK_KEEPER})
                 };
             case BACKUP:
                 return new Line[0];
@@ -269,7 +279,7 @@ public final class Tune extends Activity {
             }
         }
         return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face"
-            : room == LOOKS ? "Presets" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : "";
+            : room == APPS ? "Open an app" : room == LOOKS ? "Presets" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : "";
     }
 
     private float density;
@@ -531,6 +541,10 @@ public final class Tune extends Activity {
             fillBackup();
             return;
         }
+        if (room() == APPS) {
+            fillApps();
+            return;
+        }
         if (room() == LOOKS) {
             fillLooks();
             return;
@@ -679,6 +693,13 @@ public final class Tune extends Activity {
     }
 
     private String valueOf(Line line) {
+        if (line.key != null && line.key.startsWith("on_") && Keep.number(this, line.key, line.fallback) == Keep.DO_APP) {
+            Apps.Door door = new Apps(this).door(Keep.word(this, "app." + line.key) == null ? ""
+                : Keep.word(this, "app." + line.key));
+            if (door != null) {
+                return String.valueOf(door.label);
+            }
+        }
         int now = current(line);
         for (int i = 0; i < line.values.length; i++) {
             if (line.values[i] == now) {
@@ -709,9 +730,18 @@ public final class Tune extends Activity {
         }
         menu.choose(0, value);
         Keep.saveNumber(this, asking.key, value);
-        /* The lock needs the phone's leave, as an accessibility service. */
-        if (Keep.ON_DOUBLE.equals(asking.key) && value == Keep.DO_LOCK && !Latch.ready()) {
+        /* The lock needs the phone's leave, as an accessibility service, when it is to lock that way. */
+        if (value == Keep.DO_LOCK && Keep.number(this, Keep.LOCK_WAY, Keep.LOCK_SERVICE) == Keep.LOCK_SERVICE
+            && !Latch.ready()) {
             openSafely(new Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS));
+        }
+        /* An app for a gesture: the apps are shown to choose it from. */
+        if (value == Keep.DO_APP && asking.key.startsWith("on_")) {
+            choosingFor = asking.key;
+            menu.hide(true);
+            path.add(APPS);
+            show(1);
+            return;
         }
         askingValue.setText(valueOf(asking));
         if (Keep.THEME.equals(asking.key)) {
@@ -736,6 +766,39 @@ public final class Tune extends Activity {
                 menu.hide(true);
             }
         }, Pace.STEP * 3);
+    }
+
+    /** Every app, to choose the one a gesture opens. */
+    private void fillApps() {
+        final String gesture = choosingFor;
+        if (gesture == null) {
+            return;
+        }
+        for (final Apps.Door door : new Apps(this).all(Keep.BY_NAME)) {
+            LinearLayout line = new LinearLayout(this);
+            line.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            line.setPadding(dp(24), dp(8), dp(24), dp(8));
+            line.setBackground(Tone.touch(null, dp(16)));
+            android.widget.ImageView icon = new android.widget.ImageView(this);
+            icon.setImageDrawable(door.icon());
+            line.addView(icon, new LinearLayout.LayoutParams(dp(40), dp(40)));
+            TextView name = new TextView(this);
+            name.setText(door.label);
+            name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
+            name.setTextColor(Tone.onSurface());
+            name.setPadding(dp(16), 0, 0, 0);
+            line.addView(name);
+            line.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                    Keep.saveWord(Tune.this, "app." + gesture, door.token());
+                    Keep.saveNumber(Tune.this, gesture, Keep.DO_APP);
+                    choosingFor = null;
+                    onBackPressed();
+                }
+            });
+            rows.addView(line);
+        }
     }
 
     /** Every app with a switch beside it: on, and it is left out of the list. */
