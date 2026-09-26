@@ -96,6 +96,7 @@ public final class Folio extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Lapse.watch(this);
         super.onCreate(saved);
         Tone.read(this);
         String asked = getIntent().getStringExtra(PAGE);

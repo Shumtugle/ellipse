@@ -77,7 +77,7 @@ def readable(s):
         return False
     if re.fullmatch(r'[A-Za-z]+[A-Z][a-zA-Z]*', s) and not s[0].isupper():
         return False
-    if re.fullmatch(r'[EMdHhmsyaLk:, ]+', s):
+    if re.fullmatch(r'[EMdHhmsyaLk:, \-]+', s):
         return False
     if s.endswith(('.txt', '.json', '.png', '.xml', '.db')):
         return False

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="18000"
-    android:versionName="1.80.0">
+    android:versionCode="18100"
+    android:versionName="1.81.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -107,6 +107,13 @@
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
         android:theme="@style/Ground">
+        <!-- Files handed to another app to be sent: a copy, read-only, by name. -->
+        <provider
+            android:name=".Handed"
+            android:authorities="io.github.shumtugle.ellipse.handed"
+            android:exported="false"
+            android:grantUriPermissions="true" />
+
         <!-- The home screen: one task, never shown among recent tasks and
              never rebuilt for a turn of the phone or a change of keyboard. -->
         <activity

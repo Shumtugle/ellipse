@@ -119,6 +119,7 @@ public final class Tune extends Activity {
     private static final int PLACE = 5;
     private static final int ABOUT = 6;
     private static final int HELP = 7;
+    private static final int LAPSE = 8;
 
     private static final String SEARCH = "Search settings";
     private static final String RESTART_LINE = "Restart launcher";
@@ -250,6 +251,8 @@ public final class Tune extends Activity {
                     deed(Glyph.RESTART, "Restart launcher", "Close the home screen and open it again",
                         RESTART),
                     deed(Glyph.INFO, "Help", "How every part of the home screen works, in English", HELP),
+                    deed(Glyph.INFO, "Last error", "Where and why the home screen last stopped, to copy and send",
+                        LAPSE),
                     deed(Glyph.INFO, "About", "The version, the project, and where the weather comes from", ABOUT),
                     deed(Glyph.RESET, "Reset launcher",
                         "Forget everything set by hand and lay the screens out as on first start", RESET)
@@ -298,6 +301,7 @@ public final class Tune extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Lapse.watch(this);
         super.onCreate(saved);
         Tone.read(this);
         density = getResources().getDisplayMetrics().density;
@@ -778,6 +782,29 @@ public final class Tune extends Activity {
         }
         if (line.room == DEFAULT) {
             askToBeHome();
+            return;
+        }
+        if (line.room == LAPSE) {
+            String kept = Lapse.last(this);
+            if (kept == null) {
+                said("No error is kept");
+                return;
+            }
+            /* The first lines shown; the whole of it copied, to paste into a message. */
+            String[] lines = kept.split("\n");
+            StringBuilder head = new StringBuilder();
+            for (int i = 0; i < Math.min(6, lines.length); i++) {
+                head.append(i > 0 ? "\n" : "").append(lines[i].trim());
+            }
+            final String all = kept;
+            Ask.tell(host, "Last error", head.toString(), "Copy", new Runnable() {
+                public void run() {
+                    android.content.ClipboardManager clip = (android.content.ClipboardManager)
+                        getSystemService(CLIPBOARD_SERVICE);
+                    clip.setPrimaryClip(android.content.ClipData.newPlainText("Ellipse", all));
+                    said("Copied: paste it into a message");
+                }
+            });
             return;
         }
         if (line.room == ABOUT || line.room == HELP) {
@@ -1513,6 +1540,16 @@ public final class Tune extends Activity {
                     startActivityForResult(make, WRITE_COPY);
                 } catch (RuntimeException none) {
                     said("The phone has no place to keep files");
+                }
+            }
+        }));
+        rows.addView(deed("Send a copy", new Runnable() {
+            public void run() {
+                /* The same copy, handed to whatever the phone can send it with: a cloud, a mail, a chat. */
+                try {
+                    startActivity(Handed.send(Tune.this, Copy.name(), Copy.write(Tune.this), "application/json"));
+                } catch (Exception failed) {
+                    said("The copy could not be written");
                 }
             }
         }));

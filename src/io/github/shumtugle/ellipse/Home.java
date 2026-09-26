@@ -243,6 +243,7 @@ public final class Home extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        Lapse.watch(this);
         super.onCreate(saved);
         /* A new version's first start: the old set-out is copied aside
            before anything here reads or changes it. */
