@@ -628,6 +628,26 @@ final class Keep {
         return id;
     }
 
+    private static final String WAITS = "waits.";
+
+    /**
+     * An app brought in from another phone's set-out that this phone does
+     * not have yet: its place kept, and its name, for a grey stand-in to be
+     * drawn there until it is installed.
+     */
+    static void wait(Context context, String token, String name) {
+        store(context).edit().putString(WAITS + token, name == null ? "" : name).apply();
+    }
+
+    /** The name an app waited for was brought in by; or none if it is not waited for. */
+    static String waitName(Context context, String token) {
+        return store(context).getString(WAITS + token, null);
+    }
+
+    static void unwait(Context context, String token) {
+        store(context).edit().remove(WAITS + token).apply();
+    }
+
     static String linkCall(Context context, int id) {
         return store(context).getString(LINK + id + ".call", null);
     }

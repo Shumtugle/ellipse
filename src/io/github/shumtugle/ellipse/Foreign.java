@@ -513,6 +513,7 @@ final class Foreign {
             }
             Item item = new Item(Item.APP, x, y);
             item.component = door;
+            item.name = label;
             return item;
         }
         if (type == OPENS_FOLDER) {
@@ -573,6 +574,7 @@ final class Foreign {
                     String door = door(c.getString(1));
                     item = new Item(door == null ? Item.OTHER : Item.APP, x, y);
                     item.component = door;
+                    item.name = c.isNull(9) ? "" : c.getString(9);
                 } else if (kind == KIND_FOLDER) {
                     item = new Item(Item.FOLDER, x, y);
                     item.name = c.isNull(9) ? "" : c.getString(9);
@@ -684,10 +686,19 @@ final class Foreign {
                     continue;
                 }
                 if (item.kind == Item.APP) {
+                    ComponentName app = ComponentName.unflattenFromString(item.component);
+                    if (app == null) {
+                        report.others++;
+                        continue;
+                    }
+                    String token = app.flattenToString();
+                    spots.add(new Keep.Spot(token, s, item.x, item.y));
                     if (installed(context, item.component, known)) {
-                        spots.add(new Keep.Spot(ComponentName.unflattenFromString(item.component).flattenToString(), s, item.x, item.y));
                         report.apps++;
                     } else {
+                        /* Not on this phone: it waits in its place, grey, until it is installed. */
+                        String name = item.name == null || item.name.isEmpty() ? app.getPackageName() : item.name;
+                        Keep.wait(context, token, name);
                         report.missing++;
                     }
                 } else if (item.kind == Item.LINK) {

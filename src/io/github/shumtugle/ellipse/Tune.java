@@ -2065,7 +2065,8 @@ public final class Tune extends Activity {
                         told.append('.');
                     }
                     if (done.missing > 0) {
-                        told.append(" Not on this phone: ").append(done.missing).append('.');
+                        told.append(" Not on this phone, waiting grey in their places until installed: ")
+                            .append(done.missing).append('.');
                     }
                     if (done.others > 0) {
                         told.append(" Left behind, as shortcuts and the other home screen's own things: ")

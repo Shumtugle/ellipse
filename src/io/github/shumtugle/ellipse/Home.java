@@ -936,8 +936,19 @@ public final class Home extends Activity {
             }
             Apps.Door door = found.door(spot.token);
             Grid page = pages.get(spot.screen);
-            if (door == null || !page.fits(spot.x, spot.y, page.unit(), page.unit())) {
+            if (door == null) {
+                /* An app brought in that is not on the phone yet waits in its place. */
+                String waited = Keep.waitName(this, spot.token);
+                if (waited != null && page.fits(spot.x, spot.y, page.unit(), page.unit())) {
+                    awaited(page, spot, waited);
+                }
                 continue;
+            }
+            if (!page.fits(spot.x, spot.y, page.unit(), page.unit())) {
+                continue;
+            }
+            if (Keep.waitName(this, spot.token) != null) {
+                Keep.unwait(this, spot.token);
             }
             place(page, door, spot.x, spot.y, true);
             taken.add(spot.name.getPackageName());
@@ -2849,6 +2860,35 @@ public final class Home extends Activity {
             }
         });
         return cell;
+    }
+
+    /**
+     * An app waited for, standing grey in its place with the name it was
+     * brought in by; a touch looks for it in the store. Once installed, the
+     * app itself stands there.
+     */
+    private void awaited(Grid page, Keep.Spot spot, String name) {
+        final String pkg = spot.name.getPackageName();
+        android.graphics.drawable.GradientDrawable ground = new android.graphics.drawable.GradientDrawable();
+        ground.setColor(Tone.container());
+        ground.setStroke(Math.max(1, dp(1)), Tone.outline());
+        ground.setSize(dp(48), dp(48));
+        final Cell cell = new Cell(this, Style.dress(this, spot.token, ground, null),
+            name.isEmpty() ? pkg : name, iconSize, Style.namesOnScreens);
+        cell.setAlpha(0.55f);
+        cell.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + pkg))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+                } catch (RuntimeException none) {
+                    refuse(cell);
+                }
+            }
+        });
+        page.put(cell, spot.x, spot.y);
+        cells.add(cell);
+        stand(page, cell, spot.token);
     }
 
     /** A link standing on a screen: its own picture and name, and its call made at a touch. */
