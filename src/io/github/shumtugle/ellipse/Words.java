@@ -217,6 +217,14 @@ final class Words {
         }
     }
 
+    /** The language the words are in, as a locale for dates: the module's, or the phone's own. */
+    static java.util.Locale locale() {
+        if ("ru".equals(chosen) || "fi".equals(chosen)) {
+            return new java.util.Locale(chosen);
+        }
+        return java.util.Locale.getDefault();
+    }
+
     /** The module read again at the next reading, even if the choice is the same: a new file was brought. */
     static void forget() {
         chosen = "\u0000";

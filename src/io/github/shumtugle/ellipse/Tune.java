@@ -544,7 +544,7 @@ public final class Tune extends Activity {
         /* The wallpaper's rooms end with Done: the ground set on both screens. */
         foot.done(room() == GROUNDS || room() == GROUND_FINE ? new Runnable() {
             public void run() {
-                setGround(android.app.WallpaperManager.FLAG_SYSTEM | android.app.WallpaperManager.FLAG_LOCK);
+                setGround(0);
             }
         } : null);
         if (room() == HIDDEN) {
@@ -856,6 +856,16 @@ public final class Tune extends Activity {
             });
         }
         rows.addView(kept);
+        caption("WALLPAPER");
+        rows.addView(row(toggle("On the lock screen too", "Off, the lock screen keeps the wallpaper it has",
+            Keep.GROUND_LOCK, true)));
+        rows.addView(row(toggle("A new one while the phone sleeps", "When the screen has been dark a while, a new "
+            + "ground is drawn and set, to wake to", Keep.TURN, false)));
+        rows.addView(row(choice("After", "How long the screen is to be dark first", Keep.TURN_AFTER, 60,
+            new String[] {"15 minutes", "30 minutes", "An hour", "Three hours", "Eight hours"},
+            new int[] {15, 30, 60, 180, 480})));
+        rows.addView(row(choice("From", "Where the new ground comes from", Keep.TURN_FROM, Turn.DICE,
+            new String[] {"The dice", "The ready ones", "My own"}, new int[] {Turn.DICE, Turn.READY, Turn.MINE})));
         rows.addView(row(door(Glyph.BRUSH, "Fine tuning", "Each layer's kind, colour, strength and scale",
             GROUND_FINE)));
     }
@@ -911,7 +921,7 @@ public final class Tune extends Activity {
             }
         }));
         caption("WALLPAPER");
-        note("Done sets it on both screens; here, on one of them only.");
+        note("Done sets it on the home screen, and on the lock screen too if so chosen; here, on one only.");
         rows.addView(deed("Set on the home screen", new Runnable() {
             public void run() {
                 setGround(android.app.WallpaperManager.FLAG_SYSTEM);
@@ -1218,6 +1228,28 @@ public final class Tune extends Activity {
     /** The ground drawn at the screen's own size and set as the wallpaper where asked. */
     private void setGround(final int where) {
         final Ground g = Ground.of(ground.words());
+        if (where == 0) {
+            /* Done: on the home screen, and on the lock screen unless the owner keeps it. */
+            said("Drawing the wallpaper");
+            new Thread(new Runnable() {
+                public void run() {
+                    boolean set;
+                    try {
+                        Turn.set(Tune.this, g, true);
+                        set = true;
+                    } catch (Exception | OutOfMemoryError failed) {
+                        set = false;
+                    }
+                    final boolean done = set;
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            said(done ? "The wallpaper is set" : "The wallpaper could not be set");
+                        }
+                    });
+                }
+            }).start();
+            return;
+        }
         android.util.DisplayMetrics real = new android.util.DisplayMetrics();
         getWindowManager().getDefaultDisplay().getRealMetrics(real);
         /* With the wallpaper moving along with the screens, it is drawn wider than the screen, for there to
@@ -1233,6 +1265,7 @@ public final class Tune extends Activity {
                 try {
                     android.graphics.Bitmap made = g.draw(w, h);
                     android.app.WallpaperManager.getInstance(Tune.this).setBitmap(made, null, true, where);
+                    Keep.saveFlag(Tune.this, Keep.GROUND_WORN, true);
                     set = true;
                 } catch (Exception | OutOfMemoryError failed) {
                     set = false;

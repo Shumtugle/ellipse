@@ -6,6 +6,8 @@ import android.app.WallpaperManager;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.content.pm.LauncherApps;
 import android.content.res.Configuration;
 import android.graphics.Rect;
@@ -247,6 +249,10 @@ public final class Home extends Activity {
 
     @Override
     protected void onCreate(Bundle saved) {
+        /* The screen's sleep and waking, for a ground to turn while it sleeps. */
+        android.content.IntentFilter night = new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF);
+        night.addAction(Intent.ACTION_SCREEN_ON);
+        registerReceiver(sleep, night);
         Lapse.watch(this);
         super.onCreate(saved);
         /* A new version's first start: the old set-out is copied aside
@@ -267,6 +273,11 @@ public final class Home extends Activity {
 
     @Override
     protected void onDestroy() {
+        try {
+            unregisterReceiver(sleep);
+        } catch (RuntimeException never) {
+            // It was not listening.
+        }
         if (apps != null) {
             apps.unregisterCallback(watch);
         }
@@ -1563,13 +1574,108 @@ public final class Home extends Activity {
         }
     }
 
+    /**
+     * A picture of the home screen to show others: the screen as it stands,
+     * on its wallpaper, set in a card beside the day's date, a swatch of the
+     * wallpaper and the home screen's name — saved among the phone's
+     * pictures and offered to be sent.
+     */
+    private void portrait() {
+        final int w = root.getWidth();
+        final int h = root.getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
+        final Bitmap front = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        root.draw(new Canvas(front));
+        android.graphics.drawable.Drawable seen = null;
+        try {
+            if (Copy.wallpaperReadable()) {
+                seen = android.app.WallpaperManager.getInstance(this).getDrawable();
+            }
+        } catch (RuntimeException unseen) {
+            seen = null;
+        }
+        final android.graphics.drawable.Drawable wall = seen;
+        final boolean ours = Keep.flag(this, Keep.GROUND_WORN, false);
+        final Ground ground = Ground.kept(this);
+        final String date = new java.text.SimpleDateFormat("EEEE", Words.locale()).format(new java.util.Date());
+        final String day = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG, Words.locale())
+            .format(new java.util.Date());
+        final int accent = Tone.primary();
+        final String version = Copy.version(this);
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    Bitmap back = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                    Canvas c = new Canvas(back);
+                    if (wall != null) {
+                        float scale = Math.max(w / (float) wall.getIntrinsicWidth(), h / (float) wall.getIntrinsicHeight());
+                        int dw = Math.round(wall.getIntrinsicWidth() * scale);
+                        int dh = Math.round(wall.getIntrinsicHeight() * scale);
+                        wall.setBounds((w - dw) / 2, (h - dh) / 2, (w + dw) / 2, (h + dh) / 2);
+                        wall.draw(c);
+                    } else if (ours) {
+                        Bitmap g = ground.draw(w, h);
+                        c.drawBitmap(g, 0, 0, null);
+                        g.recycle();
+                    } else {
+                        c.drawColor(0xFF15130F);
+                    }
+                    Bitmap shot = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                    Canvas s = new Canvas(shot);
+                    s.drawBitmap(back, 0, 0, null);
+                    s.drawBitmap(front, 0, 0, null);
+                    front.recycle();
+                    Bitmap made = Portrait.compose(shot, back, date, day, accent, version);
+                    shot.recycle();
+                    back.recycle();
+                    final android.net.Uri saved = Portrait.save(Home.this, made);
+                    made.recycle();
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            if (saved == null) {
+                                refuse(screens);
+                                return;
+                            }
+                            Intent send = new Intent(Intent.ACTION_SEND).setType("image/png")
+                                .putExtra(Intent.EXTRA_STREAM, saved).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            try {
+                                startActivity(Intent.createChooser(send, null));
+                            } catch (RuntimeException none) {
+                                refuse(screens);
+                            }
+                        }
+                    });
+                } catch (Exception | OutOfMemoryError failed) {
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            refuse(screens);
+                        }
+                    });
+                }
+            }
+        }).start();
+    }
+
+    private final android.content.BroadcastReceiver sleep = new android.content.BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                Turn.slept(context);
+            } else {
+                Turn.woke(context);
+            }
+        }
+    };
+
     // ------------------------------------------------------------- menu
 
     private static final String[] ASKS = {
         "Add screen", "Add shortcut", "Add widget", "Add folder", "Make home screen", "Settings",
-        "Remove screen"
+        "Remove screen", "Picture of the home screen"
     };
     private static final int REMOVE_SCREEN = 6;
+    private static final int PORTRAIT = 7;
     /** Where the screen's menu was asked for. */
     private float askX;
     private float askY;
@@ -1596,6 +1702,7 @@ public final class Home extends Activity {
         if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
             offered.add(REMOVE_SCREEN);
         }
+        offered.add(PORTRAIT);
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
         askY = root.fingerY();
@@ -1645,6 +1752,14 @@ public final class Home extends Activity {
                 Keep.dropScreen(this, gone);
                 fill();
                 screens.show(Math.max(0, gone - 1), true);
+                break;
+            case PORTRAIT:
+                /* After the menu has gone, so it is not in the picture. */
+                root.postDelayed(new Runnable() {
+                    public void run() {
+                        portrait();
+                    }
+                }, Pace.ARRIVE);
                 break;
             case MAKE_HOME:
                 Keep.saveHome(this, screens.page());

@@ -79,6 +79,8 @@ def readable(s):
         return False
     if re.fullmatch(r'[EMdHhmsyaLk:, \-]+', s):
         return False
+    if '/' in s and ' ' not in s:
+        return False
     if s.endswith(('.txt', '.json', '.png', '.xml', '.db')):
         return False
     if s.startswith((' ', '.', ',')) or s.endswith(' '):

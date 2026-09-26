@@ -516,6 +516,17 @@ final class Keep {
     /** Whether the list of every app is sorted into kinds under tabs, and how; and the tab it was left on. */
     static final String KINDS = "kinds";
     static final String KIND_TAB = "kind_tab";
+    /**
+     * The ground factory's wallpaper: whether it goes on the lock screen too;
+     * whether a new one comes while the phone sleeps, after how many minutes
+     * dark, and from where; and whether the wallpaper now is one it drew.
+     */
+    static final String GROUND_LOCK = "ground_lock";
+    static final String TURN = "wall_turns";
+    static final String TURN_AFTER = "wall_turns_after";
+    static final String TURN_FROM = "wall_turns_from";
+    static final String GROUND_WORN = "ground_worn";
+
     /** Whether copies keep the wallpaper's pictures. */
     static final String COPY_WALLPAPER = "copy_wallpaper";
     /** The language module chosen, by its code; none for English. */
