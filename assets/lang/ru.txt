@@ -536,3 +536,7 @@ Ground = Фон
 Drawing the wallpaper = Рисую обои
 The wallpaper is set = Обои поставлены
 The wallpaper could not be set = Обои поставить не удалось
+Keep the wallpaper in the copy = Хранить обои в копии
+The pictures of the home screen and the lock screen go into every copy, and come back with it = Картинки главного экрана и экрана блокировки уходят в каждую копию и возвращаются с ней
+The phone lets an app read the wallpaper only if it may read all files. Ellipse reads nothing but the wallpaper. = Телефон даёт прочитать обои только приложению с доступом ко всем файлам. Ellipse не читает ничего, кроме обоев.
+Allow reading the wallpaper = Разрешить чтение обоев

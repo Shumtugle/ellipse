@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="18400"
-    android:versionName="1.84.0">
+    android:versionCode="18500"
+    android:versionName="1.85.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -17,6 +17,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- To set a ground the home screen draws as the wallpaper. -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
+    <!-- The phone shows its wallpaper only to an app that may read every file; asked for only when
+         the owner wants the wallpaper kept in copies. -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- The clock's headphones: their charge, while they are near. -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />

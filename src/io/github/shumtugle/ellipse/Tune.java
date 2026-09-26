@@ -1963,6 +1963,19 @@ public final class Tune extends Activity {
     private void fillBackup() {
         note("A copy holds every screen's set-out, the dock, the folders, the clock and every setting. "
             + "Widgets keep their places; after installing anew they are added again.");
+        rows.addView(row(toggle("Keep the wallpaper in the copy", "The pictures of the home screen and the lock "
+            + "screen go into every copy, and come back with it", Keep.COPY_WALLPAPER, false)));
+        if (Keep.flag(this, Keep.COPY_WALLPAPER, false) && !Copy.wallpaperReadable()) {
+            /* The phone shows the wallpaper only to an app that may read every file. */
+            note("The phone lets an app read the wallpaper only if it may read all files. Ellipse reads nothing "
+                + "but the wallpaper.");
+            rows.addView(deed("Allow reading the wallpaper", new Runnable() {
+                public void run() {
+                    openSafely(new Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                        android.net.Uri.parse("package:" + getPackageName())));
+                }
+            }));
+        }
         rows.addView(deed("Back up into a file", new Runnable() {
             public void run() {
                 Intent make = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
@@ -1978,7 +1991,7 @@ public final class Tune extends Activity {
             public void run() {
                 /* The same copy, handed to whatever the phone can send it with: a cloud, a mail, a chat. */
                 try {
-                    startActivity(Handed.send(Tune.this, Copy.name(), Copy.write(Tune.this), "application/json"));
+                    startActivity(Handed.send(Tune.this, Copy.name(), Copy.whole(Tune.this), "application/json"));
                 } catch (Exception failed) {
                     said("The copy could not be written");
                 }
@@ -2452,7 +2465,7 @@ public final class Tune extends Activity {
                 if (out == null) {
                     throw new java.io.IOException();
                 }
-                Copy.put(out, Copy.write(this));
+                Copy.put(out, Copy.whole(this));
                 said("The copy is made");
             } catch (java.io.IOException | org.json.JSONException | RuntimeException failed) {
                 said("The copy could not be written");
@@ -2521,6 +2534,15 @@ public final class Tune extends Activity {
                     if (done.packMissing != null) {
                         told.append(" Its pack of icons, ").append(done.packMissing)
                             .append(", is not on this phone: it is chosen, and the icons take it once it is installed.");
+                    }
+                    if (done.hidden > 0) {
+                        told.append(" Hidden as there: ").append(done.hidden).append('.');
+                    }
+                    if (done.kinds > 0) {
+                        told.append(" Its kinds of apps, as categories: ").append(done.kinds).append('.');
+                    }
+                    if (done.wallpaper) {
+                        told.append(" Its wallpaper is set.");
                     }
                     if (done.links > 0) {
                         told.append(" Shortcuts and links: ").append(done.links).append('.');

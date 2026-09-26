@@ -97,6 +97,15 @@ final class Foreign {
         Boolean listEndless;
         Boolean listNames;
         Integer listLines;
+        /* What else the other home screen kept: its dock's apps in order, the
+           apps it hid, its kinds of apps with the apps in each, its bars
+           hidden, and its wallpaper as a picture. */
+        final List<String> dockApps = new ArrayList<>();
+        final List<String> hidden = new ArrayList<>();
+        final Map<String, List<String>> kinds = new java.util.LinkedHashMap<>();
+        Boolean hideStatus;
+        Boolean hideNavigation;
+        byte[] wallpaper;
         final List<List<Item>> screens = new ArrayList<>();
 
         int count(int kind) {
@@ -149,6 +158,16 @@ final class Foreign {
                 String name = entry.getName();
                 String base = name.substring(name.lastIndexOf('/') + 1);
                 if (entry.isDirectory() || base.isEmpty() || base.contains("..")) {
+                    continue;
+                }
+                if (base.equals("currentWallpaper.png") || base.equals("wallpaper.png") || base.equals("wallpaper.jpg")) {
+                    /* The wallpaper the other home screen kept with its copy. */
+                    java.io.ByteArrayOutputStream picture = new java.io.ByteArrayOutputStream();
+                    int n;
+                    while ((n = in.read(buffer)) > 0) {
+                        picture.write(buffer, 0, n);
+                    }
+                    seen.wallpaper = picture.toByteArray();
                     continue;
                 }
                 if (base.endsWith(".xml")) {
@@ -206,6 +225,9 @@ final class Foreign {
                     found.listEndless = seen.listEndless;
                     found.listNames = seen.listNames;
                     found.listLines = seen.listLines;
+                    found.hideStatus = seen.hideStatus;
+                    found.hideNavigation = seen.hideNavigation;
+                    found.wallpaper = seen.wallpaper;
                     found.names = seen.names;
                     found.dock = seen.dock;
                     found.tile = seen.tile;
@@ -289,6 +311,14 @@ final class Foreign {
         Matcher labelLines = Pattern.compile("\"drawerSettings\":\\{[^}]*?\"labelLines\":(\\d+)").matcher(plain);
         if (labelLines.find()) {
             into.listLines = Integer.parseInt(labelLines.group(1));
+        }
+        Matcher nav = Pattern.compile("name=\"hideNavBar\" value=\"(true|false)\"").matcher(said);
+        if (nav.find()) {
+            into.hideNavigation = Boolean.valueOf(nav.group(1));
+        }
+        Matcher bar = Pattern.compile("name=\"StatusBarVisibilty\" value=\"(\\d+)\"").matcher(said);
+        if (bar.find()) {
+            into.hideStatus = !"0".equals(bar.group(1));
         }
         Matcher pack = Pattern.compile("name=\"homeIconAppearanceKey\">[^<]*?icPk:([^;<]+)").matcher(said);
         if (pack.find()) {
@@ -479,6 +509,48 @@ final class Foreign {
                 }
             }
         }
+        /* The dock: the other set of home items, in order along its first page. */
+        try (Cursor d = db.rawQuery("SELECT idLaunchable FROM HomeItem WHERE configId<>? ORDER BY screen, cellX",
+            new String[] {String.valueOf(config)})) {
+            while (d.moveToNext()) {
+                if (d.isNull(0)) {
+                    continue;
+                }
+                Item one = launchable(db, d.getLong(0), 0, 0);
+                if (one != null && one.kind == Item.APP && !layout.dockApps.contains(one.component)) {
+                    layout.dockApps.add(one.component);
+                }
+            }
+        } catch (RuntimeException none) {
+            // No dock kept.
+        }
+        /* The list of every app: which are hidden, and which kind each is under. */
+        if (has(db, "DrawerItem")) {
+            try (Cursor d = db.rawQuery("SELECT packageName, activityName, categoryId, hidden FROM DrawerItem",
+                null)) {
+                while (d.moveToNext()) {
+                    if (d.isNull(0) || d.isNull(1)) {
+                        continue;
+                    }
+                    String app = new ComponentName(d.getString(0), d.getString(1)).flattenToString();
+                    if (!d.isNull(3) && d.getInt(3) == 1) {
+                        layout.hidden.add(app);
+                    }
+                    if (!d.isNull(2)) {
+                        String kind = d.getString(2);
+                        kind = kind.isEmpty() ? kind : Character.toUpperCase(kind.charAt(0)) + kind.substring(1);
+                        List<String> in = layout.kinds.get(kind);
+                        if (in == null) {
+                            in = new ArrayList<>();
+                            layout.kinds.put(kind, in);
+                        }
+                        in.add(app);
+                    }
+                }
+            } catch (RuntimeException none) {
+                // The list kept nothing more.
+            }
+        }
         return layout.screens.isEmpty() ? null : layout;
     }
 
@@ -607,6 +679,49 @@ final class Foreign {
                 layout.add(order.indexOf(c.getLong(2)), item);
             }
         }
+        /* The dock: its first page, left to right, apps only. */
+        try (Cursor d = db.rawQuery("SELECT intent FROM favorites WHERE container=-101 AND screen=(SELECT MIN(screen) "
+            + "FROM favorites WHERE container=-101) ORDER BY cellX", null)) {
+            while (d.moveToNext()) {
+                String app = door(d.getString(0));
+                if (app != null && !layout.dockApps.contains(app)) {
+                    layout.dockApps.add(app);
+                }
+            }
+        } catch (RuntimeException none) {
+            // No dock kept.
+        }
+        /* The list of every app: its folders become kinds; the group it hides apps in, hidden. */
+        if (has(db, "appgroups") && has(db, "drawer_groups")) {
+            try (Cursor g = db.rawQuery("SELECT a.groupId, a.component, d.title, d.groupType FROM appgroups a "
+                + "LEFT JOIN drawer_groups d ON d._id=a.groupId", null)) {
+                while (g.moveToNext()) {
+                    String raw = g.getString(1);
+                    if (raw == null) {
+                        continue;
+                    }
+                    int cut = raw.indexOf('#');
+                    ComponentName app = ComponentName.unflattenFromString(cut > 0 ? raw.substring(0, cut) : raw);
+                    if (app == null) {
+                        continue;
+                    }
+                    long group = g.getLong(0);
+                    if (group == CONTAINER_SCREENS) {
+                        layout.hidden.add(app.flattenToString());
+                    } else if (!g.isNull(2) && "FOLDER_APP_GROUP".equals(g.getString(3))) {
+                        String kind = g.getString(2);
+                        List<String> in = layout.kinds.get(kind);
+                        if (in == null) {
+                            in = new ArrayList<>();
+                            layout.kinds.put(kind, in);
+                        }
+                        in.add(app.flattenToString());
+                    }
+                }
+            } catch (RuntimeException none) {
+                // The list kept nothing more.
+            }
+        }
         return layout;
     }
 
@@ -649,6 +764,10 @@ final class Foreign {
         final List<String> lost = new ArrayList<>();
         /** How many of the other home screen's looks were taken over: names, dock, outline. */
         int look;
+        /** Apps hidden as the other home screen hid them; its kinds of apps; its wallpaper set. */
+        int hidden;
+        int kinds;
+        boolean wallpaper;
         /** Whether the owner's widget clock was stood in for by this home screen's own. */
         boolean clock;
         /** The pack of icons the other home screen read, not on this phone; or none. */
@@ -869,6 +988,61 @@ final class Foreign {
         Keep.saveFlag(context, Keep.CLOCK, clocked);
         if (clocked) {
             Keep.saveNumber(context, Keep.CLOCK_FACE, Home.FACE_MENO);
+        }
+        /* The dock's apps, as many as the dock holds, those on this phone. */
+        if (!layout.dockApps.isEmpty()) {
+            int slot = 0;
+            for (String app : layout.dockApps) {
+                if (slot >= 4) {
+                    break;
+                }
+                if (installed(context, app, known)) {
+                    Keep.saveDockSlot(context, slot++, ComponentName.unflattenFromString(app).flattenToString());
+                }
+            }
+            if (slot > 0) {
+                report.look++;
+            }
+        }
+        /* The apps it hid, hidden here too. */
+        for (String app : layout.hidden) {
+            ComponentName name = ComponentName.unflattenFromString(app);
+            if (name != null) {
+                Keep.hide(context, name.flattenToString(), true);
+                report.hidden++;
+            }
+        }
+        /* Its kinds of apps, as kinds put together by hand here. */
+        if (!layout.kinds.isEmpty()) {
+            for (Map.Entry<String, List<String>> kind : layout.kinds.entrySet()) {
+                for (String app : kind.getValue()) {
+                    ComponentName name = ComponentName.unflattenFromString(app);
+                    if (name != null) {
+                        Kinds.put(context, name.flattenToString(), kind.getKey());
+                    }
+                }
+            }
+            if (Kinds.mode(context) == Kinds.NONE) {
+                Keep.saveNumber(context, Keep.KINDS, Kinds.BY_HAND);
+            }
+            report.kinds = layout.kinds.size();
+        }
+        if (layout.hideStatus != null) {
+            Keep.saveFlag(context, Keep.HIDE_STATUS, layout.hideStatus);
+        }
+        if (layout.hideNavigation != null) {
+            Keep.saveFlag(context, Keep.HIDE_NAVIGATION, layout.hideNavigation);
+        }
+        /* Its wallpaper, set on the home screen and the lock screen alike. */
+        if (layout.wallpaper != null && layout.wallpaper.length > 0) {
+            try {
+                android.app.WallpaperManager.getInstance(context).setStream(
+                    new ByteArrayInputStream(layout.wallpaper), null, true,
+                    android.app.WallpaperManager.FLAG_SYSTEM | android.app.WallpaperManager.FLAG_LOCK);
+                report.wallpaper = true;
+            } catch (IOException | RuntimeException refused) {
+                report.wallpaper = false;
+            }
         }
         /* Its pack of icons, if it read one and the pack is on this phone. */
         if (layout.pack != null && !layout.pack.isEmpty()) {

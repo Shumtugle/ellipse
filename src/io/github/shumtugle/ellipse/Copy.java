@@ -58,6 +58,73 @@ final class Copy {
     }
 
     /** Everything kept, as words. */
+    /** Everything, with the wallpaper too where it may be read: for a file, a sending, or the copy before a restore. */
+    static String whole(Context context) throws JSONException {
+        JSONObject copy = new JSONObject(write(context));
+        JSONObject pictures = wallpapers(context);
+        if (pictures.length() > 0) {
+            copy.put("wallpapers", pictures);
+        }
+        return copy.toString(1);
+    }
+
+    /** Whether the wallpaper goes into copies, and whether the phone lets it be read. */
+    static boolean wallpaperReadable() {
+        return android.os.Build.VERSION.SDK_INT >= 30 && android.os.Environment.isExternalStorageManager();
+    }
+
+    /** The wallpapers of the home screen and the lock screen as pictures, where the phone lets them be read. */
+    private static JSONObject wallpapers(Context context) throws JSONException {
+        JSONObject out = new JSONObject();
+        if (!Keep.flag(context, Keep.COPY_WALLPAPER, false) || !wallpaperReadable()) {
+            return out;
+        }
+        android.app.WallpaperManager manager = android.app.WallpaperManager.getInstance(context);
+        int[] which = {android.app.WallpaperManager.FLAG_SYSTEM, android.app.WallpaperManager.FLAG_LOCK};
+        String[] names = {"home", "lock"};
+        for (int i = 0; i < which.length; i++) {
+            try (android.os.ParcelFileDescriptor file = manager.getWallpaperFile(which[i])) {
+                if (file == null) {
+                    continue;
+                }
+                try (InputStream in = new FileInputStream(file.getFileDescriptor())) {
+                    java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+                    byte[] chunk = new byte[65536];
+                    int n;
+                    while ((n = in.read(chunk)) > 0) {
+                        bytes.write(chunk, 0, n);
+                    }
+                    out.put(names[i], android.util.Base64.encodeToString(bytes.toByteArray(),
+                        android.util.Base64.NO_WRAP));
+                }
+            } catch (IOException | RuntimeException unread) {
+                // That one is left out.
+            }
+        }
+        return out;
+    }
+
+    /** The wallpapers a copy kept, set again: the home screen's, and the lock screen's if it was its own. */
+    private static void rewall(Context context, JSONObject kept) {
+        android.app.WallpaperManager manager = android.app.WallpaperManager.getInstance(context);
+        String home = kept.optString("home", "");
+        String lock = kept.optString("lock", "");
+        try {
+            if (!home.isEmpty()) {
+                manager.setStream(new java.io.ByteArrayInputStream(android.util.Base64.decode(home,
+                    android.util.Base64.DEFAULT)), null, true, lock.isEmpty()
+                    ? android.app.WallpaperManager.FLAG_SYSTEM | android.app.WallpaperManager.FLAG_LOCK
+                    : android.app.WallpaperManager.FLAG_SYSTEM);
+            }
+            if (!lock.isEmpty()) {
+                manager.setStream(new java.io.ByteArrayInputStream(android.util.Base64.decode(lock,
+                    android.util.Base64.DEFAULT)), null, true, android.app.WallpaperManager.FLAG_LOCK);
+            }
+        } catch (IOException | RuntimeException refused) {
+            // The wallpaper stays as it is.
+        }
+    }
+
     static String write(Context context) throws JSONException {
         SharedPreferences kept = context.getSharedPreferences(STORE, Context.MODE_PRIVATE);
         JSONObject all = new JSONObject();
@@ -114,7 +181,7 @@ final class Copy {
             return false;
         }
         try {
-            save(context, new File(dir(context), BEFORE_RESTORE), write(context));
+            save(context, new File(dir(context), BEFORE_RESTORE), whole(context));
         } catch (JSONException | IOException unsaved) {
             // The restore goes on; it only cannot be undone.
         }
@@ -161,6 +228,14 @@ final class Copy {
         }
         Words.forget();
         try {
+            JSONObject pictures = new JSONObject(words).optJSONObject("wallpapers");
+            if (pictures != null) {
+                rewall(context, pictures);
+            }
+        } catch (JSONException broken) {
+            // The wallpaper stays as it is.
+        }
+        try {
             JSONObject whose = new JSONObject(words).optJSONObject("widgets");
             remake(context, whose == null ? new JSONObject() : whose);
         } catch (JSONException broken) {
@@ -172,7 +247,7 @@ final class Copy {
     /** What is here now copied aside, as before a restore, so what comes next can be undone. */
     static void aside(Context context) {
         try {
-            save(context, new File(dir(context), BEFORE_RESTORE), write(context));
+            save(context, new File(dir(context), BEFORE_RESTORE), whole(context));
         } catch (JSONException | IOException unsaved) {
             // What comes next cannot be undone, then.
         }

@@ -61,7 +61,12 @@ final class Kinds {
 
     /** An app put in a kind by hand; a kind not known yet is added to the owner's own. */
     static void put(Context context, Apps.Door door, String kind) {
-        Keep.saveWord(context, OWN + door.token(), kind);
+        put(context, door.token(), kind);
+    }
+
+    /** The same, by the app's word. */
+    static void put(Context context, String token, String kind) {
+        Keep.saveWord(context, OWN + token, kind);
         List<String> named = named(context);
         if (!named.contains(kind) && !kind.equals(OTHER)) {
             named.add(kind);
