@@ -844,6 +844,28 @@ public final class Tune extends Activity {
             });
         }
         rows.addView(kept);
+        caption("YOUR PICTURE");
+        rows.addView(deed("Wallpaper from a picture", new Runnable() {
+            public void run() {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType("image/*");
+                try {
+                    startActivityForResult(pick, READ_PICTURE);
+                } catch (android.content.ActivityNotFoundException none) {
+                    said("No way to choose a picture was found on the phone");
+                }
+            }
+        }));
+        if (Picture.kept(this)) {
+            rows.addView(deed("Your picture again", new Runnable() {
+                public void run() {
+                    wearPicture();
+                }
+            }));
+        }
+        note("A picture of your own is kept by Ellipse and carried in copies, so a ground set later never "
+            + "takes it away for good.");
         caption("WALLPAPER");
         rows.addView(row(toggle("On the lock screen too", "Off, the lock screen keeps the wallpaper it has",
             Keep.GROUND_LOCK, true)));
@@ -1215,6 +1237,20 @@ public final class Tune extends Activity {
 
     /** The ground drawn at the screen's own size and set as the wallpaper where asked. */
     private void setGround(final int where) {
+        if (!Picture.replaceable(this)) {
+            /* The wallpaper the phone has may be the owner's own picture, and the phone does not let it
+               be read to be kept: before it is replaced the first time, the owner is asked. */
+            Ask.tell(host, "Replace the wallpaper?", "The wallpaper the phone has now is replaced, and Ellipse "
+                + "cannot keep it for you, for the phone does not let it be read. If it is a picture of your "
+                + "own, bring it in first with Wallpaper from a picture: Ellipse keeps it, sets it again at a "
+                + "touch and carries it in copies.", "Replace", new Runnable() {
+                    public void run() {
+                        Keep.saveFlag(Tune.this, Keep.WALL_WARNED, true);
+                        setGround(where);
+                    }
+                });
+            return;
+        }
         final Ground g = Ground.of(ground.words());
         if (where == 0) {
             /* Done: on the home screen, and on the lock screen unless the owner keeps it. */
@@ -1257,6 +1293,7 @@ public final class Tune extends Activity {
                     Keep.saveFlag(Tune.this, Keep.GROUND_WORN, true);
                     if ((where & android.app.WallpaperManager.FLAG_SYSTEM) != 0) {
                         Keep.saveNumber(Tune.this, Keep.GROUND_WALL, id);
+                        Keep.saveFlag(Tune.this, Keep.PICTURE_WORN, false);
                     }
                     set = true;
                 } catch (Exception | OutOfMemoryError failed) {
@@ -2120,6 +2157,30 @@ public final class Tune extends Activity {
     private static final int READ_FOREIGN = 23;
     private static final int READ_LANGUAGE = 24;
     private static final int WRITE_TEMPLATE = 25;
+    private static final int READ_PICTURE = 26;
+
+    /** The owner's own picture set, away from the hand; the room shows what is kept now. */
+    private void wearPicture() {
+        said("Setting the wallpaper");
+        new Thread(new Runnable() {
+            public void run() {
+                boolean set;
+                try {
+                    Picture.set(Tune.this);
+                    set = true;
+                } catch (Exception | OutOfMemoryError failed) {
+                    set = false;
+                }
+                final boolean done = set;
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        said(done ? "The wallpaper is set" : "The wallpaper could not be set");
+                        fill();
+                    }
+                });
+            }
+        }).start();
+    }
     /** A copy armed by a first tap, waiting for the second. */
     private java.io.File armedCopy;
     private long armedCopyAt;
@@ -2587,6 +2648,25 @@ public final class Tune extends Activity {
             } catch (java.io.IOException | RuntimeException failed) {
                 said("The template could not be written");
             }
+            return;
+        }
+        if (asked == READ_PICTURE) {
+            final android.net.Uri chosen = where;
+            said("Reading the picture");
+            new Thread(new Runnable() {
+                public void run() {
+                    final boolean kept = Picture.keep(Tune.this, chosen);
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            if (kept) {
+                                wearPicture();
+                            } else {
+                                said("That picture could not be read");
+                            }
+                        }
+                    });
+                }
+            }).start();
             return;
         }
         if (asked == READ_LANGUAGE) {

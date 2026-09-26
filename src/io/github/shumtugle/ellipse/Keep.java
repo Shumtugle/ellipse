@@ -539,6 +539,11 @@ final class Keep {
         store(context).edit().putLong(key, when).apply();
     }
 
+    /** Whether the wallpaper now is the owner's own picture, set from here. */
+    static final String PICTURE_WORN = "picture_worn";
+    /** Whether the owner has said once that the wallpaper the phone had may be replaced. */
+    static final String WALL_WARNED = "wall_warned";
+
     /** Whether copies keep the wallpaper's pictures. */
     static final String COPY_WALLPAPER = "copy_wallpaper";
     /** The language module chosen, by its code; none for English. */

@@ -245,6 +245,18 @@ final class Copy {
                         }
                     }
                 }).start();
+            } else if (Keep.flag(context, Keep.PICTURE_WORN, false) && Picture.kept(context)) {
+                /* The wallpaper was the owner's own picture, and the copy carried it: set again. */
+                final Context app = context.getApplicationContext();
+                new Thread(new Runnable() {
+                    public void run() {
+                        try {
+                            Picture.set(app);
+                        } catch (Exception | OutOfMemoryError failed) {
+                            // The wallpaper stays as it is.
+                        }
+                    }
+                }).start();
             }
         } catch (JSONException broken) {
             // The wallpaper stays as it is.
@@ -375,14 +387,17 @@ final class Copy {
         File root = context.getFilesDir();
         List<File> kept = new ArrayList<>();
         kept.add(new File(root, Words.BROUGHT_FILE));
-        for (String room : new String[] {"faces", "links"}) {
+        for (String room : new String[] {"faces", "links", "walls"}) {
             File[] inside = new File(root, room).listFiles();
             if (inside != null) {
                 kept.addAll(Arrays.asList(inside));
             }
         }
         for (File one : kept) {
-            if (!one.isFile() || one.length() > 2L * 1024 * 1024) {
+            /* The owner's own wallpaper is a photograph, and larger than any icon's picture. */
+            long most = one.getParentFile() != null && "walls".equals(one.getParentFile().getName())
+                ? 16L * 1024 * 1024 : 2L * 1024 * 1024;
+            if (!one.isFile() || one.length() > most) {
                 continue;
             }
             try (InputStream in = new FileInputStream(one)) {

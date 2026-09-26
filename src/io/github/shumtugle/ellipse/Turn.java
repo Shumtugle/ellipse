@@ -56,7 +56,8 @@ public final class Turn extends BroadcastReceiver {
 
     @Override
     public void onReceive(final Context context, Intent intent) {
-        if (!Keep.flag(context, Keep.TURN, false)) {
+        /* A wallpaper the owner has not let go of is never replaced in their sleep. */
+        if (!Keep.flag(context, Keep.TURN, false) || !Picture.replaceable(context)) {
             return;
         }
         final PendingResult later = goAsync();
@@ -117,5 +118,6 @@ public final class Turn extends BroadcastReceiver {
         Keep.saveNumber(context, Keep.GROUND_WALL, id);
         ground.keep(context);
         Keep.saveFlag(context, Keep.GROUND_WORN, true);
+        Keep.saveFlag(context, Keep.PICTURE_WORN, false);
     }
 }

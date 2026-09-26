@@ -1595,7 +1595,14 @@ public final class Home extends Activity {
         /* The factory's word that the wallpaper is its own: taken back whenever another sets one. */
         final boolean ours = Keep.flag(this, Keep.GROUND_WORN, false);
         android.graphics.drawable.Drawable seen = null;
-        if (!ours && Copy.wallpaperReadable()) {
+        if (!ours && Keep.flag(this, Keep.PICTURE_WORN, false) && Picture.kept(this)) {
+            /* The owner's own picture, set from here: read from the home screen's own keeping. */
+            Bitmap picture = android.graphics.BitmapFactory.decodeFile(Picture.file(this).getPath());
+            if (picture != null) {
+                seen = new android.graphics.drawable.BitmapDrawable(getResources(), picture);
+            }
+        }
+        if (seen == null && !ours && Copy.wallpaperReadable()) {
             try (android.os.ParcelFileDescriptor file = walls.getWallpaperFile(android.app.WallpaperManager.FLAG_SYSTEM)) {
                 if (file != null) {
                     Bitmap picture = android.graphics.BitmapFactory.decodeFileDescriptor(file.getFileDescriptor());
@@ -1678,6 +1685,7 @@ public final class Home extends Activity {
                 /* Another wallpaper, not set by the factory a moment ago: the factory's word is taken back. */
                 if (System.currentTimeMillis() - Keep.clock(context, Keep.GROUND_SET_AT) > 15000L) {
                     Keep.saveFlag(context, Keep.GROUND_WORN, false);
+                    Keep.saveFlag(context, Keep.PICTURE_WORN, false);
                 }
             } else if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
                 Turn.slept(context);
