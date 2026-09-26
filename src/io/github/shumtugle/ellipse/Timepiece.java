@@ -5,4 +5,8 @@ interface Timepiece {
     void weather(boolean shown);
 
     void ears(int level);
+
+    /** Whether it reaches the screen's own edge, left and right: a face with a card runs its card to it. */
+    default void edged(boolean left, boolean right) {
+    }
 }

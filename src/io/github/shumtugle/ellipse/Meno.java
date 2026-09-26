@@ -38,6 +38,16 @@ import java.util.Locale;
  */
 final class Meno extends View implements Timepiece {
 
+    private boolean edgeLeft;
+    private boolean edgeRight;
+
+    @Override
+    public void edged(boolean left, boolean right) {
+        edgeLeft = left;
+        edgeRight = right;
+        invalidate();
+    }
+
     /** The owner's widget this face is the drawing of, by its package. */
     static final String WIDGET_PACKAGE = "io.github.shumtugle.meno";
 
@@ -241,7 +251,8 @@ final class Meno extends View implements Timepiece {
         scale = k * density;
         float vw = w / scale;
         float vh = h / scale;
-        card.set(BORDER, BORDER, vw - BORDER, vh - BORDER);
+        /* Reaching the screen's edge, the card runs to it. */
+        card.set(edgeLeft ? 0f : BORDER, BORDER, vw - (edgeRight ? 0f : BORDER), vh - BORDER);
         float pad = 10f;
         float left = BORDER + pad;
         float top = BORDER + pad;
@@ -293,7 +304,11 @@ final class Meno extends View implements Timepiece {
         canvas.save();
         canvas.scale(scale, scale);
         float edge = Math.max(1f, 1f / k) * strength;
-        field(canvas, card, 30f, cardAlpha, edge);
+        if (edgeLeft || edgeRight) {
+            outer(canvas, card, 30f, cardAlpha, edge);
+        } else {
+            field(canvas, card, 30f, cardAlpha, edge);
+        }
         dial(canvas, dialBox);
 
         field(canvas, timeBox, 22f, FIELD_ALPHA, edge);
@@ -325,6 +340,28 @@ final class Meno extends View implements Timepiece {
     }
 
     /** A box of the widget's own drawing: a fill of its dark glass, a light edge. */
+    /** The card, square where it meets the screen's edge; its fine light edge only where it does not. */
+    private void outer(Canvas canvas, RectF box, float radius, int alpha, float edge) {
+        float r = Math.min(radius, Math.min(box.width(), box.height()) / 2f);
+        float l = edgeLeft ? 0f : r;
+        float rr = edgeRight ? 0f : r;
+        android.graphics.Path shape = new android.graphics.Path();
+        shape.addRoundRect(box, new float[] {l, l, rr, rr, rr, rr, l, l}, android.graphics.Path.Direction.CW);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor((alpha << 24) | GLASS);
+        canvas.drawPath(shape, paint);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(edge);
+        paint.setColor((Math.min(255, Math.round(EDGE_ALPHA * strength)) << 24) | 0xFFFFFF);
+        canvas.save();
+        /* The light edge along the top and the bottom, and at a side only where the card ends. */
+        canvas.clipRect(box.left + (edgeLeft ? edge : -edge), box.top - edge, box.right - (edgeRight ? edge : -edge),
+            box.bottom + edge);
+        canvas.drawPath(shape, paint);
+        canvas.restore();
+        paint.setStyle(Paint.Style.FILL);
+    }
+
     private void field(Canvas canvas, RectF box, float radius, int alpha, float edge) {
         float r = Math.min(radius, Math.min(box.width(), box.height()) / 2f);
         paint.setStyle(Paint.Style.FILL);

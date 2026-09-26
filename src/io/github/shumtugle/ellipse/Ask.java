@@ -161,6 +161,12 @@ final class Ask {
      * does what it says.
      */
     static void tell(final FrameLayout host, String caption, String text, String go, final Runnable action) {
+        tell(host, caption, text, null, null, go, action);
+    }
+
+    /** The same card with a second thing it may do, offered before the first. */
+    static void tell(final FrameLayout host, String caption, String text, String other, final Runnable otherAction,
+                     String go, final Runnable action) {
         final Context context = host.getContext();
         final float density = context.getResources().getDisplayMetrics().density;
         float scaled = context.getResources().getDisplayMetrics().scaledDensity;
@@ -191,6 +197,10 @@ final class Ask {
         TextView cancel = word(context, CANCEL, Tone.onSurface(), scaled, density);
         TextView yes = word(context, go, Tone.primary(), scaled, density);
         foot.addView(cancel);
+        TextView second = other == null ? null : word(context, other, Tone.primary(), scaled, density);
+        if (second != null) {
+            foot.addView(second);
+        }
         foot.addView(yes);
         card.addView(foot, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -223,6 +233,14 @@ final class Ask {
                 action.run();
             }
         });
+        if (second != null) {
+            second.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    close.run();
+                    otherAction.run();
+                }
+            });
+        }
         veil.setAlpha(0f);
         veil.animate().alpha(1f).setDuration(Pace.ARRIVE / 2).start();
         card.setScaleX(0.9f);

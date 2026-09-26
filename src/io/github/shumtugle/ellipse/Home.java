@@ -1458,6 +1458,10 @@ public final class Home extends Activity {
         });
         page.put(clock, column, row, across, down);
         page.edge(clock, Keep.edges(this));
+        if (clock instanceof Timepiece) {
+            boolean edges = Keep.edges(this);
+            ((Timepiece) clock).edged(edges && column == 0, edges && column + across >= columns);
+        }
         /* Its size as it stands, kept for the settings to show it at. */
         clock.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
@@ -3736,7 +3740,21 @@ public final class Home extends Activity {
                 if (key - 9500 >= kept.size()) {
                     return;
                 }
-                seed = kept.get(key - 9500);
+                final long mine = kept.get(key - 9500);
+                /* One of the owner's own: more like it, or let go of; where it stands already, it stays. */
+                Ask.tell(root, MY_MARK, FORGET_OR_MORE, MORE_LIKE, new Runnable() {
+                    public void run() {
+                        chooser.close(false);
+                        showOmens(Omen.like(mine, 24), MORE_LIKE);
+                    }
+                }, FORGET, new Runnable() {
+                    public void run() {
+                        Keep.forgetOmen(Home.this, mine);
+                        chooser.close(false);
+                        chooseFace(faceToken, faceDoor);
+                    }
+                });
+                return;
             } else if (key >= 9000 && key - 9000 < omenPage.size()) {
                 seed = omenPage.get(key - 9000);
             } else {
@@ -3747,6 +3765,9 @@ public final class Home extends Activity {
         }
     };
     private static final String MORE_LIKE = "More like it";
+    private static final String MY_MARK = "My mark";
+    private static final String FORGET = "Forget";
+    private static final String FORGET_OR_MORE = "More marks like this one, or forget it? Where it is on an icon, it stays.";
     private static final String THROWN = "Thrown";
     private static final java.util.Random dice = new java.util.Random();
 

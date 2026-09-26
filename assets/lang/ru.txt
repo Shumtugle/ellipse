@@ -611,3 +611,5 @@ As every folder = Как у всех
 More like it = Ещё таких
 Thrown = Выпало
 Throw again = Бросить ещё
+My mark = Мой знак
+More marks like this one, or forget it? Where it is on an icon, it stays. = Ещё таких знаков — или забыть этот? Там, где он уже стоит на значке, он останется.

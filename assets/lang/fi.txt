@@ -611,3 +611,5 @@ As every folder = Kuten muilla
 More like it = Lisää samanlaisia
 Thrown = Heitetty
 Throw again = Heitä uudelleen
+My mark = Oma merkki
+More marks like this one, or forget it? Where it is on an icon, it stays. = Lisää tällaisia merkkejä vai unohdetaanko tämä? Kuvakkeissa, joissa se jo on, se pysyy.

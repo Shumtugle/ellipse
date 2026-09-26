@@ -34,6 +34,16 @@ import java.util.Locale;
  */
 final class Watch extends View implements Timepiece {
 
+    private boolean edgeLeft;
+    private boolean edgeRight;
+
+    @Override
+    public void edged(boolean left, boolean right) {
+        edgeLeft = left;
+        edgeRight = right;
+        invalidate();
+    }
+
     /**
      * What the dial and the small windows are made of: dark, as the face of
      * a good watch, or any of the materials a plate may be — then the words
@@ -195,10 +205,13 @@ final class Watch extends View implements Timepiece {
         float w = getWidth();
         float h = getHeight();
         float edge = px(4);
-        RectF slab = new RectF(edge, edge, w - edge, h - edge);
+        /* Reaching the screen's edge, the plate runs to it, square where it meets it. */
+        RectF slab = new RectF(edgeLeft ? 0f : edge, edge, w - (edgeRight ? 0f : edge), h - edge);
         float round = Math.min(slab.height() * 0.16f, px(28));
+        float l = edgeLeft ? 0f : round;
+        float r = edgeRight ? 0f : round;
         Path body = new Path();
-        body.addRoundRect(slab, round, round, Path.Direction.CW);
+        body.addRoundRect(slab, new float[] {l, l, r, r, r, r, l, l}, Path.Direction.CW);
         canvas.save();
         canvas.translate(slab.left, slab.top);
         body.offset(-slab.left, -slab.top);
