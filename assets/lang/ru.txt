@@ -596,3 +596,7 @@ Replace = Заменить
 Setting the wallpaper = Ставлю обои
 Reading the picture = Читаю картинку
 That picture could not be read = Эту картинку не удалось прочесть
+Add a widget to the stack = Добавить виджет в стопку
+Turns by itself = Листается сама
+Off, only a swipe turns it = Выкл.: листается только пальцем
+Shown first = Показывается первым

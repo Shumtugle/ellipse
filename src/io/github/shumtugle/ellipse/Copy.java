@@ -290,9 +290,14 @@ final class Copy {
         for (Keep.Spot spot : Keep.placed(context)) {
             tokens.add(spot.token);
         }
-        /* A widget may stand in a folder too. */
+        /* A widget may stand in a folder too, or in a pile. */
         for (int folder : Keep.folderIds(context)) {
             tokens.addAll(Keep.folderItems(context, folder));
+        }
+        for (int pile : Keep.pileIds(context)) {
+            for (int id : Keep.pileItems(context, pile)) {
+                tokens.add("#widget:" + id);
+            }
         }
         for (String token : tokens) {
             int id = widgetOf(token);
@@ -408,6 +413,43 @@ final class Copy {
                     token.append(':').append(part[i]);
                 }
                 Keep.folderSwap(context, folder, item, token.toString());
+            }
+        }
+        /* Widgets kept in piles, made again the same way, each in its place in the pile. */
+        for (int pile : Keep.pileIds(context)) {
+            List<Integer> ids = Keep.pileItems(context, pile);
+            boolean moved = false;
+            for (int i = 0; i < ids.size(); i++) {
+                int id = ids.get(i);
+                if (manager.getAppWidgetInfo(id) != null) {
+                    continue;
+                }
+                String said = whose.optString(String.valueOf(id), "");
+                android.content.ComponentName provider = said.isEmpty() ? null
+                    : android.content.ComponentName.unflattenFromString(said);
+                int fresh = 0;
+                if (provider != null) {
+                    fresh = host.allocateAppWidgetId();
+                    boolean made;
+                    try {
+                        made = manager.bindAppWidgetIdIfAllowed(fresh, provider);
+                    } catch (RuntimeException refused) {
+                        made = false;
+                    }
+                    if (!made) {
+                        host.deleteAppWidgetId(fresh);
+                        fresh = 0;
+                    }
+                }
+                if (fresh == 0) {
+                    unmade.add(provider == null ? "?" : label(context, provider));
+                    continue;
+                }
+                ids.set(i, fresh);
+                moved = true;
+            }
+            if (moved) {
+                Keep.savePile(context, pile, ids);
             }
         }
         edit.commit();

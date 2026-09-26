@@ -826,6 +826,85 @@ final class Keep {
         saveFolderItems(context, id, items);
     }
 
+    // --------------------------------------------------------------- piles
+
+    /** A pile of widgets on the home screen is kept by this word, with its number and its size. */
+    static final String PILE_THING = "#pile:";
+    private static final String PILE = "pile.";
+    private static final String PILE_NEXT = "pile.next";
+
+    /** A new pile holding these widgets, in this order; its number. */
+    static int newPile(Context context, List<Integer> widgets) {
+        int id = store(context).getInt(PILE_NEXT, 1);
+        store(context).edit().putInt(PILE_NEXT, id + 1).apply();
+        savePile(context, id, widgets);
+        return id;
+    }
+
+    /** The widgets a pile holds, by their numbers, the one shown first at the head. */
+    static List<Integer> pileItems(Context context, int id) {
+        List<Integer> list = new ArrayList<>();
+        for (String one : store(context).getString(PILE + id + ".items", "").split(",")) {
+            try {
+                list.add(Integer.parseInt(one.trim()));
+            } catch (NumberFormatException empty) {
+                // Nothing on that line.
+            }
+        }
+        return list;
+    }
+
+    static void savePile(Context context, int id, List<Integer> widgets) {
+        StringBuilder out = new StringBuilder();
+        for (int widget : widgets) {
+            if (out.length() > 0) {
+                out.append(',');
+            }
+            out.append(widget);
+        }
+        store(context).edit().putString(PILE + id + ".items", out.toString()).apply();
+        touch(context);
+    }
+
+    /** Whether a pile turns by itself, now and then, while it is seen. */
+    static boolean pileTurns(Context context, int id) {
+        return store(context).getBoolean(PILE + id + ".turns", false);
+    }
+
+    static void savePileTurns(Context context, int id, boolean turns) {
+        store(context).edit().putBoolean(PILE + id + ".turns", turns).apply();
+    }
+
+    /** Which of its widgets a pile shows now; it is shown again after the home screen is set out anew. */
+    static int pileShown(Context context, int id) {
+        return store(context).getInt(PILE + id + ".shown", 0);
+    }
+
+    static void savePileShown(Context context, int id, int shown) {
+        store(context).edit().putInt(PILE + id + ".shown", shown).apply();
+    }
+
+    /** A pile let go of: everything it kept forgotten. */
+    static void forgetPile(Context context, int id) {
+        store(context).edit().remove(PILE + id + ".items").remove(PILE + id + ".turns")
+            .remove(PILE + id + ".shown").apply();
+    }
+
+    /** The number of every pile that is kept. */
+    static List<Integer> pileIds(Context context) {
+        List<Integer> ids = new ArrayList<>();
+        for (String key : store(context).getAll().keySet()) {
+            if (key.startsWith(PILE) && key.endsWith(".items")) {
+                try {
+                    ids.add(Integer.parseInt(key.substring(PILE.length(), key.length() - ".items".length())));
+                } catch (NumberFormatException other) {
+                    // Not a pile's own line.
+                }
+            }
+        }
+        return ids;
+    }
+
     // -------------------------------------------------------------- pending
 
     /**

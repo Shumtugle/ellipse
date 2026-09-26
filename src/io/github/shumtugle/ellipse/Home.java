@@ -130,6 +130,12 @@ public final class Home extends Activity {
     private View folderHover;
     /** The folder of one's own that stands open, if one does. */
     private int trayFolder = -1;
+    /** The pile's own card, and the place whose pile it edits: screen, column, row. */
+    private PileCard pileCard;
+    private int[] pileAt;
+    /** The place a widget chosen from the shelf now is to be added to, as one more in its pile. */
+    private int[] pileShelf;
+    private int[] pendingPileAt;
     /** Widgets already made, kept across settings-out so they do not blink. */
     private final java.util.Map<Integer, android.appwidget.AppWidgetHostView> widgetViews = new java.util.HashMap<>();
     private LauncherApps launcher;
@@ -144,6 +150,7 @@ public final class Home extends Activity {
     private static final int KEY_REMOVE = 3;
     private static final int KEY_RESIZE = 4;
     private static final int KEY_RENAME = 5;
+    private static final int KEY_PILE = 40;
     private static final int KEY_SHORTCUT = 100;
     private static final int KEY_FACE = 7;
     private static final int KEY_ARRANGE = 8;
@@ -173,6 +180,7 @@ public final class Home extends Activity {
     private static final String REMOVE = "Remove";
     private static final String RESIZE = "Resize";
     private static final String RENAME = "Rename";
+    private static final String PILE_LINE = "Stack";
     private static final String NEW_FOLDER = "Folder";
     private static final String OWN_SETTINGS = "Ellipse settings";
     private static final String CLOCK_NAME = "Clock";
@@ -393,6 +401,10 @@ public final class Home extends Activity {
             chooser.close(true);
             return;
         }
+        if (pileCard.shown()) {
+            pileCard.close();
+            return;
+        }
         if (tray.shown()) {
             tray.close(true);
             return;
@@ -477,6 +489,10 @@ public final class Home extends Activity {
         }
         if (drawer.menuShown()) {
             drawer.shutMenu(true);
+            return;
+        }
+        if (pileCard.shown()) {
+            pileCard.close();
             return;
         }
         if (tray.shown()) {
@@ -831,6 +847,22 @@ public final class Home extends Activity {
         root.addView(tray, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
+        pileCard = new PileCard(this, new PileCard.Hand() {
+            public void done(List<Integer> kept, List<Integer> out, boolean turns) {
+                pileKeep(pileAt, kept, out, turns);
+            }
+
+            public void add(List<Integer> kept, List<Integer> out, boolean turns) {
+                int[] at = pileAt;
+                pileKeep(at, kept, out, turns);
+                pileShelf = at;
+                pendingPage = screens.page();
+                shelf.show(Keep.number(Home.this, Keep.SHELF_VIEW, Keep.LINES) == Keep.PAGES);
+            }
+        });
+        root.addView(pileCard, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         shelf = new Shelf(this, new Shelf.Hand() {
             public int[] span(android.appwidget.AppWidgetProviderInfo info) {
                 return widgetSpan(info);
@@ -838,6 +870,8 @@ public final class Home extends Activity {
 
             public void chosen(android.appwidget.AppWidgetProviderInfo info) {
                 shelf.close(true);
+                pendingPileAt = pileShelf;
+                pileShelf = null;
                 takeWidget(info);
             }
 
@@ -1091,6 +1125,8 @@ public final class Home extends Activity {
                     }
                 } else if (spot.token.startsWith(WIDGET)) {
                     widget(page, spot);
+                } else if (spot.token.startsWith(Keep.PILE_THING)) {
+                    pile(page, spot);
                 } else if (spot.token.startsWith(Keep.SHORTCUT_THING)) {
                     pinned(page, spot);
                 } else if (spot.token.startsWith(Keep.LINK_THING)) {
@@ -1770,6 +1806,7 @@ public final class Home extends Activity {
                 break;
             case ADD_WIDGET:
                 pendingPage = screens.page();
+                pileShelf = null;
                 shelf.show(Keep.number(this, Keep.SHELF_VIEW, Keep.LINES) == Keep.PAGES);
                 break;
             case ADD_SHORTCUT:
@@ -2514,6 +2551,13 @@ public final class Home extends Activity {
             } catch (NumberFormatException broken) {
                 // Nothing to let go.
             }
+        } else if (token.startsWith(Keep.PILE_THING)) {
+            /* A pile taken off lets go of every widget it held. */
+            int pile = pileId(token);
+            for (int id : Keep.pileItems(this, pile)) {
+                drop(id);
+            }
+            Keep.forgetPile(this, pile);
         } else if (Keep.CLOCK_THING.equals(base(token))) {
             Keep.saveFlag(this, Keep.CLOCK, false);
             stamp = Keep.stamp(this);
@@ -2529,6 +2573,10 @@ public final class Home extends Activity {
         if (token.startsWith(Keep.FOLDER_THING)) {
             String[] part = token.split(":");
             return Keep.FOLDER_THING + (part.length > 1 ? part[1] : "0");
+        }
+        if (token.startsWith(Keep.PILE_THING)) {
+            String[] part = token.split(":");
+            return Keep.PILE_THING + (part.length > 1 ? part[1] : "0");
         }
         int colon = token.indexOf(':');
         return colon < 0 ? token : token.substring(0, colon);
@@ -2555,7 +2603,8 @@ public final class Home extends Activity {
         }
         String word = base(token);
         if (Keep.VENDOR_THING.equals(word) || Keep.SYSTEM_THING.equals(word)
-            || word.startsWith(Keep.FOLDER_THING) || Keep.CLOCK_THING.equals(word)) {
+            || word.startsWith(Keep.FOLDER_THING) || Keep.CLOCK_THING.equals(word)
+            || word.startsWith(Keep.PILE_THING)) {
             return true;
         }
         if (WIDGET.equals(word)) {
@@ -2762,6 +2811,11 @@ public final class Home extends Activity {
             lines.add(RENAME);
             keys.add(KEY_RENAME);
             glyphs.add(Glyph.PEN);
+        }
+        if (whence != null && whence[0] >= 0 && (token.startsWith(WIDGET) || token.startsWith(Keep.PILE_THING))) {
+            lines.add(PILE_LINE);
+            keys.add(KEY_PILE);
+            glyphs.add(Glyph.LIST);
         }
         if (whence != null && whence[0] >= 0 && resizable(token)) {
             lines.add(RESIZE);
@@ -3006,6 +3060,8 @@ public final class Home extends Activity {
                 fill();
             } else if (key == KEY_ARRANGE && offerView instanceof Rings) {
                 arrange((Rings) offerView);
+            } else if (key == KEY_PILE && offerWhence != null && offerWhence[0] >= 0) {
+                openPile(new int[] {offerWhence[0], offerWhence[1], offerWhence[2]});
             } else if (key == KEY_RENAME) {
                 if (offerToken.startsWith(Keep.FOLDER_THING)) {
                     rename(folderId(offerToken));
@@ -3991,7 +4047,20 @@ public final class Home extends Activity {
         android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
         if (info == null) {
             drop(id);
+            pendingPileAt = null;
             return;
+        }
+        if (pendingPileAt != null) {
+            /* One more for a pile: laid behind the others, and the pile's card shown again. */
+            int[] at = pendingPileAt;
+            pendingPileAt = null;
+            List<Integer> now = pileWidgets(at);
+            if (now != null) {
+                now.add(id);
+                pileKeep(at, now, new ArrayList<Integer>(), pileTurnsAt(at));
+                openPile(at);
+                return;
+            }
         }
         int[] span = widgetSpan(info);
         List<Integer> order = new ArrayList<>();
@@ -4231,6 +4300,205 @@ public final class Home extends Activity {
         page.edge(view, Keep.edges(this));
         cells.add(view);
         stand(page, view, spot.token);
+    }
+
+    // ------------------------------------------------------------- piles
+
+    /** The number of a pile, from the word it is kept by; nought for any other. */
+    private static int pileId(String token) {
+        if (token == null || !token.startsWith(Keep.PILE_THING)) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(token.split(":")[1]);
+        } catch (RuntimeException broken) {
+            return 0;
+        }
+    }
+
+    /** The word of what is kept at a place, screen, column and row; or none. */
+    private String keptAt(int[] at) {
+        if (at == null) {
+            return null;
+        }
+        for (Keep.Spot spot : Keep.placed(this)) {
+            if (spot.screen == at[0] && spot.x == at[1] && spot.y == at[2]) {
+                return spot.token;
+            }
+        }
+        return null;
+    }
+
+    /** The widgets at a place, in order: a pile's, or a single widget's own; none if neither stands there. */
+    private List<Integer> pileWidgets(int[] at) {
+        String token = keptAt(at);
+        List<Integer> ids = new ArrayList<>();
+        if (token == null) {
+            return null;
+        }
+        if (token.startsWith(Keep.PILE_THING)) {
+            ids.addAll(Keep.pileItems(this, pileId(token)));
+        } else if (token.startsWith(WIDGET)) {
+            try {
+                ids.add(Integer.parseInt(token.substring(WIDGET.length()).split(":")[0]));
+            } catch (NumberFormatException broken) {
+                return null;
+            }
+        } else {
+            return null;
+        }
+        return ids;
+    }
+
+    private boolean pileTurnsAt(int[] at) {
+        String token = keptAt(at);
+        return token != null && token.startsWith(Keep.PILE_THING) && Keep.pileTurns(this, pileId(token));
+    }
+
+    /** The pile's own card for the widget or pile at a place. */
+    private void openPile(int[] at) {
+        List<Integer> ids = pileWidgets(at);
+        if (ids == null) {
+            return;
+        }
+        pileAt = at;
+        List<PileCard.Entry> entries = new ArrayList<>();
+        int dpi = getResources().getDisplayMetrics().densityDpi;
+        for (int id : ids) {
+            android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
+            if (info == null) {
+                continue;
+            }
+            android.graphics.drawable.Drawable picture = null;
+            try {
+                picture = info.loadPreviewImage(this, dpi);
+                if (picture == null) {
+                    picture = info.loadIcon(this, dpi);
+                }
+            } catch (RuntimeException unseen) {
+                picture = null;
+            }
+            entries.add(new PileCard.Entry(id, info.loadLabel(getPackageManager()), picture));
+        }
+        pileCard.show(entries, pileTurnsAt(at));
+    }
+
+    /**
+     * What the pile's card left, kept at its place: widgets taken out let
+     * go of; none left, the place is freed; one left, it stands as a plain
+     * widget again; more, they are a pile, the first shown first. Its size
+     * on the screen stays as it was.
+     */
+    private void pileKeep(int[] at, List<Integer> kept, List<Integer> out, boolean turns) {
+        String token = keptAt(at);
+        if (token == null) {
+            return;
+        }
+        for (int id : out) {
+            drop(id);
+        }
+        String[] part = token.split(":");
+        String size = part.length >= 4 ? ":" + part[2] + ":" + part[3] : "";
+        int pile = pileId(token);
+        if (!Keep.laid(this)) {
+            Keep.lay(this, standing);
+        }
+        if (kept.isEmpty()) {
+            Keep.remove(this, at[0], at[1], at[2]);
+            if (pile > 0) {
+                Keep.forgetPile(this, pile);
+            }
+        } else if (kept.size() == 1) {
+            Keep.reshape(this, at[0], at[1], at[2], WIDGET + kept.get(0) + size, at[1], at[2]);
+            if (pile > 0) {
+                Keep.forgetPile(this, pile);
+            }
+        } else {
+            if (pile > 0) {
+                Keep.savePile(this, pile, kept);
+            } else {
+                pile = Keep.newPile(this, kept);
+            }
+            Keep.savePileTurns(this, pile, turns);
+            Keep.savePileShown(this, pile, 0);
+            Keep.reshape(this, at[0], at[1], at[2], Keep.PILE_THING + pile + size, at[1], at[2]);
+        }
+        fill();
+    }
+
+    /** A pile on a screen: its widgets made, each framed as a widget is, one shown. */
+    private void pile(Grid page, final Keep.Spot spot) {
+        String[] part = spot.token.split(":");
+        if (part.length < 4) {
+            return;
+        }
+        final int pile;
+        int across;
+        int down;
+        try {
+            pile = Integer.parseInt(part[1]);
+            across = Math.min(columns, Integer.parseInt(part[2]));
+            down = Math.min(rows, Integer.parseInt(part[3]));
+        } catch (NumberFormatException broken) {
+            return;
+        }
+        if (!page.fits(spot.x, spot.y, across, down)) {
+            return;
+        }
+        Pile made = new Pile(this, new Pile.Hand() {
+            public void turned(int shown) {
+                Keep.savePileShown(Home.this, pile, shown);
+            }
+        });
+        int kind = Keep.number(this, Keep.WIDGET_FRAME, Rim.NONE);
+        int band = 0;
+        for (int id : Keep.pileItems(this, pile)) {
+            android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
+            if (info == null) {
+                continue;
+            }
+            android.appwidget.AppWidgetHostView view = widgetViews.get(id);
+            if (view == null) {
+                view = host.createView(this, id, info);
+                widgetViews.put(id, view);
+            } else if (view.getParent() instanceof ViewGroup) {
+                ((ViewGroup) view.getParent()).removeView(view);
+            }
+            view.setScaleX(1f);
+            view.setScaleY(1f);
+            view.setAlpha(1f);
+            view.setTranslationX(0f);
+            view.setTranslationY(0f);
+            boolean framed = kind != Rim.NONE && !Keep.flag(this, Keep.FRAME_OFF + id, false);
+            band = framed ? dp(Keep.number(this, Keep.WIDGET_FRAME_WIDTH, 6)) : 0;
+            if (view instanceof Piece) {
+                ((Piece) view).frame(framed ? kind : Rim.NONE, band, dp(Keep.number(this, Keep.WIDGET_FRAME_ROUND, 24)),
+                    Keep.flag(this, Keep.WIDGET_GLAZE, false));
+            }
+            if (Keep.edgeless(this)) {
+                view.setPadding(band, band, band, band);
+            } else {
+                android.graphics.Rect own = android.appwidget.AppWidgetHostView.getDefaultPaddingForWidget(
+                    this, info.provider, null);
+                view.setPadding(own.left + band, own.top + band, own.right + band, own.bottom + band);
+            }
+            /* A widget in a pile is held as the pile: its menu is the pile's. */
+            final Pile whole = made;
+            view.setOnLongClickListener(new View.OnLongClickListener() {
+                public boolean onLongClick(View v) {
+                    return whole.performLongClick();
+                }
+            });
+            made.add(view);
+        }
+        if (made.count() == 0) {
+            return;
+        }
+        made.set(Keep.pileShown(this, pile), Keep.pileTurns(this, pile), band + dp(2));
+        page.put(made, spot.x, spot.y, across, down);
+        page.edge(made, Keep.edges(this));
+        cells.add(made);
+        stand(page, made, spot.token);
     }
 
     // ------------------------------------------------------------- shade

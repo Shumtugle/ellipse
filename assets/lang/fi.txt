@@ -596,3 +596,7 @@ Replace = Korvaa
 Setting the wallpaper = Asetetaan taustakuvaa
 Reading the picture = Luetaan kuvaa
 That picture could not be read = Kuvaa ei voitu lukea
+Add a widget to the stack = Lisää widget pinoon
+Turns by itself = Vaihtuu itsestään
+Off, only a swipe turns it = Pois: vaihtuu vain pyyhkäisemällä
+Shown first = Näytetään ensin
