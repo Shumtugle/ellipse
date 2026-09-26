@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="18301"
-    android:versionName="1.83.1">
+    android:versionCode="18400"
+    android:versionName="1.84.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -15,6 +15,8 @@
     <!-- The clock's weather: the phone's rough place, asked once, and the
          network to ask the weather of it. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- To set a ground the home screen draws as the wallpaper. -->
+    <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- The clock's headphones: their charge, while they are near. -->
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />

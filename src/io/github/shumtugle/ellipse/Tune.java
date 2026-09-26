@@ -127,6 +127,14 @@ public final class Tune extends Activity {
         Keep.DO_FRESH, Keep.DO_HOME, Keep.DO_LOCK, Keep.DO_SETTINGS, Keep.DO_APP};
     /** The room where an app is chosen for a gesture, and the gesture it is chosen for. */
     private static final int APPS = 14;
+    /** The ground factory's room, the recipe on it, and the throws of the dice in this sitting. */
+    private static final int GROUNDS = 16;
+    private Ground ground;
+    private android.widget.ImageView groundView;
+    private int groundDrawn;
+    private static final java.util.List<String> thrown = new java.util.ArrayList<>();
+    private static int throwAt = -1;
+    private static final java.util.Random dice = new java.util.Random();
     private static String choosingFor;
 
     private static final String SEARCH = "Search settings";
@@ -213,6 +221,8 @@ public final class Tune extends Activity {
                 return new Line[] {
                     door(Glyph.LOOK, "Presets", "Ready looks to put on at a touch, and your own", LOOKS),
                     door(Glyph.LOOK, "Typeface", "The letters of every name and every word here", FONTS),
+                    door(Glyph.LOOK, "Wallpaper", "A ground drawn from layers of light, texture and ornament",
+                        GROUNDS),
                     choice("Theme", "Dark surfaces, light ones, or as the phone is set", Keep.THEME,
                         Keep.THEME_DARK, new String[] {"Dark", "Light", "As the phone"},
                         new int[] {Keep.THEME_DARK, Keep.THEME_LIGHT, Keep.THEME_PHONE}),
@@ -279,7 +289,7 @@ public final class Tune extends Activity {
             }
         }
         return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face"
-            : room == APPS ? "Open an app" : room == LOOKS ? "Presets" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : "";
+            : room == APPS ? "Open an app" : room == GROUNDS ? "Wallpaper" : room == LOOKS ? "Presets" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : "";
     }
 
     private float density;
@@ -528,7 +538,7 @@ public final class Tune extends Activity {
     private void fillRoom() {
         rows.removeAllViews();
         window.setVisibility(room() == ICONS || room() == CLOCK || room() == LISTGROUND || room() == FONTS
-            ? View.VISIBLE : View.GONE);
+            || room() == GROUNDS ? View.VISIBLE : View.GONE);
         if (room() == HIDDEN) {
             fillHidden();
             return;
@@ -543,6 +553,10 @@ public final class Tune extends Activity {
         }
         if (room() == APPS) {
             fillApps();
+            return;
+        }
+        if (room() == GROUNDS) {
+            fillGrounds();
             return;
         }
         if (room() == LOOKS) {
@@ -766,6 +780,349 @@ public final class Tune extends Activity {
                 menu.hide(true);
             }
         }, Pace.STEP * 3);
+    }
+
+    // ------------------------------------------------------------- the ground factory
+
+    /**
+     * The ground factory: the ground drawn small at the head of the room;
+     * the dice, back and forth through what they threw; the ready grounds;
+     * each layer's kind as a row of words and its colours and strengths as
+     * sliders, seen at once; another draw of the same; and the ground set
+     * as the wallpaper, or kept among the owner's own.
+     */
+    private void fillGrounds() {
+        if (ground == null) {
+            ground = Ground.kept(this);
+        }
+        window.removeAllViews();
+        groundView = new android.widget.ImageView(this);
+        groundView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+        android.util.DisplayMetrics real = new android.util.DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getRealMetrics(real);
+        int tall = dp(260);
+        window.addView(groundView, new FrameLayout.LayoutParams(Math.round(tall * real.widthPixels
+            / (float) real.heightPixels), tall, android.view.Gravity.CENTER_HORIZONTAL));
+        drawGround();
+        /* The dice: back to what was thrown before, or a new throw. */
+        LinearLayout throwing = new LinearLayout(this);
+        throwing.setGravity(android.view.Gravity.CENTER);
+        throwing.setPadding(dp(16), dp(8), dp(16), dp(8));
+        throwing.addView(chip("\u25C0", false, new Runnable() {
+            public void run() {
+                if (throwAt > 0) {
+                    throwAt--;
+                    ground = Ground.of(thrown.get(throwAt));
+                    groundChanged(true);
+                }
+            }
+        }));
+        throwing.addView(chip("\u2684  " + Words.t("Random"), true, new Runnable() {
+            public void run() {
+                throwDice();
+            }
+        }));
+        throwing.addView(chip("\u25B6", false, new Runnable() {
+            public void run() {
+                if (throwAt >= 0 && throwAt < thrown.size() - 1) {
+                    throwAt++;
+                    ground = Ground.of(thrown.get(throwAt));
+                    groundChanged(true);
+                } else {
+                    throwDice();
+                }
+            }
+        }));
+        rows.addView(throwing);
+        caption("READY");
+        rows.addView(chips(Ground.READY, -1, new Chosen() {
+            public void chosen(int which) {
+                ground = Ground.ready(which);
+                groundChanged(true);
+            }
+        }));
+        caption("LIGHT");
+        rows.addView(chips(Ground.LIGHTS, ground.light, new Chosen() {
+            public void chosen(int which) {
+                ground.light = which;
+                groundChanged(true);
+            }
+        }));
+        if (ground.light != Ground.LIGHT_NONE) {
+            groundSlider("Hue", 0, 360, ground.lightHue, "\u00B0", 0);
+            groundSlider("Second hue", 0, 360, ground.lightHue2, "\u00B0", 1);
+            groundSlider("Strength", 0, 100, ground.lightK, "%", 2);
+        }
+        caption("TEXTURE");
+        rows.addView(chips(Ground.TEXTURES, ground.texture, new Chosen() {
+            public void chosen(int which) {
+                ground.texture = which;
+                groundChanged(true);
+            }
+        }));
+        groundSlider("Hue", 0, 360, ground.hue, "\u00B0", 3);
+        groundSlider("Saturation", 0, 100, ground.sat, "%", 4);
+        groundSlider("Brightness", 0, 100, ground.val, "%", 5);
+        if (ground.texture != Ground.TEXTURE_NONE) {
+            groundSlider("Strength", 0, 100, ground.textureK, "%", 6);
+            groundSlider("Scale", 40, 250, ground.scale, "%", 7);
+        }
+        caption("ORNAMENT");
+        rows.addView(chips(Ground.ORNAMENTS, ground.ornament, new Chosen() {
+            public void chosen(int which) {
+                ground.ornament = which;
+                groundChanged(true);
+            }
+        }));
+        if (ground.ornament != Ground.ORNAMENT_NONE) {
+            groundSlider("Strength", 0, 100, ground.ornamentK, "%", 8);
+        }
+        caption("EDGES");
+        groundSlider("Darkening", 0, 100, ground.vignette, "%", 9);
+        rows.addView(deed("Another draw of the same", new Runnable() {
+            public void run() {
+                ground.seed = 1 + dice.nextInt(1 << 30);
+                groundChanged(false);
+            }
+        }));
+        caption("WALLPAPER");
+        rows.addView(deed("Set on the home screen", new Runnable() {
+            public void run() {
+                setGround(android.app.WallpaperManager.FLAG_SYSTEM);
+            }
+        }));
+        rows.addView(deed("Set on the lock screen", new Runnable() {
+            public void run() {
+                setGround(android.app.WallpaperManager.FLAG_LOCK);
+            }
+        }));
+        rows.addView(deed("Set on both", new Runnable() {
+            public void run() {
+                setGround(android.app.WallpaperManager.FLAG_SYSTEM | android.app.WallpaperManager.FLAG_LOCK);
+            }
+        }));
+        caption("MINE");
+        rows.addView(deed("Keep this ground", new Runnable() {
+            public void run() {
+                Ask.show(host, "Name this ground", Words.t("Ground") + " " + (mineGrounds().size() + 1),
+                    new Ask.Answer() {
+                        public void answered(String text) {
+                            String name = text == null ? "" : text.trim().replace("\t", " ").replace("\n", " ");
+                            if (name.isEmpty()) {
+                                return;
+                            }
+                            java.util.List<String[]> mine = mineGrounds();
+                            mine.add(new String[] {name, ground.words()});
+                            keepMineGrounds(mine);
+                            fill();
+                        }
+                    });
+            }
+        }));
+        final java.util.List<String[]> mine = mineGrounds();
+        for (int i = 0; i < mine.size(); i++) {
+            final int which = i;
+            LinearLayout line = new LinearLayout(this);
+            line.setGravity(android.view.Gravity.CENTER_VERTICAL);
+            TextView wear = (TextView) deed(mine.get(i)[0], new Runnable() {
+                public void run() {
+                    ground = Ground.of(mine.get(which)[1]);
+                    groundChanged(true);
+                }
+            });
+            wear.setTextColor(Tone.onSurface());
+            line.addView(wear, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+            final TextView gone = (TextView) deed("\u00D7", null);
+            gone.setPadding(dp(16), dp(12), dp(24), dp(12));
+            gone.setOnClickListener(new View.OnClickListener() {
+                private long armed;
+
+                public void onClick(View v) {
+                    long now = System.currentTimeMillis();
+                    if (now - armed > 3000L) {
+                        armed = now;
+                        gone.setText(Words.t("Forget?"));
+                        return;
+                    }
+                    mine.remove(which);
+                    keepMineGrounds(mine);
+                    fill();
+                }
+            });
+            line.addView(gone);
+            rows.addView(line);
+        }
+    }
+
+    interface Chosen {
+        void chosen(int which);
+    }
+
+    /** A row of words to choose one from, sideways; the chosen one in the accent. */
+    private View chips(String[] names, int chosen, final Chosen then) {
+        android.widget.HorizontalScrollView across = new android.widget.HorizontalScrollView(this);
+        across.setHorizontalScrollBarEnabled(false);
+        LinearLayout row = new LinearLayout(this);
+        row.setPadding(dp(18), dp(4), dp(18), dp(8));
+        for (int i = 0; i < names.length; i++) {
+            final int which = i;
+            row.addView(chip(Words.t(names[i]), i == chosen, new Runnable() {
+                public void run() {
+                    then.chosen(which);
+                }
+            }));
+        }
+        across.addView(row);
+        return across;
+    }
+
+    private TextView chip(String word, boolean on, final Runnable does) {
+        TextView made = new TextView(this);
+        made.setText(word);
+        made.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        made.setTextColor(on ? (android.graphics.Color.luminance(Tone.primary()) > 0.4f ? 0xFF1C1A17 : 0xFFF5F1E8)
+            : Tone.onSurface());
+        made.setPadding(dp(18), dp(10), dp(18), dp(10));
+        made.setBackground(Tone.touch(Tone.box(on ? Tone.primary() : Tone.container(), dp(22), 0f), dp(22)));
+        LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT);
+        gap.setMargins(dp(4), 0, dp(4), 0);
+        made.setLayoutParams(gap);
+        made.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                does.run();
+            }
+        });
+        return made;
+    }
+
+    /** A slider of the recipe, by the place of its part: the ground drawn again as it moves. */
+    private void groundSlider(String title, int least, int most, int now, final String unit, final int part) {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.VERTICAL);
+        made.setPadding(dp(24), dp(4), dp(24), dp(4));
+        LinearLayout top = new LinearLayout(this);
+        TextView name = new TextView(this);
+        name.setText(Words.t(title));
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
+        name.setTextColor(Tone.onSurface());
+        top.addView(name, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        final TextView value = new TextView(this);
+        value.setText(now + unit);
+        value.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+        value.setTextColor(Tone.primary());
+        top.addView(value);
+        made.addView(top);
+        made.addView(new Slide(this, least, most, now, new Slide.Moved() {
+            public void moved(int at, boolean done) {
+                value.setText(at + unit);
+                int[] v = ground.values();
+                int[] map = {1, 2, 3, 5, 6, 7, 8, 9, 11, 12};
+                v[map[part]] = at;
+                ground.take(v);
+                ground.keep(Tune.this);
+                drawGround();
+            }
+        }));
+        rows.addView(made);
+    }
+
+    /** A new throw of the dice, after the last; the sitting remembers every throw. */
+    private void throwDice() {
+        Ground g = Ground.roll(dice);
+        while (thrown.size() > throwAt + 1) {
+            thrown.remove(thrown.size() - 1);
+        }
+        if (thrown.isEmpty() && ground != null) {
+            thrown.add(ground.words());
+        }
+        thrown.add(g.words());
+        throwAt = thrown.size() - 1;
+        ground = g;
+        groundChanged(true);
+    }
+
+    /** The recipe changed: kept, drawn again, and, where its rows change, the room built again. */
+    private void groundChanged(boolean rebuild) {
+        ground.keep(this);
+        if (rebuild) {
+            fill();
+        } else {
+            drawGround();
+        }
+    }
+
+    /** The ground drawn small, away from the hand, and shown when it is ready if it is still the last asked. */
+    private void drawGround() {
+        final int asked = ++groundDrawn;
+        final Ground g = Ground.of(ground.words());
+        android.util.DisplayMetrics real = new android.util.DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getRealMetrics(real);
+        final int w = 300;
+        final int h = Math.round(w * real.heightPixels / (float) real.widthPixels);
+        new Thread(new Runnable() {
+            public void run() {
+                final android.graphics.Bitmap made = g.draw(w, h);
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        if (asked == groundDrawn && groundView != null) {
+                            groundView.setImageBitmap(made);
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    /** The ground drawn at the screen's own size and set as the wallpaper where asked. */
+    private void setGround(final int where) {
+        final Ground g = Ground.of(ground.words());
+        android.util.DisplayMetrics real = new android.util.DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getRealMetrics(real);
+        final int w = real.widthPixels;
+        final int h = real.heightPixels;
+        said("Drawing the wallpaper");
+        new Thread(new Runnable() {
+            public void run() {
+                boolean set;
+                try {
+                    android.graphics.Bitmap made = g.draw(w, h);
+                    android.app.WallpaperManager.getInstance(Tune.this).setBitmap(made, null, true, where);
+                    set = true;
+                } catch (Exception | OutOfMemoryError failed) {
+                    set = false;
+                }
+                final boolean done = set;
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        said(done ? "The wallpaper is set" : "The wallpaper could not be set");
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private java.util.List<String[]> mineGrounds() {
+        java.util.List<String[]> out = new java.util.ArrayList<>();
+        String kept = Keep.word(this, "grounds_mine");
+        if (kept != null) {
+            for (String line : kept.split("\n")) {
+                int cut = line.indexOf('\t');
+                if (cut > 0) {
+                    out.add(new String[] {line.substring(0, cut), line.substring(cut + 1)});
+                }
+            }
+        }
+        return out;
+    }
+
+    private void keepMineGrounds(java.util.List<String[]> mine) {
+        StringBuilder b = new StringBuilder();
+        for (String[] one : mine) {
+            b.append(one[0]).append('\t').append(one[1]).append('\n');
+        }
+        Keep.saveWord(this, "grounds_mine", b.toString());
     }
 
     /** Every app, to choose the one a gesture opens. */
