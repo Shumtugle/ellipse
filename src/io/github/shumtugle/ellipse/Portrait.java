@@ -76,17 +76,26 @@ final class Portrait {
         words.setTextSize(80f);
         words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         fitText(c, date, x, 350f, W - x - 90f, words);
-        RectF swatch = new RectF(x, 450f, W - 110f, 450f + (W - 110f - x) * 0.62f);
+        /* The wallpaper whole, as a small upright picture of its own: not a middle cut, which on a
+           ground lit at one place may be only dark. */
+        float swatchTall = 500f;
+        float swatchWide = swatchTall * wall.getWidth() / wall.getHeight();
+        RectF swatch = new RectF(x, 440f, x + swatchWide, 440f + swatchTall);
         BitmapShader ground = new BitmapShader(wall, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-        android.graphics.Matrix crop = new android.graphics.Matrix();
-        float s = Math.max(swatch.width() / wall.getWidth(), swatch.height() / wall.getHeight() * 0.5f);
-        crop.setScale(s, s);
-        crop.postTranslate(swatch.centerX() - wall.getWidth() * s / 2f, swatch.centerY() - wall.getHeight() * s / 2f);
-        ground.setLocalMatrix(crop);
-        c.drawRoundRect(swatch, 28f, 28f, shade);
+        android.graphics.Matrix fit2 = new android.graphics.Matrix();
+        fit2.setScale(swatchWide / wall.getWidth(), swatchTall / wall.getHeight());
+        fit2.postTranslate(swatch.left, swatch.top);
+        ground.setLocalMatrix(fit2);
+        float corner = swatchWide * 0.09f;
+        c.drawRoundRect(swatch, corner, corner, shade);
         p.setShader(ground);
-        c.drawRoundRect(swatch, 28f, 28f, p);
+        c.drawRoundRect(swatch, corner, corner, p);
         p.setShader(null);
+        p.setStyle(Paint.Style.STROKE);
+        p.setStrokeWidth(2f);
+        p.setColor(0x33FFFFFF);
+        c.drawRoundRect(swatch, corner, corner, p);
+        p.setStyle(Paint.Style.FILL);
         p.setColor(accent);
         c.drawRect(x, H - 190f, x + 90f, H - 184f, p);
         words.setTextSize(44f);
