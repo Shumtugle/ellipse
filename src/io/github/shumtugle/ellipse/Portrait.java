@@ -16,20 +16,21 @@ import android.provider.MediaStore;
 import java.io.OutputStream;
 
 /**
- * A picture of the home screen to show others: on a soft, darkened spread
- * of its own wallpaper, the screen itself in a rounded card with a shadow;
- * beside it the weekday and the date, a swatch of the wallpaper, and the
- * home screen's name and version in small letters under a line of accent.
+ * A picture of the home screen to show others: the screen itself in the
+ * frame of a phone — a dark body, a fine bright edge, the camera's dot —
+ * standing on a soft, darkened spread of its own wallpaper; and under it a
+ * caption: the home screen's name and version, the phone and its grid,
+ * and the day.
  */
 final class Portrait {
 
-    private static final int W = 1600;
-    private static final int H = 1200;
+    private static final int W = 1080;
+    private static final int H = 1350;
 
     private Portrait() {
     }
 
-    static Bitmap compose(Bitmap shot, Bitmap wall, String weekday, String date, int accent, String version) {
+    static Bitmap compose(Bitmap shot, Bitmap wall, String when, String version, String data, int accent) {
         Bitmap out = Bitmap.createBitmap(W, H, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(out);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
@@ -41,80 +42,70 @@ final class Portrait {
         float sh = small.getHeight() * cover;
         c.drawBitmap(small, null, new RectF((W - sw) / 2f, (H - sh) / 2f, (W + sw) / 2f, (H + sh) / 2f), p);
         small.recycle();
-        p.setShader(new LinearGradient(0, 0, W, 0, 0x99000000, 0xCC000000, Shader.TileMode.CLAMP));
+        p.setShader(new LinearGradient(0, 0, 0, H, 0x8C000000, 0xD9000000, Shader.TileMode.CLAMP));
         c.drawRect(0, 0, W, H, p);
         p.setShader(null);
-        /* The screen, in a card. */
-        float tall = H - 160f;
-        float wide = tall * shot.getWidth() / shot.getHeight();
-        RectF card = new RectF(150f, 80f, 150f + wide, 80f + tall);
-        float round = wide * 0.09f;
+        /* The phone: a body a little larger than its screen, then the screen within. */
+        float screenTall = 1010f;
+        float screenWide = screenTall * shot.getWidth() / shot.getHeight();
+        float bezel = 16f;
+        RectF body = new RectF((W - screenWide) / 2f - bezel, 64f, (W + screenWide) / 2f + bezel,
+            64f + screenTall + 2 * bezel);
+        float bodyRound = screenWide * 0.12f;
         Paint shade = new Paint(Paint.ANTI_ALIAS_FLAG);
-        shade.setColor(0xFF000000);
-        shade.setShadowLayer(48f, 0f, 18f, 0xB0000000);
-        c.drawRoundRect(card, round, round, shade);
-        BitmapShader screen = new BitmapShader(shot, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-        android.graphics.Matrix fit = new android.graphics.Matrix();
-        fit.setScale(wide / shot.getWidth(), tall / shot.getHeight());
-        fit.postTranslate(card.left, card.top);
-        screen.setLocalMatrix(fit);
-        p.setShader(screen);
-        c.drawRoundRect(card, round, round, p);
-        p.setShader(null);
+        shade.setColor(0xFF0B0B0C);
+        shade.setShadowLayer(60f, 0f, 24f, 0xC0000000);
+        c.drawRoundRect(body, bodyRound, bodyRound, shade);
+        /* The frame's edge: a fine light along it, brighter at the top. */
         p.setStyle(Paint.Style.STROKE);
         p.setStrokeWidth(3f);
-        p.setColor(0x33FFFFFF);
-        c.drawRoundRect(card, round, round, p);
-        p.setStyle(Paint.Style.FILL);
-        /* The day, the wallpaper's swatch, the name. */
-        float x = card.right + 110f;
-        Paint words = new Paint(Paint.ANTI_ALIAS_FLAG);
-        words.setColor(0xFFF2EDE4);
-        words.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
-        words.setTextSize(46f);
-        c.drawText(capital(weekday), x, 250f, words);
-        words.setTextSize(80f);
-        words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
-        fitText(c, date, x, 350f, W - x - 90f, words);
-        /* The wallpaper whole, as a small upright picture of its own: not a middle cut, which on a
-           ground lit at one place may be only dark. */
-        float swatchTall = 500f;
-        float swatchWide = swatchTall * wall.getWidth() / wall.getHeight();
-        RectF swatch = new RectF(x, 440f, x + swatchWide, 440f + swatchTall);
-        BitmapShader ground = new BitmapShader(wall, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-        android.graphics.Matrix fit2 = new android.graphics.Matrix();
-        fit2.setScale(swatchWide / wall.getWidth(), swatchTall / wall.getHeight());
-        fit2.postTranslate(swatch.left, swatch.top);
-        ground.setLocalMatrix(fit2);
-        float corner = swatchWide * 0.09f;
-        c.drawRoundRect(swatch, corner, corner, shade);
-        p.setShader(ground);
-        c.drawRoundRect(swatch, corner, corner, p);
+        p.setShader(new LinearGradient(0, body.top, 0, body.bottom, 0x80FFFFFF, 0x26FFFFFF, Shader.TileMode.CLAMP));
+        c.drawRoundRect(body, bodyRound, bodyRound, p);
         p.setShader(null);
-        p.setStyle(Paint.Style.STROKE);
-        p.setStrokeWidth(2f);
-        p.setColor(0x33FFFFFF);
-        c.drawRoundRect(swatch, corner, corner, p);
         p.setStyle(Paint.Style.FILL);
+        /* The side keys, barely there. */
+        p.setColor(0xFF2A2A2C);
+        c.drawRoundRect(body.right - 1f, body.top + 230f, body.right + 5f, body.top + 330f, 3f, 3f, p);
+        c.drawRoundRect(body.right - 1f, body.top + 360f, body.right + 5f, body.top + 420f, 3f, 3f, p);
+        RectF screen = new RectF(body.left + bezel, body.top + bezel, body.right - bezel, body.bottom - bezel);
+        float screenRound = bodyRound - bezel;
+        BitmapShader picture = new BitmapShader(shot, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+        android.graphics.Matrix fit = new android.graphics.Matrix();
+        fit.setScale(screen.width() / shot.getWidth(), screen.height() / shot.getHeight());
+        fit.postTranslate(screen.left, screen.top);
+        picture.setLocalMatrix(fit);
+        p.setShader(picture);
+        c.drawRoundRect(screen, screenRound, screenRound, p);
+        p.setShader(null);
+        /* The camera's dot at the top of the screen. */
+        p.setColor(0xFF050505);
+        c.drawCircle(screen.centerX(), screen.top + 22f, 9f, p);
+        p.setColor(0x33FFFFFF);
+        c.drawCircle(screen.centerX() - 2.5f, screen.top + 19.5f, 2.2f, p);
+        /* The caption: a short line of the accent, the name and version, the data, the day. */
+        float y = body.bottom + 72f;
         p.setColor(accent);
-        c.drawRect(x, H - 190f, x + 90f, H - 184f, p);
-        words.setTextSize(44f);
+        c.drawRect(W / 2f - 36f, y - 42f, W / 2f + 36f, y - 37f, p);
+        Paint words = new Paint(Paint.ANTI_ALIAS_FLAG);
+        words.setTextAlign(Paint.Align.CENTER);
+        words.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
         words.setColor(0xFFF2EDE4);
-        c.drawText("Ellipse", x, H - 120f, words);
-        words.setTextSize(28f);
-        words.setColor(0x99F2EDE4);
-        c.drawText(version, x, H - 78f, words);
+        words.setTextSize(40f);
+        c.drawText("Ellipse " + version, W / 2f, y, words);
+        words.setTypeface(Typeface.create("sans-serif-light", Typeface.NORMAL));
+        words.setColor(0xB3F2EDE4);
+        words.setTextSize(27f);
+        fitText(c, data, W / 2f, y + 46f, W - 160f, words);
+        words.setColor(0x80F2EDE4);
+        words.setTextSize(25f);
+        fitText(c, when, W / 2f, y + 86f, W - 160f, words);
         return out;
-    }
-
-    private static String capital(String word) {
-        return word.isEmpty() ? word : Character.toUpperCase(word.charAt(0)) + word.substring(1);
     }
 
     /** Words made smaller until they fit a width. */
     private static void fitText(Canvas c, String text, float x, float y, float room, Paint paint) {
-        while (paint.measureText(text) > room && paint.getTextSize() > 30f) {
-            paint.setTextSize(paint.getTextSize() - 4f);
+        while (paint.measureText(text) > room && paint.getTextSize() > 16f) {
+            paint.setTextSize(paint.getTextSize() - 2f);
         }
         c.drawText(text, x, y, paint);
     }

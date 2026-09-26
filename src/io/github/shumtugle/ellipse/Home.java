@@ -1609,9 +1609,13 @@ public final class Home extends Activity {
         }
         final android.graphics.drawable.Drawable wall = seen;
         final Ground ground = Ground.kept(this);
-        final String date = new java.text.SimpleDateFormat("EEEE", Words.locale()).format(new java.util.Date());
-        final String day = java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG, Words.locale())
-            .format(new java.util.Date());
+        final String day = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.LONG,
+            java.text.DateFormat.SHORT, Words.locale()).format(new java.util.Date());
+        /* The data under the picture: the phone, its Android, the grid of the screens. */
+        int grid = Keep.number(this, Keep.DESK_GRID, 45);
+        final String data = android.os.Build.MANUFACTURER.substring(0, 1).toUpperCase(java.util.Locale.ROOT)
+            + android.os.Build.MANUFACTURER.substring(1) + " " + android.os.Build.MODEL + "  \u00B7  Android "
+            + android.os.Build.VERSION.RELEASE + "  \u00B7  " + Keep.columns(grid) + " \u00D7 " + Keep.rows(grid);
         final int accent = Tone.primary();
         final String version = Copy.version(this);
         new Thread(new Runnable() {
@@ -1637,7 +1641,7 @@ public final class Home extends Activity {
                     s.drawBitmap(back, 0, 0, null);
                     s.drawBitmap(front, 0, 0, null);
                     front.recycle();
-                    Bitmap made = Portrait.compose(shot, back, date, day, accent, version);
+                    Bitmap made = Portrait.compose(shot, back, day, version, data, accent);
                     shot.recycle();
                     back.recycle();
                     final android.net.Uri saved = Portrait.save(Home.this, made);
