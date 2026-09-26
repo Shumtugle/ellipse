@@ -286,8 +286,16 @@ final class Copy {
     private static JSONObject widgets(Context context) throws JSONException {
         JSONObject out = new JSONObject();
         android.appwidget.AppWidgetManager manager = android.appwidget.AppWidgetManager.getInstance(context);
+        List<String> tokens = new ArrayList<>();
         for (Keep.Spot spot : Keep.placed(context)) {
-            int id = widgetOf(spot.token);
+            tokens.add(spot.token);
+        }
+        /* A widget may stand in a folder too. */
+        for (int folder : Keep.folderIds(context)) {
+            tokens.addAll(Keep.folderItems(context, folder));
+        }
+        for (String token : tokens) {
+            int id = widgetOf(token);
             if (id == 0) {
                 continue;
             }
@@ -365,6 +373,42 @@ final class Copy {
                 edit.remove(Keep.FRAME_OFF + id);
             }
             changed = true;
+        }
+        /* Widgets kept in folders, made again the same way; each keeps its place in its folder. */
+        for (int folder : Keep.folderIds(context)) {
+            for (String item : Keep.folderItems(context, folder)) {
+                int id = widgetOf(item);
+                if (id == 0 || manager.getAppWidgetInfo(id) != null) {
+                    continue;
+                }
+                String said = whose.optString(String.valueOf(id), "");
+                android.content.ComponentName provider = said.isEmpty() ? null
+                    : android.content.ComponentName.unflattenFromString(said);
+                int fresh = 0;
+                if (provider != null) {
+                    fresh = host.allocateAppWidgetId();
+                    boolean made;
+                    try {
+                        made = manager.bindAppWidgetIdIfAllowed(fresh, provider);
+                    } catch (RuntimeException refused) {
+                        made = false;
+                    }
+                    if (!made) {
+                        host.deleteAppWidgetId(fresh);
+                        fresh = 0;
+                    }
+                }
+                if (fresh == 0) {
+                    unmade.add(provider == null ? "?" : label(context, provider));
+                    continue;
+                }
+                String[] part = item.split(":");
+                StringBuilder token = new StringBuilder("#widget:").append(fresh);
+                for (int i = 2; i < part.length; i++) {
+                    token.append(':').append(part[i]);
+                }
+                Keep.folderSwap(context, folder, item, token.toString());
+            }
         }
         edit.commit();
         if (changed) {

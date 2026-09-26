@@ -795,6 +795,31 @@ final class Keep {
         saveFolderItems(context, id, items);
     }
 
+    /** The number of every folder of one's own that is kept. */
+    static List<Integer> folderIds(Context context) {
+        List<Integer> ids = new ArrayList<>();
+        for (String key : store(context).getAll().keySet()) {
+            if (key.startsWith(FOLDER) && key.endsWith(".items")) {
+                try {
+                    ids.add(Integer.parseInt(key.substring(FOLDER.length(), key.length() - ".items".length())));
+                } catch (NumberFormatException other) {
+                    // Not a folder's own line.
+                }
+            }
+        }
+        return ids;
+    }
+
+    /** One thing a folder holds put in the place of another, in the same order. */
+    static void folderSwap(Context context, int id, String was, String now) {
+        List<String> items = folderItems(context, id);
+        int at = items.indexOf(was);
+        if (at >= 0) {
+            items.set(at, now);
+            saveFolderItems(context, id, items);
+        }
+    }
+
     static void folderRemove(Context context, int id, String token) {
         List<String> items = folderItems(context, id);
         items.remove(token);

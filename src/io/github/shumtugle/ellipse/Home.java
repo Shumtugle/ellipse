@@ -819,6 +819,14 @@ public final class Home extends Activity {
             public void lift(View from, Apps.Door door, int[] icon) {
                 offerNew(from, door, icon, trayFolder > 0 ? new int[] {-2, trayFolder} : null);
             }
+
+            public List<View> widgets() {
+                return folderWidgets(trayFolder);
+            }
+
+            public void hold(View widget) {
+                holdFolderWidget(widget);
+            }
         });
         root.addView(tray, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -2168,7 +2176,8 @@ public final class Home extends Activity {
             }
         }
         View hover = null;
-        if (!binned && slot < 0 && app) {
+        if (!binned && slot < 0 && (app || carried.startsWith(WIDGET))) {
+            /* An app, or a widget, may go into a folder. */
             hover = folderUnder(cx, cy);
         }
         if (hover != folderHover) {
@@ -2300,6 +2309,13 @@ public final class Home extends Activity {
         }
         if (into != null) {
             Keep.folderAdd(this, folderId(things.get(into)), token);
+            if (whence != null && whence[0] >= 0) {
+                /* Put in a folder, a thing leaves the place it stood in: a widget cannot stand in two. */
+                if (!Keep.laid(this)) {
+                    Keep.lay(this, standing);
+                }
+                Keep.remove(this, whence[0], whence[1], whence[2]);
+            }
             leave(token, whence);
             flyInto(going, into, 0.3f, true);
             grid.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
@@ -2448,6 +2464,19 @@ public final class Home extends Activity {
      * settings, where it can be switched on again.
      */
     private void removeThing(String token, int[] whence) {
+        if (isFolder(token) && whence[0] != -2) {
+            /* A folder taken off lets go of the widgets it held. */
+            for (String item : Keep.folderItems(this, folderId(token))) {
+                if (item.startsWith(WIDGET)) {
+                    try {
+                        drop(Integer.parseInt(item.substring(WIDGET.length()).split(":")[0]));
+                    } catch (NumberFormatException broken) {
+                        // Nothing to let go.
+                    }
+                    Keep.folderRemove(this, folderId(token), item);
+                }
+            }
+        }
         if (whence[0] == -1) {
             Keep.saveDockSlot(this, whence[1], "");
             if (token.startsWith(WIDGET)) {
@@ -2462,6 +2491,13 @@ public final class Home extends Activity {
         }
         if (whence[0] == -2) {
             Keep.folderRemove(this, whence[1], token);
+            if (token.startsWith(WIDGET)) {
+                try {
+                    drop(Integer.parseInt(token.substring(WIDGET.length()).split(":")[0]));
+                } catch (NumberFormatException broken) {
+                    // Nothing to let go.
+                }
+            }
             fill();
             return;
         }
@@ -3567,6 +3603,102 @@ public final class Home extends Activity {
             public void answered(String text) {
                 Style.name(Home.this, token, text);
                 fill();
+            }
+        });
+    }
+
+    /** Which widget each view shown in an open folder is, by the word the folder keeps it by. */
+    private final java.util.Map<View, String> folderWidgetTokens = new java.util.HashMap<>();
+
+    /**
+     * The widgets a folder holds, made and sized to be shown above its apps:
+     * as tall as the places they were given, as wide as the folder's card.
+     * One whose app is gone is left out.
+     */
+    private List<View> folderWidgets(int folder) {
+        List<View> made = new ArrayList<>();
+        folderWidgetTokens.clear();
+        if (folder <= 0) {
+            return made;
+        }
+        float[] place = place();
+        for (String item : Keep.folderItems(this, folder)) {
+            if (!item.startsWith(WIDGET)) {
+                continue;
+            }
+            String[] part = item.substring(WIDGET.length()).split(":");
+            int id;
+            int down;
+            try {
+                id = Integer.parseInt(part[0]);
+                down = part.length > 2 ? Math.max(1, Integer.parseInt(part[2])) : 2;
+            } catch (NumberFormatException broken) {
+                continue;
+            }
+            android.appwidget.AppWidgetProviderInfo info = widgets.getAppWidgetInfo(id);
+            if (info == null) {
+                continue;
+            }
+            android.appwidget.AppWidgetHostView view = widgetViews.get(id);
+            if (view == null) {
+                view = host.createView(this, id, info);
+                widgetViews.put(id, view);
+            } else if (view.getParent() instanceof ViewGroup) {
+                ((ViewGroup) view.getParent()).removeView(view);
+            }
+            view.setScaleX(1f);
+            view.setScaleY(1f);
+            view.setAlpha(1f);
+            view.setTranslationX(0f);
+            view.setTranslationY(0f);
+            view.setVisibility(View.VISIBLE);
+            if (view instanceof Piece) {
+                ((Piece) view).frame(Rim.NONE, 0, dp(22), false);
+            }
+            android.graphics.Rect own = android.appwidget.AppWidgetHostView.getDefaultPaddingForWidget(
+                this, info.provider, null);
+            view.setPadding(own.left, own.top, own.right, own.bottom);
+            view.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                Math.round(place[1] * down)));
+            folderWidgetTokens.put(view, item);
+            made.add(view);
+        }
+        return made;
+    }
+
+    /** A widget held in an open folder: its menu, and the finger moving on carries it out of the folder. */
+    private void holdFolderWidget(final View widget) {
+        final String token = folderWidgetTokens.get(widget);
+        if (token == null || trayFolder <= 0) {
+            return;
+        }
+        final int[] whence = {-2, trayFolder};
+        offerThing(widget, token, whence, null);
+        root.arm(new Runnable() {
+            public void run() {
+                menu.hide(false);
+                android.graphics.Bitmap picture = android.graphics.Bitmap.createBitmap(
+                    Math.max(1, widget.getWidth()), Math.max(1, widget.getHeight()),
+                    android.graphics.Bitmap.Config.ARGB_8888);
+                widget.draw(new android.graphics.Canvas(picture));
+                android.graphics.drawable.Drawable face = new android.graphics.drawable.BitmapDrawable(
+                    getResources(), picture);
+                int[] icon = {0, 0, widget.getWidth(), widget.getHeight()};
+                String[] part = token.substring(WIDGET.length()).split(":");
+                int across = 2;
+                int down = 2;
+                try {
+                    across = Math.max(1, Integer.parseInt(part[1]));
+                    down = Math.max(1, Integer.parseInt(part[2]));
+                } catch (RuntimeException broken) {
+                    // Carried at a size of two by two.
+                }
+                carry(widget, token, face, icon, across, down, whence, root.fingerX() + rootLeft(),
+                    root.fingerY() + rootTop());
+                if (widget.getParent() instanceof ViewGroup) {
+                    ((ViewGroup) widget.getParent()).removeView(widget);
+                }
+                tray.close(false);
             }
         });
     }

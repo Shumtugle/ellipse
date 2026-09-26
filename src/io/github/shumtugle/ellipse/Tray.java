@@ -27,6 +27,12 @@ final class Tray extends FrameLayout {
         void open(View from, Apps.Door door, int[] icon);
 
         void lift(View from, Apps.Door door, int[] icon);
+
+        /** The widgets the folder holds, made and sized, above its apps; none if it holds none. */
+        List<View> widgets();
+
+        /** A widget in the folder held: its menu, and the same finger may carry it out. */
+        void hold(View widget);
     }
 
     private static final int COLUMNS = 4;
@@ -87,8 +93,38 @@ final class Tray extends FrameLayout {
         caption.setPadding(dp(16), 0, dp(16), dp(6));
         card.addView(caption);
 
-        int rows = Math.max(1, (doors.size() + COLUMNS - 1) / COLUMNS);
-        Grid grid = new Grid(getContext(), COLUMNS, rows);
+        /* Widgets first, as wide as the card, each at its own height; a thin line under them. */
+        LinearLayout inside = new LinearLayout(getContext());
+        inside.setOrientation(LinearLayout.VERTICAL);
+        float widgetsTall = 0f;
+        for (final View widget : hand.widgets()) {
+            if (widget.getParent() instanceof ViewGroup) {
+                ((ViewGroup) widget.getParent()).removeView(widget);
+            }
+            ViewGroup.LayoutParams wanted = widget.getLayoutParams();
+            int tall = wanted != null && wanted.height > 0 ? wanted.height : dp(160);
+            LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, tall);
+            at.setMargins(dp(8), dp(4), dp(8), dp(8));
+            widget.setOnLongClickListener(new OnLongClickListener() {
+                public boolean onLongClick(View v) {
+                    hand.hold(widget);
+                    return true;
+                }
+            });
+            inside.addView(widget, at);
+            widgetsTall += tall + dp(12);
+        }
+        if (widgetsTall > 0f && !doors.isEmpty()) {
+            View line = new View(getContext());
+            line.setBackgroundColor(Tone.faint() & 0x55FFFFFF);
+            LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                Math.max(1, dp(0.5f)));
+            at.setMargins(dp(24), 0, dp(24), dp(10));
+            inside.addView(line, at);
+            widgetsTall += dp(10) + Math.max(1, dp(0.5f));
+        }
+        int rows = doors.isEmpty() ? 0 : Math.max(1, (doors.size() + COLUMNS - 1) / COLUMNS);
+        Grid grid = new Grid(getContext(), COLUMNS, Math.max(1, rows));
         for (int i = 0; i < doors.size(); i++) {
             final Cell cell = new Cell(getContext(), doors.get(i), iconSize, true).onGround();
             cell.setOnClickListener(new OnClickListener() {
@@ -108,11 +144,16 @@ final class Tray extends FrameLayout {
         ScrollView scroll = new ScrollView(getContext());
         scroll.setVerticalScrollBarEnabled(false);
         scroll.setOverScrollMode(OVER_SCROLL_NEVER);
-        scroll.addView(grid, new ScrollView.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, Math.round(cellTall * rows)));
+        if (rows > 0) {
+            inside.addView(grid, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                Math.round(cellTall * rows)));
+        }
+        float full = widgetsTall + cellTall * rows;
+        scroll.addView(inside, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT));
         float room = getHeight() * 0.62f;
         card.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            Math.round(Math.min(room, cellTall * rows))));
+            Math.round(Math.min(room, full))));
 
         shown = true;
         setVisibility(VISIBLE);
