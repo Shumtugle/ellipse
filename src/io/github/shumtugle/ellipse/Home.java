@@ -1566,7 +1566,7 @@ public final class Home extends Activity {
             });
             return;
         }
-        final Cell cell = new Cell(this, new Stack(doors), name, iconSize, Style.namesOnScreens);
+        final Cell cell = new Cell(this, folderFace(token, doors), name, iconSize, Style.namesOnScreens);
         insides.put(cell, doors);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -1901,7 +1901,7 @@ public final class Home extends Activity {
     private Cell dockFolder(final String token, Apps found, Set<String> taken) {
         final List<Apps.Door> doors = folderDoors(token, found, taken);
         final String name = folderName(token, doors);
-        final Cell cell = new Cell(this, new Stack(doors), name, iconSize, false);
+        final Cell cell = new Cell(this, folderFace(token, doors), name, iconSize, false);
         insides.put(cell, doors);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -2791,7 +2791,8 @@ public final class Home extends Activity {
         List<String> lines = new ArrayList<>();
         List<Integer> keys = new ArrayList<>();
         List<Integer> glyphs = new ArrayList<>();
-        if (door != null || token.startsWith(Keep.SHORTCUT_THING) || Keep.OWN_THING.equals(token)) {
+        if (door != null || token.startsWith(Keep.SHORTCUT_THING) || Keep.OWN_THING.equals(token)
+            || isFolder(token)) {
             lines.add(FACE_LINE);
             keys.add(KEY_FACE);
             glyphs.add(Glyph.ICONS);
@@ -3069,7 +3070,8 @@ public final class Home extends Activity {
                     renameThing(offerToken, nameOfThing(offerView, offerToken, offerDoor));
                 }
             } else if (key == KEY_FACE) {
-                chooseFace(offerToken, offerDoor);
+                /* A folder's face is kept by the folder, whatever size it stands at. */
+                chooseFace(isFolder(offerToken) ? base(offerToken) : offerToken, offerDoor);
 
             }
         } catch (RuntimeException refused) {
@@ -3419,7 +3421,47 @@ public final class Home extends Activity {
                 }
             }
         }
+        if (isFolder(token)) {
+            return new Stack(faceDoors(token, folderDoors(token, new Apps(this), new java.util.HashSet<String>())));
+        }
         return null;
+    }
+
+    /**
+     * What a folder's face shows: its apps, and for each widget it holds, the
+     * icon of the app the widget comes from — a folder of widgets alone is
+     * not a blank. A folder given a picture or a symbol of its own wears it.
+     */
+    private android.graphics.drawable.Drawable folderFace(String token, List<Apps.Door> doors) {
+        Stack face = new Stack(faceDoors(token, doors));
+        String kept = base(token);
+        int[] own = Style.faceOf(kept);
+        if (own[4] == 1 || Style.symbolOf(kept).length() > 0) {
+            return Style.dress(this, kept, face, null);
+        }
+        return face;
+    }
+
+    private List<Apps.Door> faceDoors(String token, List<Apps.Door> doors) {
+        List<Apps.Door> face = new ArrayList<>(doors);
+        Apps found = null;
+        for (String item : Keep.folderItems(this, folderId(token))) {
+            if (!item.startsWith(WIDGET)) {
+                continue;
+            }
+            android.appwidget.AppWidgetProviderInfo info = widgetOf(item);
+            if (info == null || info.provider == null) {
+                continue;
+            }
+            if (found == null) {
+                found = new Apps(this);
+            }
+            Apps.Door owner = found.ofPackage(info.provider.getPackageName());
+            if (owner != null) {
+                face.add(0, owner);
+            }
+        }
+        return face;
     }
 
     /**
@@ -3449,19 +3491,25 @@ public final class Home extends Activity {
             groups.add(doors);
             captions.add("Door");
         }
+        /* A folder's face is its apps in small: only a picture or a symbol is put in its place. */
+        boolean folder = isFolder(token);
         List<Chooser.Item> colours = new ArrayList<>();
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, -1), AS_OTHERS, 1999));
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.OWN), THEIR_OWN, 2000));
         colours.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.ALL), IN_ACCENT, 2001));
-        groups.add(colours);
-        captions.add("Colour");
+        if (!folder) {
+            groups.add(colours);
+            captions.add("Colour");
+        }
         List<Chooser.Item> inkings = new ArrayList<>();
         for (int m = 0; m < Shape.METHODS; m++) {
             inkings.add(new Chooser.Item(Shape.face(rawIcon(token, door), -1, Style.ALL, Marks.NONE, m),
                 Shape.METHOD_NAMES[m], 4000 + m));
         }
-        groups.add(inkings);
-        captions.add("Inking");
+        if (!folder) {
+            groups.add(inkings);
+            captions.add("Inking");
+        }
         int drawing = door != null ? Marks.of(door.name.getPackageName()) : Marks.NONE;
         if (drawing != Marks.NONE) {
             List<Chooser.Item> drawings = new ArrayList<>();

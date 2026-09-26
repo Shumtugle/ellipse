@@ -197,6 +197,12 @@ final class Apps {
     }
 
     /** The door a kept word names, or none if it is gone or names something else. */
+    /** The front door of a package, for its icon; or none if it has none. */
+    Door ofPackage(String owner) {
+        LauncherActivityInfo info = owner == null ? null : doors.get(owner);
+        return info == null ? null : new Door(info, context.getResources().getDisplayMetrics().densityDpi);
+    }
+
     Door door(String token) {
         ComponentName name = nameOf(token);
         return name == null ? null : door(name, serialOf(token));
