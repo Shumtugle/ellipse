@@ -1080,7 +1080,11 @@ public final class Tune extends Activity {
         final Ground g = Ground.of(ground.words());
         android.util.DisplayMetrics real = new android.util.DisplayMetrics();
         getWindowManager().getDefaultDisplay().getRealMetrics(real);
-        final int w = real.widthPixels;
+        /* With the wallpaper moving along with the screens, it is drawn wider than the screen, for there to
+           be somewhere to move; however many screens there are, it goes the same width across all of them. */
+        final boolean moves = Keep.flag(this, Keep.WALL_MOVES, true) && (where
+            & android.app.WallpaperManager.FLAG_SYSTEM) != 0;
+        final int w = moves ? Math.round(real.widthPixels * 1.5f) : real.widthPixels;
         final int h = real.heightPixels;
         said("Drawing the wallpaper");
         new Thread(new Runnable() {
@@ -1962,7 +1966,9 @@ public final class Tune extends Activity {
      */
     private void fillBackup() {
         note("A copy holds every screen's set-out, the dock, the folders, the clock and every setting. "
-            + "Widgets keep their places; after installing anew they are added again.");
+            + "Widgets keep their places; after installing anew they are added again. Restore takes any copy: "
+            + "this home screen's own, or the backup of another home screen, whose screens, apps, folders, "
+            + "widgets, dock, wallpaper and look it brings in.");
         rows.addView(row(toggle("Keep the wallpaper in the copy", "The pictures of the home screen and the lock "
             + "screen go into every copy, and come back with it", Keep.COPY_WALLPAPER, false)));
         if (Keep.flag(this, Keep.COPY_WALLPAPER, false) && !Copy.wallpaperReadable()) {
@@ -2056,21 +2062,6 @@ public final class Tune extends Activity {
                 rows.addView(line);
             }
         }
-        caption("FROM ANOTHER HOME SCREEN");
-        note("The set-out of another home screen, from its backup, or of this home screen's earlier line: "
-            + "screens, applications at their places, folders, and widgets where the phone allows. "
-            + "What is here now is copied aside first.");
-        rows.addView(deed("Bring in from a backup", new Runnable() {
-            public void run() {
-                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("*/*");
-                try {
-                    startActivityForResult(pick, READ_FOREIGN);
-                } catch (RuntimeException none) {
-                    said("The phone has no place to keep files");
-                }
-            }
-        }));
     }
 
     /**

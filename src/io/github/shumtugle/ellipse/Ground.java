@@ -191,7 +191,8 @@ final class Ground {
 
     /** The ground drawn at a size; the same recipe gives the same picture at every size. */
     Bitmap draw(int w, int h) {
-        float unit = w / 1080f;
+        /* Measured by the height, so a picture drawn wider to move along with the screens keeps its scale. */
+        float unit = h / 2340f;
         float[] tex = texture == TEXTURE_NONE ? null : texture(w, h, unit);
         int base = Color.HSVToColor(new float[] {hue, sat / 100f, val / 100f});
         float br = Color.red(base);

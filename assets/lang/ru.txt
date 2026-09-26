@@ -543,3 +543,4 @@ Allow reading the wallpaper = Разрешить чтение обоев
 KEPT AUTOMATICALLY, ONCE A DAY = СОХРАНЯЕТСЯ САМО, РАЗ В ДЕНЬ
 The set-out as it was at the first start of the day. Tap twice to bring it back. = Раскладка, какой она была при первом запуске за день. Коснитесь дважды, чтобы вернуть.
 As it was = Как было
+A copy holds every screen's set-out, the dock, the folders, the clock and every setting. Widgets keep their places; after installing anew they are added again. Restore takes any copy: this home screen's own, or the backup of another home screen, whose screens, apps, folders, widgets, dock, wallpaper and look it brings in. = Копия хранит раскладку каждого экрана, док, папки, часы и все настройки. Виджеты сохраняют места; после переустановки их добавляют заново. Восстановление принимает любую копию: собственную или копию другого лаунчера — из неё переносятся экраны, приложения, папки, виджеты, док, обои и облик.
