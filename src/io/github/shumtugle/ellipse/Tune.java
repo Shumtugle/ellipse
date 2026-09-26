@@ -129,6 +129,7 @@ public final class Tune extends Activity {
     private static final int APPS = 14;
     /** The ground factory's room, the recipe on it, and the throws of the dice in this sitting. */
     private static final int GROUNDS = 16;
+    private static final int GROUND_FINE = 17;
     private Ground ground;
     private android.widget.ImageView groundView;
     private int groundDrawn;
@@ -289,7 +290,7 @@ public final class Tune extends Activity {
             }
         }
         return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face"
-            : room == APPS ? "Open an app" : room == GROUNDS ? "Wallpaper" : room == LOOKS ? "Presets" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : "";
+            : room == APPS ? "Open an app" : room == GROUNDS ? "Wallpaper" : room == GROUND_FINE ? "Fine tuning" : room == LOOKS ? "Presets" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : "";
     }
 
     private float density;
@@ -538,7 +539,14 @@ public final class Tune extends Activity {
     private void fillRoom() {
         rows.removeAllViews();
         window.setVisibility(room() == ICONS || room() == CLOCK || room() == LISTGROUND || room() == FONTS
-            || room() == GROUNDS ? View.VISIBLE : View.GONE);
+            || room() == GROUNDS || room() == GROUND_FINE ? View.VISIBLE : View.GONE);
+        window.setPadding(dp(16), dp(4), dp(16), dp(10));
+        /* The wallpaper's rooms end with Done: the ground set on both screens. */
+        foot.done(room() == GROUNDS || room() == GROUND_FINE ? new Runnable() {
+            public void run() {
+                setGround(android.app.WallpaperManager.FLAG_SYSTEM | android.app.WallpaperManager.FLAG_LOCK);
+            }
+        } : null);
         if (room() == HIDDEN) {
             fillHidden();
             return;
@@ -557,6 +565,10 @@ public final class Tune extends Activity {
         }
         if (room() == GROUNDS) {
             fillGrounds();
+            return;
+        }
+        if (room() == GROUND_FINE) {
+            fillGroundsFine();
             return;
         }
         if (room() == LOOKS) {
@@ -792,57 +804,70 @@ public final class Tune extends Activity {
      * as the wallpaper, or kept among the owner's own.
      */
     private void fillGrounds() {
-        if (ground == null) {
-            ground = Ground.kept(this);
-        }
-        window.removeAllViews();
-        groundView = new android.widget.ImageView(this);
-        groundView.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
-        android.util.DisplayMetrics real = new android.util.DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getRealMetrics(real);
-        int tall = dp(260);
-        window.addView(groundView, new FrameLayout.LayoutParams(Math.round(tall * real.widthPixels
-            / (float) real.heightPixels), tall, android.view.Gravity.CENTER_HORIZONTAL));
-        drawGround();
-        /* The dice: back to what was thrown before, or a new throw. */
-        LinearLayout throwing = new LinearLayout(this);
-        throwing.setGravity(android.view.Gravity.CENTER);
-        throwing.setPadding(dp(16), dp(8), dp(16), dp(8));
-        throwing.addView(chip("\u25C0", false, new Runnable() {
-            public void run() {
-                if (throwAt > 0) {
-                    throwAt--;
-                    ground = Ground.of(thrown.get(throwAt));
-                    groundChanged(true);
-                }
-            }
-        }));
-        throwing.addView(chip("\u2684  " + Words.t("Random"), true, new Runnable() {
-            public void run() {
-                throwDice();
-            }
-        }));
-        throwing.addView(chip("\u25B6", false, new Runnable() {
-            public void run() {
-                if (throwAt >= 0 && throwAt < thrown.size() - 1) {
-                    throwAt++;
-                    ground = Ground.of(thrown.get(throwAt));
-                    groundChanged(true);
-                } else {
-                    throwDice();
-                }
-            }
-        }));
-        rows.addView(throwing);
+        groundWindow(true);
         caption("READY");
-        rows.addView(chips(Ground.READY, -1, new Chosen() {
+        rows.addView(flow(Ground.READY, -1, new Chosen() {
             public void chosen(int which) {
                 ground = Ground.ready(which);
                 groundChanged(true);
             }
         }));
+        caption("MINE");
+        final java.util.List<String[]> mine = mineGrounds();
+        String[] names = new String[mine.size() + 1];
+        for (int i = 0; i < mine.size(); i++) {
+            names[i] = mine.get(i)[0];
+        }
+        names[mine.size()] = "+ " + Words.t("Keep this ground");
+        Flow kept = flow(names, -1, new Chosen() {
+            public void chosen(int which) {
+                if (which < mine.size()) {
+                    ground = Ground.of(mine.get(which)[1]);
+                    groundChanged(true);
+                    return;
+                }
+                Ask.show(host, "Name this ground", Words.t("Ground") + " " + (mine.size() + 1), new Ask.Answer() {
+                    public void answered(String text) {
+                        String name = text == null ? "" : text.trim().replace("\t", " ").replace("\n", " ");
+                        if (!name.isEmpty()) {
+                            mine.add(new String[] {name, ground.words()});
+                            keepMineGrounds(mine);
+                            fill();
+                        }
+                    }
+                });
+            }
+        });
+        /* A kept ground is forgotten by holding it. */
+        for (int i = 0; i < mine.size(); i++) {
+            final int which = i;
+            kept.getChildAt(i).setOnLongClickListener(new View.OnLongClickListener() {
+                public boolean onLongClick(View v) {
+                    v.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                    Ask.tell(host, mine.get(which)[0], Words.t("Forget this ground?"), "Forget", new Runnable() {
+                        public void run() {
+                            mine.remove(which);
+                            keepMineGrounds(mine);
+                            fill();
+                        }
+                    });
+                    return true;
+                }
+            });
+        }
+        rows.addView(kept);
+        rows.addView(row(door(Glyph.BRUSH, "Fine tuning", "Each layer's kind, colour, strength and scale",
+            GROUND_FINE)));
+    }
+
+    /** The ground's layers one by one, for whoever wants more than the dice. */
+    private void fillGroundsFine() {
+        if (ground == null) {
+            ground = Ground.kept(this);
+        }
+        groundWindow(false);
         caption("LIGHT");
-        rows.addView(chips(Ground.LIGHTS, ground.light, new Chosen() {
+        rows.addView(flow(Ground.LIGHTS, ground.light, new Chosen() {
             public void chosen(int which) {
                 ground.light = which;
                 groundChanged(true);
@@ -854,7 +879,7 @@ public final class Tune extends Activity {
             groundSlider("Strength", 0, 100, ground.lightK, "%", 2);
         }
         caption("TEXTURE");
-        rows.addView(chips(Ground.TEXTURES, ground.texture, new Chosen() {
+        rows.addView(flow(Ground.TEXTURES, ground.texture, new Chosen() {
             public void chosen(int which) {
                 ground.texture = which;
                 groundChanged(true);
@@ -868,7 +893,7 @@ public final class Tune extends Activity {
             groundSlider("Scale", 40, 250, ground.scale, "%", 7);
         }
         caption("ORNAMENT");
-        rows.addView(chips(Ground.ORNAMENTS, ground.ornament, new Chosen() {
+        rows.addView(flow(Ground.ORNAMENTS, ground.ornament, new Chosen() {
             public void chosen(int which) {
                 ground.ornament = which;
                 groundChanged(true);
@@ -886,6 +911,7 @@ public final class Tune extends Activity {
             }
         }));
         caption("WALLPAPER");
+        note("Done sets it on both screens; here, on one of them only.");
         rows.addView(deed("Set on the home screen", new Runnable() {
             public void run() {
                 setGround(android.app.WallpaperManager.FLAG_SYSTEM);
@@ -896,62 +922,136 @@ public final class Tune extends Activity {
                 setGround(android.app.WallpaperManager.FLAG_LOCK);
             }
         }));
-        rows.addView(deed("Set on both", new Runnable() {
-            public void run() {
-                setGround(android.app.WallpaperManager.FLAG_SYSTEM | android.app.WallpaperManager.FLAG_LOCK);
-            }
-        }));
-        caption("MINE");
-        rows.addView(deed("Keep this ground", new Runnable() {
-            public void run() {
-                Ask.show(host, "Name this ground", Words.t("Ground") + " " + (mineGrounds().size() + 1),
-                    new Ask.Answer() {
-                        public void answered(String text) {
-                            String name = text == null ? "" : text.trim().replace("\t", " ").replace("\n", " ");
-                            if (name.isEmpty()) {
-                                return;
-                            }
-                            java.util.List<String[]> mine = mineGrounds();
-                            mine.add(new String[] {name, ground.words()});
-                            keepMineGrounds(mine);
-                            fill();
-                        }
-                    });
-            }
-        }));
-        final java.util.List<String[]> mine = mineGrounds();
-        for (int i = 0; i < mine.size(); i++) {
-            final int which = i;
-            LinearLayout line = new LinearLayout(this);
-            line.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            TextView wear = (TextView) deed(mine.get(i)[0], new Runnable() {
-                public void run() {
-                    ground = Ground.of(mine.get(which)[1]);
-                    groundChanged(true);
-                }
-            });
-            wear.setTextColor(Tone.onSurface());
-            line.addView(wear, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            final TextView gone = (TextView) deed("\u00D7", null);
-            gone.setPadding(dp(16), dp(12), dp(24), dp(12));
-            gone.setOnClickListener(new View.OnClickListener() {
-                private long armed;
+    }
 
+    /**
+     * The ground at the head of the room, from edge to edge of the screen;
+     * and, in the first of the two rooms, the arrows back and forth through
+     * the throws and the round button of the dice, standing over its foot.
+     */
+    private void groundWindow(boolean dice) {
+        if (ground == null) {
+            ground = Ground.kept(this);
+        }
+        window.removeAllViews();
+        window.setPadding(0, 0, 0, dp(8));
+        FrameLayout stage = new FrameLayout(this);
+        groundView = new android.widget.ImageView(this);
+        groundView.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+        stage.addView(groundView, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(dice ? 290 : 240)));
+        if (dice) {
+            stage.addView(arrow(true), arrowAt(dp(20)));
+            stage.addView(arrow(false), arrowAt(dp(124)));
+            TextView roll = new TextView(this);
+            roll.setText(Words.t("Random"));
+            roll.setGravity(android.view.Gravity.CENTER);
+            roll.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+            roll.setTextColor(android.graphics.Color.luminance(Tone.primary()) > 0.4f ? 0xFF1C1A17 : 0xFFF5F1E8);
+            android.graphics.drawable.GradientDrawable round = new android.graphics.drawable.GradientDrawable();
+            round.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            round.setColor(Tone.primary());
+            roll.setBackground(Tone.touch(round, dp(52)));
+            roll.setElevation(dp(6));
+            roll.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    long now = System.currentTimeMillis();
-                    if (now - armed > 3000L) {
-                        armed = now;
-                        gone.setText(Words.t("Forget?"));
-                        return;
-                    }
-                    mine.remove(which);
-                    keepMineGrounds(mine);
-                    fill();
+                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                    throwDice();
                 }
             });
-            line.addView(gone);
-            rows.addView(line);
+            FrameLayout.LayoutParams at = new FrameLayout.LayoutParams(dp(104), dp(104),
+                android.view.Gravity.BOTTOM | android.view.Gravity.END);
+            at.rightMargin = dp(20);
+            stage.addView(roll, at);
         }
+        window.addView(stage, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(dice ? 340 : 240)));
+        drawGround();
+    }
+
+    private FrameLayout.LayoutParams arrowAt(int left) {
+        FrameLayout.LayoutParams at = new FrameLayout.LayoutParams(dp(92), dp(64),
+            android.view.Gravity.BOTTOM | android.view.Gravity.START);
+        at.leftMargin = left;
+        at.bottomMargin = dp(10);
+        return at;
+    }
+
+    /** A large outlined arrow, back or forth through the throws of the dice. */
+    private View arrow(final boolean back) {
+        View made = new View(this) {
+            private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            private final android.graphics.Path shape = new android.graphics.Path();
+
+            @Override
+            protected void onDraw(android.graphics.Canvas c) {
+                float w = getWidth();
+                float h = getHeight();
+                shape.reset();
+                float tip = w * 0.06f;
+                float neck = w * 0.48f;
+                float stem = h * 0.22f;
+                shape.moveTo(tip, h / 2f);
+                shape.lineTo(neck, h * 0.06f);
+                shape.lineTo(neck, h / 2f - stem);
+                shape.lineTo(w * 0.94f, h / 2f - stem);
+                shape.lineTo(w * 0.94f, h / 2f + stem);
+                shape.lineTo(neck, h / 2f + stem);
+                shape.lineTo(neck, h * 0.94f);
+                shape.close();
+                c.save();
+                if (!back) {
+                    c.scale(-1f, 1f, w / 2f, h / 2f);
+                }
+                paint.setStyle(android.graphics.Paint.Style.FILL);
+                paint.setColor(0x66000000);
+                c.drawPath(shape, paint);
+                paint.setStyle(android.graphics.Paint.Style.STROKE);
+                paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+                paint.setStrokeWidth(dp(3));
+                paint.setColor(0xFFF5F1E8);
+                c.drawPath(shape, paint);
+                c.restore();
+            }
+        };
+        made.setContentDescription(Words.t(back ? "Back" : "Forward"));
+        made.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                if (back) {
+                    if (throwAt > 0) {
+                        throwAt--;
+                        ground = Ground.of(thrown.get(throwAt));
+                        groundChanged(false);
+                    }
+                } else if (throwAt >= 0 && throwAt < thrown.size() - 1) {
+                    throwAt++;
+                    ground = Ground.of(thrown.get(throwAt));
+                    groundChanged(false);
+                } else {
+                    throwDice();
+                }
+            }
+        });
+        return made;
+    }
+
+    /** Words to choose one from, in lines that wrap; the chosen one in the accent. */
+    private Flow flow(String[] names, int chosen, final Chosen then) {
+        Flow made = new Flow(this, dp(8));
+        made.setPadding(dp(20), dp(4), dp(20), dp(10));
+        for (int i = 0; i < names.length; i++) {
+            final int which = i;
+            TextView one = chip(Words.t(names[i]), i == chosen, new Runnable() {
+                public void run() {
+                    then.chosen(which);
+                }
+            });
+            one.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
+            one.setPadding(dp(16), dp(9), dp(16), dp(9));
+            one.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+            made.addView(one);
+        }
+        return made;
     }
 
     interface Chosen {
@@ -1001,8 +1101,9 @@ public final class Tune extends Activity {
     private void groundSlider(String title, int least, int most, int now, final String unit, final int part) {
         LinearLayout made = new LinearLayout(this);
         made.setOrientation(LinearLayout.VERTICAL);
-        made.setPadding(dp(24), dp(4), dp(24), dp(4));
+        made.setPadding(dp(12), dp(4), dp(12), dp(4));
         LinearLayout top = new LinearLayout(this);
+        top.setPadding(dp(12), 0, dp(12), 0);
         TextView name = new TextView(this);
         name.setText(Words.t(title));
         name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
@@ -1059,7 +1160,8 @@ public final class Tune extends Activity {
         final Ground g = Ground.of(ground.words());
         android.util.DisplayMetrics real = new android.util.DisplayMetrics();
         getWindowManager().getDefaultDisplay().getRealMetrics(real);
-        final int w = 300;
+        /* Drawn large enough to fill the screen's width without softening much. */
+        final int w = 720;
         final int h = Math.round(w * real.heightPixels / (float) real.widthPixels);
         new Thread(new Runnable() {
             public void run() {

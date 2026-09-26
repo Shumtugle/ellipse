@@ -106,6 +106,32 @@ final class Foot extends LinearLayout {
             }
         });
         addView(blob);
+        /* The explicit way to finish, standing in the menu's place where a room has one. */
+        done = new View(context) {
+            private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            private final android.graphics.Path tick = new android.graphics.Path();
+
+            @Override
+            protected void onDraw(android.graphics.Canvas c) {
+                float w = getWidth();
+                float h = getHeight();
+                paint.setStyle(android.graphics.Paint.Style.FILL);
+                paint.setColor(0xFF3DC96A);
+                c.drawCircle(w / 2f, h / 2f, Math.min(w, h) / 2f, paint);
+                paint.setStyle(android.graphics.Paint.Style.STROKE);
+                paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
+                paint.setStrokeWidth(Math.min(w, h) * 0.1f);
+                paint.setColor(0xFFFFFFFF);
+                tick.reset();
+                tick.moveTo(w * 0.29f, h * 0.52f);
+                tick.lineTo(w * 0.44f, h * 0.67f);
+                tick.lineTo(w * 0.72f, h * 0.36f);
+                c.drawPath(tick, paint);
+            }
+        };
+        done.setVisibility(GONE);
+        addView(done, new LayoutParams(dp(56), dp(56)));
 
         menu = new Menu(context, host, new Menu.Listener() {
             public void picked(int section, int key) {
@@ -132,6 +158,27 @@ final class Foot extends LinearLayout {
 
     EditText field() {
         return field;
+    }
+
+    private final View done;
+
+    /** The done button in the menu's place, doing what it is given; none, and the menu is back. */
+    void done(final Runnable does) {
+        if (does == null) {
+            done.setVisibility(GONE);
+            blob.setVisibility(VISIBLE);
+            done.setOnClickListener(null);
+            return;
+        }
+        blob.setVisibility(GONE);
+        done.setVisibility(VISIBLE);
+        done.setContentDescription(Words.t("Done"));
+        done.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM);
+                does.run();
+            }
+        });
     }
 
     /** Shows the way back at the start of the bar, or hides it when given nothing. */

@@ -60,11 +60,52 @@ final class Slide extends View {
         canvas.drawCircle(at, cy, 13 * density, paint);
     }
 
+    /*
+     * A finger that comes down on the slider is not yet the slider's: the
+     * page may be scrolling. It becomes the slider's only when it has gone
+     * clearly sideways, or when it lifts where it came down, as a tap; a
+     * finger going up or down is handed back to the page, and the value is
+     * left as it was.
+     */
+    private float downX;
+    private float downY;
+    private boolean holding;
+    private boolean given;
+
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getActionMasked();
+        float slop = android.view.ViewConfiguration.get(getContext()).getScaledTouchSlop();
         if (action == MotionEvent.ACTION_DOWN) {
-            getParent().requestDisallowInterceptTouchEvent(true);
+            downX = event.getX();
+            downY = event.getY();
+            holding = false;
+            given = false;
+            return true;
+        }
+        if (given) {
+            return false;
+        }
+        if (!holding) {
+            float dx = Math.abs(event.getX() - downX);
+            float dy = Math.abs(event.getY() - downY);
+            if (action == MotionEvent.ACTION_MOVE) {
+                if (dy > slop && dy > dx) {
+                    given = true;
+                    getParent().requestDisallowInterceptTouchEvent(false);
+                    return false;
+                }
+                if (dx > slop * 1.5f && dx > dy * 1.5f) {
+                    holding = true;
+                    getParent().requestDisallowInterceptTouchEvent(true);
+                } else {
+                    return true;
+                }
+            } else if (action == MotionEvent.ACTION_CANCEL) {
+                return false;
+            } else if (action == MotionEvent.ACTION_UP && (dx > slop || dy > slop)) {
+                return false;
+            }
         }
         float f = (event.getX() - edge()) / Math.max(1f, getWidth() - 2 * edge());
         int now = Math.round(least + Math.max(0f, Math.min(1f, f)) * (most - least));
