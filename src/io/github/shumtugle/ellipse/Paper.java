@@ -835,7 +835,7 @@ private static String head(String title, String extra) {
 
         /* A size is a size of something: the words move while the finger does. */
         b.append("<label>").append(safe(Words.s("text_size")))
-            .append("</label><input id=z type=range min=70 max=200 value='")
+            .append("</label><input id=z type=range min=70 max=" + Keep.ZOOM_MOST + " value='")
             .append(zoom).append("'>");
         b.append("<p id=sample>").append(safe(Words.s("sample"))).append("</p>");
 

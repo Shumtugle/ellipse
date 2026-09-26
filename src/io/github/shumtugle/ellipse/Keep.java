@@ -647,13 +647,21 @@ final class Keep {
         touch(context);
     }
 
-    /** How large the home screen's own words are drawn, in percent. */
+    /**
+     * How large the home screen's own words are drawn, in percent: from
+     * seventy to a hundred and thirty. Larger, the words of a menu broke
+     * into syllables and its last lines — the way back to this setting
+     * among them — fell off the screen; a size kept larger before is read
+     * as the largest there is.
+     */
+    static final int ZOOM_MOST = 130;
+
     static int zoom(Context context) {
-        return store(context).getInt("zoom", 100);
+        return Math.max(70, Math.min(ZOOM_MOST, store(context).getInt("zoom", 100)));
     }
 
     static void saveZoom(Context context, int size) {
-        store(context).edit().putInt("zoom", size < 70 ? 70 : (size > 200 ? 200 : size)).apply();
+        store(context).edit().putInt("zoom", Math.max(70, Math.min(ZOOM_MOST, size))).apply();
         touch(context);
     }
 
