@@ -601,6 +601,44 @@ final class Keep {
     private static final String PENDING = "pending";
     static final String FOLDER_THING = "#folder:";
     static final String SHORTCUT_THING = "#shortcut:";
+    /**
+     * A link: an older kind of shortcut, a call to open something — a page,
+     * a contact, a place in an app — with its own name and picture, kept by
+     * the home screen itself rather than by the app it opens.
+     */
+    static final String LINK_THING = "#link:";
+    private static final String LINK = "link.";
+    private static final String LINK_NEXT = "link.next";
+
+    /** A link kept: its call, its name and its picture; its number returned. */
+    static int newLink(Context context, String call, String name, byte[] picture) {
+        int id = store(context).getInt(LINK_NEXT, 1);
+        store(context).edit().putInt(LINK_NEXT, id + 1).putString(LINK + id + ".call", call)
+            .putString(LINK + id + ".name", name == null ? "" : name).apply();
+        if (picture != null && picture.length > 0) {
+            java.io.File file = linkPicture(context, id);
+            try (java.io.OutputStream out = new java.io.FileOutputStream(file)) {
+                out.write(picture);
+            } catch (java.io.IOException unsaved) {
+                // The link keeps a plain picture.
+            }
+        }
+        return id;
+    }
+
+    static String linkCall(Context context, int id) {
+        return store(context).getString(LINK + id + ".call", null);
+    }
+
+    static String linkName(Context context, int id) {
+        return store(context).getString(LINK + id + ".name", "");
+    }
+
+    static java.io.File linkPicture(Context context, int id) {
+        java.io.File room = new java.io.File(context.getFilesDir(), "links");
+        room.mkdirs();
+        return new java.io.File(room, id + ".png");
+    }
 
     /**
      * What stands in a place of the dock: an app as it is kept, an empty

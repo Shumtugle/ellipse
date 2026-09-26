@@ -157,6 +157,11 @@ final class Looks {
         dress(context, new Object[0]);
     }
 
+    /** The dress let go of, as a set-out brought in begins: the same as Material 3. */
+    static void plain(Context context) {
+        dress(context, new Object[0]);
+    }
+
     /** The ready presets, by their names; the first is the home screen as it first comes. */
     static final String[] READY = {"Material 3", "Wood", "Steel", "Meno", "Rings", "Paper"};
     static final String[] READY_ABOUT = {

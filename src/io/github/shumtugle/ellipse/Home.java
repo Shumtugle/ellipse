@@ -1004,6 +1004,8 @@ public final class Home extends Activity {
                     widget(page, spot);
                 } else if (spot.token.startsWith(Keep.SHORTCUT_THING)) {
                     pinned(page, spot);
+                } else if (spot.token.startsWith(Keep.LINK_THING)) {
+                    linked(page, spot);
                 } else if (spot.token.startsWith(Keep.FOLDER_THING)) {
                     int id = folderId(spot.token);
                     List<Apps.Door> inside = new ArrayList<>();
@@ -2843,6 +2845,52 @@ public final class Home extends Activity {
             }
         });
         return cell;
+    }
+
+    /** A link standing on a screen: its own picture and name, and its call made at a touch. */
+    private void linked(Grid page, Keep.Spot spot) {
+        if (!page.free(spot.x, spot.y)) {
+            return;
+        }
+        final int id;
+        try {
+            id = Integer.parseInt(spot.token.substring(Keep.LINK_THING.length()));
+        } catch (NumberFormatException broken) {
+            return;
+        }
+        final String call = Keep.linkCall(this, id);
+        if (call == null) {
+            return;
+        }
+        android.graphics.drawable.Drawable picture = null;
+        java.io.File file = Keep.linkPicture(this, id);
+        if (file.isFile()) {
+            android.graphics.Bitmap bitmap = android.graphics.BitmapFactory.decodeFile(file.getPath());
+            if (bitmap != null) {
+                picture = new android.graphics.drawable.BitmapDrawable(getResources(), bitmap);
+            }
+        }
+        if (picture == null) {
+            picture = new android.graphics.drawable.ColorDrawable(Tone.primaryContainer());
+        }
+        final Cell cell = new Cell(this, Style.dress(this, spot.token, picture, null), Keep.linkName(this, id),
+            iconSize, Style.namesOnScreens);
+        cell.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                try {
+                    Intent open = Intent.parseUri(call, 0);
+                    open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    open.setSourceBounds(boundsOf(cell));
+                    startActivity(open, ActivityOptions.makeClipRevealAnimation(cell, 0, 0, cell.getWidth(),
+                        cell.getHeight()).toBundle());
+                } catch (java.net.URISyntaxException | RuntimeException gone) {
+                    refuse(cell);
+                }
+            }
+        });
+        page.put(cell, spot.x, spot.y);
+        cells.add(cell);
+        stand(page, cell, spot.token);
     }
 
     /** A shortcut another app asked to pin, standing on a screen. */

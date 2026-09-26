@@ -49,6 +49,10 @@ final class Foreign {
         static final int FOLDER = 1;
         static final int WIDGET = 2;
         static final int OTHER = 3;
+        /** An older shortcut: a call with its own name and picture. */
+        static final int LINK = 4;
+        /** A shortcut an app offers, by its package and its id. */
+        static final int DEEP = 5;
         final int kind;
         final int x;
         final int y;
@@ -57,6 +61,8 @@ final class Foreign {
         String component;
         String provider;
         String name = "";
+        String call;
+        byte[] picture;
         final List<String> apps = new ArrayList<>();
 
         Item(int kind, int x, int y) {
@@ -522,7 +528,9 @@ final class Foreign {
 
     private static final int CONTAINER_SCREENS = -100;
     private static final int KIND_APP = 0;
+    private static final int KIND_SHORTCUT = 1;
     private static final int KIND_FOLDER = 2;
+    private static final int KIND_DEEP = 6;
     private static final int KIND_WIDGET = 4;
     private static final int KIND_CUSTOM_WIDGET = 5;
 
@@ -531,6 +539,7 @@ final class Foreign {
         boolean ranked = column(db, "favorites", "rank");
         boolean providers = column(db, "favorites", "appWidgetProvider");
         boolean titled = column(db, "favorites", "title");
+        boolean pictured = column(db, "favorites", "icon");
         List<Long> order = new ArrayList<>();
         try (Cursor d = db.rawQuery("SELECT DISTINCT screen FROM favorites WHERE container=? ORDER BY screen",
             new String[] {String.valueOf(CONTAINER_SCREENS)})) {
@@ -546,8 +555,9 @@ final class Foreign {
             layout.screens.add(new ArrayList<Item>());
         }
         try (Cursor c = db.rawQuery("SELECT _id, intent, screen, cellX, cellY, spanX, spanY, itemType, "
-            + (providers ? "appWidgetProvider" : "NULL") + ", " + (titled ? "title" : "NULL")
-            + " FROM favorites WHERE container=?", new String[] {String.valueOf(CONTAINER_SCREENS)})) {
+            + (providers ? "appWidgetProvider" : "NULL") + ", " + (titled ? "title" : "NULL") + ", "
+            + (pictured ? "icon" : "NULL") + " FROM favorites WHERE container=?",
+            new String[] {String.valueOf(CONTAINER_SCREENS)})) {
             while (c.moveToNext()) {
                 int x = place(c.getDouble(3));
                 int y = place(c.getDouble(4));
@@ -569,6 +579,15 @@ final class Foreign {
                             }
                         }
                     }
+                } else if (kind == KIND_SHORTCUT && !c.isNull(1)) {
+                    item = new Item(Item.LINK, x, y);
+                    item.call = c.getString(1);
+                    item.name = c.isNull(9) ? "" : c.getString(9);
+                    item.picture = c.isNull(10) ? null : c.getBlob(10);
+                } else if (kind == KIND_DEEP && !c.isNull(1)) {
+                    item = new Item(Item.DEEP, x, y);
+                    item.call = c.getString(1);
+                    item.name = c.isNull(9) ? "" : c.getString(9);
                 } else if ((kind == KIND_WIDGET || kind == KIND_CUSTOM_WIDGET) && providers && !c.isNull(8)) {
                     item = new Item(Item.WIDGET, x, y);
                     item.w = span(c.getDouble(5));
@@ -616,6 +635,10 @@ final class Foreign {
         int widgets;
         int missing;
         int others;
+        /** Older shortcuts brought as links, and shortcuts of apps pinned again. */
+        int links;
+        /** Shortcuts the apps that offered them no longer hold, by their names. */
+        final List<String> lost = new ArrayList<>();
         /** How many of the other home screen's looks were taken over: names, dock, outline. */
         int look;
         /** Whether the owner's widget clock was stood in for by this home screen's own. */
@@ -635,6 +658,12 @@ final class Foreign {
     static Report bringIn(Context context, Layout layout, android.appwidget.AppWidgetHost host) {
         Copy.aside(context);
         Report report = new Report();
+        /* The dress let go of first, so what the other home screen says of its
+           look is put on a plain ground, not over this one's last dress. */
+        Looks.plain(context);
+        android.content.pm.LauncherApps shortcuts = (android.content.pm.LauncherApps)
+            context.getSystemService(Context.LAUNCHER_APPS_SERVICE);
+        Map<String, List<String>> pins = new HashMap<>();
         android.content.pm.PackageManager pm = context.getPackageManager();
         android.appwidget.AppWidgetManager widgets = android.appwidget.AppWidgetManager.getInstance(context);
         int columns = Math.max(3, Math.min(7, layout.columns));
@@ -654,6 +683,45 @@ final class Foreign {
                         report.apps++;
                     } else {
                         report.missing++;
+                    }
+                } else if (item.kind == Item.LINK) {
+                    /* An older shortcut is kept as a link, if what it calls is on this phone. */
+                    boolean answers;
+                    try {
+                        answers = pm.resolveActivity(Intent.parseUri(item.call, 0), 0) != null;
+                    } catch (java.net.URISyntaxException | RuntimeException broken) {
+                        answers = false;
+                    }
+                    if (answers) {
+                        int id = Keep.newLink(context, item.call, item.name, item.picture);
+                        spots.add(new Keep.Spot(Keep.LINK_THING + id, s, item.x, item.y));
+                        report.links++;
+                    } else {
+                        report.others++;
+                    }
+                } else if (item.kind == Item.DEEP) {
+                    /* A shortcut an app offers is pinned again here, if the app still holds it. */
+                    String pkg = null;
+                    String id = null;
+                    try {
+                        Intent said = Intent.parseUri(item.call, 0);
+                        pkg = said.getPackage() != null ? said.getPackage()
+                            : said.getComponent() != null ? said.getComponent().getPackageName() : null;
+                        id = said.getStringExtra("shortcut_id");
+                    } catch (java.net.URISyntaxException | RuntimeException broken) {
+                        pkg = null;
+                    }
+                    if (pkg != null && id != null && holds(shortcuts, pkg, id)) {
+                        List<String> ids = pins.get(pkg);
+                        if (ids == null) {
+                            ids = new ArrayList<>();
+                            pins.put(pkg, ids);
+                        }
+                        ids.add(id);
+                        spots.add(new Keep.Spot(Keep.SHORTCUT_THING + pkg + "/" + id, s, item.x, item.y));
+                        report.links++;
+                    } else {
+                        report.lost.add(item.name.isEmpty() ? "?" : item.name);
                     }
                 } else if (item.kind == Item.FOLDER) {
                     List<String> inside = new ArrayList<>();
@@ -705,6 +773,19 @@ final class Foreign {
                 } else {
                     report.others++;
                 }
+            }
+        }
+        for (Map.Entry<String, List<String>> one : pins.entrySet()) {
+            List<String> all = new ArrayList<>(pinnedOf(shortcuts, one.getKey()));
+            for (String id : one.getValue()) {
+                if (!all.contains(id)) {
+                    all.add(id);
+                }
+            }
+            try {
+                shortcuts.pinShortcuts(one.getKey(), all, android.os.Process.myUserHandle());
+            } catch (RuntimeException refused) {
+                // Not the home screen in charge: the places stay, empty until it is.
             }
         }
         Keep.lay(context, spots);
@@ -785,6 +866,43 @@ final class Foreign {
     }
 
     /** Whether an application's front door is on this phone, as the home screen sees the phone's apps. */
+    /** Whether an app still holds a shortcut of a given id, pinned, offered or declared. */
+    private static boolean holds(android.content.pm.LauncherApps shortcuts, String pkg, String id) {
+        try {
+            android.content.pm.LauncherApps.ShortcutQuery query = new android.content.pm.LauncherApps.ShortcutQuery();
+            query.setPackage(pkg);
+            query.setShortcutIds(java.util.Collections.singletonList(id));
+            query.setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED
+                | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
+                | android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST);
+            List<android.content.pm.ShortcutInfo> found = shortcuts.getShortcuts(query,
+                android.os.Process.myUserHandle());
+            return found != null && !found.isEmpty();
+        } catch (RuntimeException refused) {
+            return false;
+        }
+    }
+
+    /** The ids of an app's shortcuts this home screen has pinned already. */
+    private static List<String> pinnedOf(android.content.pm.LauncherApps shortcuts, String pkg) {
+        List<String> ids = new ArrayList<>();
+        try {
+            android.content.pm.LauncherApps.ShortcutQuery query = new android.content.pm.LauncherApps.ShortcutQuery();
+            query.setPackage(pkg);
+            query.setQueryFlags(android.content.pm.LauncherApps.ShortcutQuery.FLAG_MATCH_PINNED);
+            List<android.content.pm.ShortcutInfo> found = shortcuts.getShortcuts(query,
+                android.os.Process.myUserHandle());
+            if (found != null) {
+                for (android.content.pm.ShortcutInfo one : found) {
+                    ids.add(one.getId());
+                }
+            }
+        } catch (RuntimeException refused) {
+            // None known.
+        }
+        return ids;
+    }
+
     private static boolean installed(Context context, String component, Map<String, Boolean> known) {
         ComponentName name = component == null ? null : ComponentName.unflattenFromString(component);
         if (name == null) {

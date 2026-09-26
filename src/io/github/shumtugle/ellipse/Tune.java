@@ -2035,6 +2035,16 @@ public final class Tune extends Activity {
                     if (done.packMissing != null) {
                         told.append(" Its pack of icons is not on this phone: ").append(done.packMissing).append('.');
                     }
+                    if (done.links > 0) {
+                        told.append(" Shortcuts and links: ").append(done.links).append('.');
+                    }
+                    if (!done.lost.isEmpty()) {
+                        told.append(" Shortcuts their apps no longer hold, to be made again: ");
+                        for (int i = 0; i < done.lost.size(); i++) {
+                            told.append(i > 0 ? ", " : "").append(done.lost.get(i));
+                        }
+                        told.append('.');
+                    }
                     if (done.missing > 0) {
                         told.append(" Not on this phone: ").append(done.missing).append('.');
                     }

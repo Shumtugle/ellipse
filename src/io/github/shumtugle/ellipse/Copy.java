@@ -286,9 +286,11 @@ final class Copy {
         File root = context.getFilesDir();
         List<File> kept = new ArrayList<>();
         kept.add(new File(root, Words.BROUGHT_FILE));
-        File[] faces = new File(root, "faces").listFiles();
-        if (faces != null) {
-            kept.addAll(Arrays.asList(faces));
+        for (String room : new String[] {"faces", "links"}) {
+            File[] inside = new File(root, room).listFiles();
+            if (inside != null) {
+                kept.addAll(Arrays.asList(inside));
+            }
         }
         for (File one : kept) {
             if (!one.isFile() || one.length() > 2L * 1024 * 1024) {
