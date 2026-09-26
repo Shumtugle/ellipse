@@ -1131,6 +1131,8 @@ public final class Home extends Activity {
                     pinned(page, spot);
                 } else if (spot.token.startsWith(Keep.LINK_THING)) {
                     linked(page, spot);
+                } else if (spot.token.startsWith(Keep.RUN_THING)) {
+                    run(page, spot);
                 } else if (spot.token.startsWith(Keep.FOLDER_THING)) {
                     int id = folderId(spot.token);
                     List<Apps.Door> inside = new ArrayList<>();
@@ -2792,7 +2794,7 @@ public final class Home extends Activity {
         List<Integer> keys = new ArrayList<>();
         List<Integer> glyphs = new ArrayList<>();
         if (door != null || token.startsWith(Keep.SHORTCUT_THING) || Keep.OWN_THING.equals(token)
-            || isFolder(token)) {
+            || isFolder(token) || token.startsWith(Keep.RUN_THING)) {
             lines.add(FACE_LINE);
             keys.add(KEY_FACE);
             glyphs.add(Glyph.ICONS);
@@ -2808,7 +2810,7 @@ public final class Home extends Activity {
             glyphs.add(Glyph.TRASH);
         }
         if (token.startsWith(Keep.FOLDER_THING) || door != null || token.startsWith(Keep.SHORTCUT_THING)
-            || token.startsWith(Keep.LINK_THING)) {
+            || token.startsWith(Keep.LINK_THING) || token.startsWith(Keep.RUN_THING)) {
             lines.add(RENAME);
             keys.add(KEY_RENAME);
             glyphs.add(Glyph.PEN);
@@ -3357,13 +3359,121 @@ public final class Home extends Activity {
             all.add(new Chooser.Item(makers.get(i).getIcon(dpi), makers.get(i).getLabel(), i));
         }
         groups.add(all);
+        /* The apps themselves, their icons set down as from the list of every app. */
+        choiceApps = new Apps(this).all(Keep.BY_NAME);
+        List<Chooser.Item> apps = new ArrayList<>();
+        List<Chooser.Item> ways = new ArrayList<>();
+        for (int i = 0; i < choiceApps.size(); i++) {
+            Apps.Door door = choiceApps.get(i);
+            if (door.serial != 0) {
+                continue;
+            }
+            apps.add(new Chooser.Item(door.icon(), door.label, CHOOSE_APP + i));
+            /* One picture cannot stand in two places: the second line gets its own copy. */
+            android.graphics.drawable.Drawable.ConstantState again = door.icon().getConstantState();
+            ways.add(new Chooser.Item(again != null ? again.newDrawable(getResources()) : door.plain(), door.label,
+                CHOOSE_RUNS + i));
+        }
+        groups.add(apps);
+        /* Runs: an app's other ways in, chosen from the app. */
+        groups.add(ways);
         choosingFace = false;
         chooser.hint(SEARCH_SHORTCUTS);
-        chooser.show(new String[] {null}, groups, Keep.number(this, Keep.MAKERS_VIEW, Keep.LINES) == Keep.PAGES);
+        chooser.show(new String[] {null, "Apps", "Runs"}, groups,
+            Keep.number(this, Keep.MAKERS_VIEW, Keep.LINES) == Keep.PAGES);
+    }
+
+    private static final int CHOOSE_APP = 100000;
+    private static final int CHOOSE_RUNS = 200000;
+    private static final int CHOOSE_RUN = 300000;
+    private List<Apps.Door> choiceApps = new ArrayList<>();
+    private final List<android.content.pm.ActivityInfo> choiceRuns = new ArrayList<>();
+
+    /**
+     * An app's runs: the screens it lets any other app open by name, open
+     * to all and switched on, asking no leave — every other is left out, for
+     * it would not open from here. Its front door is not among them.
+     */
+    private void showRuns(Apps.Door door) {
+        choiceRuns.clear();
+        android.content.pm.PackageManager pm = getPackageManager();
+        try {
+            android.content.pm.PackageInfo info = pm.getPackageInfo(door.name.getPackageName(),
+                android.content.pm.PackageManager.GET_ACTIVITIES);
+            if (info.activities != null) {
+                for (android.content.pm.ActivityInfo one : info.activities) {
+                    if (!one.exported || !one.enabled || one.permission != null
+                        || one.name.equals(door.name.getClassName())) {
+                        continue;
+                    }
+                    choiceRuns.add(one);
+                }
+            }
+        } catch (android.content.pm.PackageManager.NameNotFoundException | RuntimeException gone) {
+            choiceRuns.clear();
+        }
+        if (choiceRuns.isEmpty()) {
+            said("This app has no other ways in");
+            return;
+        }
+        final java.text.Collator order = java.text.Collator.getInstance();
+        final android.content.pm.PackageManager names = pm;
+        java.util.Collections.sort(choiceRuns, new java.util.Comparator<android.content.pm.ActivityInfo>() {
+            public int compare(android.content.pm.ActivityInfo a, android.content.pm.ActivityInfo b) {
+                int by = order.compare(String.valueOf(a.loadLabel(names)), String.valueOf(b.loadLabel(names)));
+                return by != 0 ? by : a.name.compareTo(b.name);
+            }
+        });
+        List<Chooser.Item> runs = new ArrayList<>();
+        for (int i = 0; i < choiceRuns.size(); i++) {
+            android.content.pm.ActivityInfo one = choiceRuns.get(i);
+            Chooser.Item item = new Chooser.Item(one.loadIcon(pm), one.loadLabel(pm), CHOOSE_RUN + i);
+            runs.add(item.noted(shortClass(one.packageName, one.name)));
+        }
+        List<List<Chooser.Item>> groups = new ArrayList<>();
+        groups.add(runs);
+        choosingFace = false;
+        chooser.hint(SEARCH_SHORTCUTS);
+        chooser.show(new String[] {door.label.toString()}, groups, false);
+    }
+
+    /** A screen's class as short as it reads: without its package, where it begins with it. */
+    private static String shortClass(String owner, String name) {
+        return name.startsWith(owner + ".") ? name.substring(owner.length()) : name;
+    }
+
+    /** A short word on the screen, for a moment. */
+    private void said(String words) {
+        android.widget.Toast.makeText(this, Words.t(words), android.widget.Toast.LENGTH_LONG).show();
     }
 
     /** A maker was chosen: its own window makes the shortcut, and the answer comes back as a pin request. */
     private void make(int which) {
+        if (which >= CHOOSE_RUN) {
+            int at = which - CHOOSE_RUN;
+            if (at >= 0 && at < choiceRuns.size()) {
+                android.content.pm.ActivityInfo one = choiceRuns.get(at);
+                String token = Keep.RUN_THING + new android.content.ComponentName(one.packageName, one.name)
+                    .flattenToString();
+                Keep.saveRunName(this, token, String.valueOf(one.loadLabel(getPackageManager())));
+                setAnywhere(token, pendingPage);
+            }
+            return;
+        }
+        if (which >= CHOOSE_RUNS) {
+            int at = which - CHOOSE_RUNS;
+            if (at >= 0 && at < choiceApps.size()) {
+                showRuns(choiceApps.get(at));
+            }
+            return;
+        }
+        if (which >= CHOOSE_APP) {
+            int at = which - CHOOSE_APP;
+            if (at >= 0 && at < choiceApps.size()) {
+                setAnywhere(choiceApps.get(at).token(), pendingPage);
+            }
+            return;
+        }
         if (which == OWN_MAKER) {
             setAnywhere(Keep.OWN_THING, pendingPage);
             return;
@@ -3420,6 +3530,10 @@ public final class Home extends Activity {
                     return null;
                 }
             }
+        }
+        if (token.startsWith(Keep.RUN_THING)) {
+            android.content.pm.ActivityInfo info = runInfo(token);
+            return info == null ? null : info.loadIcon(getPackageManager());
         }
         if (isFolder(token)) {
             return new Stack(faceDoors(token, folderDoors(token, new Apps(this), new java.util.HashSet<String>())));
@@ -4348,6 +4462,76 @@ public final class Home extends Activity {
         page.edge(view, Keep.edges(this));
         cells.add(view);
         stand(page, view, spot.token);
+    }
+
+    // ------------------------------------------------------------- runs
+
+    /** The screen a run opens, as the phone knows it now; or none if its app or its screen is gone. */
+    private android.content.pm.ActivityInfo runInfo(String token) {
+        android.content.ComponentName name = android.content.ComponentName.unflattenFromString(
+            token.substring(Keep.RUN_THING.length()));
+        if (name == null) {
+            return null;
+        }
+        try {
+            return getPackageManager().getActivityInfo(name, 0);
+        } catch (android.content.pm.PackageManager.NameNotFoundException | RuntimeException gone) {
+            return null;
+        }
+    }
+
+    /**
+     * A run on a screen: the screen's own icon and name, or the name given
+     * by hand. A run whose app or screen is gone stays in its place, faint,
+     * under the name it was kept with, until the app comes back.
+     */
+    private void run(Grid page, final Keep.Spot spot) {
+        if (!page.free(spot.x, spot.y)) {
+            return;
+        }
+        android.content.pm.ActivityInfo info = runInfo(spot.token);
+        android.graphics.drawable.Drawable raw = info == null
+            ? new android.graphics.drawable.ColorDrawable(Tone.container()) : info.loadIcon(getPackageManager());
+        String given = Style.nameOf(spot.token);
+        CharSequence name = given != null ? given
+            : info != null ? info.loadLabel(getPackageManager()) : Keep.runName(this, spot.token);
+        final Cell cell = new Cell(this, Style.dress(this, spot.token, raw, info == null ? null : info.packageName),
+            name, iconSize, Style.namesOnScreens);
+        if (info == null) {
+            cell.setAlpha(0.45f);
+        }
+        cell.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                runNow(cell, spot.token);
+            }
+        });
+        page.put(cell, spot.x, spot.y);
+        cells.add(cell);
+        stand(page, cell, spot.token);
+    }
+
+    /** A run opened: its screen, by name, grown out of its icon; if the phone will not, a short word why. */
+    private void runNow(View from, String token) {
+        android.content.ComponentName name = android.content.ComponentName.unflattenFromString(
+            token.substring(Keep.RUN_THING.length()));
+        if (name == null) {
+            return;
+        }
+        Intent open = new Intent().setComponent(name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            android.app.ActivityOptions grow = android.app.ActivityOptions.makeClipRevealAnimation(from, 0, 0,
+                from.getWidth(), from.getHeight());
+            startActivity(open, grow.toBundle());
+        } catch (android.content.ActivityNotFoundException gone) {
+            refuse(from);
+            said("This way in is no longer in its app");
+        } catch (SecurityException closed) {
+            refuse(from);
+            said("Its app does not let it be opened from here");
+        } catch (RuntimeException other) {
+            refuse(from);
+            said("It could not be opened");
+        }
     }
 
     // ------------------------------------------------------------- piles

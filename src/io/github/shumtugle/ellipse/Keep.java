@@ -826,6 +826,24 @@ final class Keep {
         saveFolderItems(context, id, items);
     }
 
+    // ---------------------------------------------------------------- runs
+
+    /**
+     * A run: one way into an app other than its front door, kept by its
+     * component — the app's package and the screen's class. Its name is
+     * kept beside it, to be shown while the app is away.
+     */
+    static final String RUN_THING = "#run:";
+    private static final String RUN_NAME = "runname.";
+
+    static void saveRunName(Context context, String token, String name) {
+        store(context).edit().putString(RUN_NAME + token, name == null ? "" : name).apply();
+    }
+
+    static String runName(Context context, String token) {
+        return store(context).getString(RUN_NAME + token, "");
+    }
+
     // --------------------------------------------------------------- piles
 
     /** A pile of widgets on the home screen is kept by this word, with its number and its size. */

@@ -43,11 +43,18 @@ final class Chooser extends FrameLayout {
         final Drawable icon;
         final CharSequence name;
         final int key;
+        /** A faint second line under the name, found by the search too; or none. */
+        CharSequence note;
 
         Item(Drawable icon, CharSequence name, int key) {
             this.icon = icon;
             this.name = name == null ? "" : name;
             this.key = key;
+        }
+
+        Item noted(CharSequence said) {
+            note = said;
+            return this;
         }
     }
 
@@ -194,7 +201,22 @@ final class Chooser extends FrameLayout {
         name.setSingleLine(true);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
         name.setPadding(dp(18), 0, 0, 0);
-        made.addView(name, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (item.note == null) {
+            made.addView(name, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        } else {
+            LinearLayout words = new LinearLayout(getContext());
+            words.setOrientation(LinearLayout.VERTICAL);
+            words.addView(name);
+            TextView note = new TextView(getContext());
+            note.setText(item.note);
+            note.setTextColor(Tone.faint());
+            note.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+            note.setSingleLine(true);
+            note.setEllipsize(android.text.TextUtils.TruncateAt.MIDDLE);
+            note.setPadding(dp(18), dp(1), 0, 0);
+            words.addView(note);
+            made.addView(words, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        }
         made.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 hand.chosen(item.key);
@@ -210,7 +232,8 @@ final class Chooser extends FrameLayout {
         for (int g = 0; g < captions.length && g < items.size(); g++) {
             List<Item> found = new ArrayList<>();
             for (Item item : items.get(g)) {
-                if (typed.length() == 0 || Match.rank(Match.norm(item.name.toString()), typed) != Match.NONE) {
+                if (typed.length() == 0 || Match.rank(Match.norm(item.name.toString()), typed) != Match.NONE
+                    || (item.note != null && Match.norm(item.note.toString()).contains(typed))) {
                     found.add(item);
                 }
             }
