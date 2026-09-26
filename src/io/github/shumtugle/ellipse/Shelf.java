@@ -67,8 +67,7 @@ final class Shelf extends FrameLayout {
     /** The key the launcher's own card is opened under: no package is named so. */
     private static final String OWN_KEY = "#own";
     private static final String SETTINGS = "Settings";
-    private static final String ONE = "1 widget";
-    private static final String MANY = " widgets";
+    private static final String MANY = "%1 widget | %1 widgets";
 
     /** One application and what it offers. */
     private static final class Maker {
@@ -377,7 +376,7 @@ final class Shelf extends FrameLayout {
         name.setSingleLine(true);
         words.addView(name);
         TextView count = new TextView(getContext());
-        count.setText(offers.size() == 1 ? Words.t(ONE) : offers.size() + " " + Words.t(MANY.trim()));
+        count.setText(Words.n(MANY, offers.size()));
         count.setTextColor(Tone.faint());
         count.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         words.addView(count);

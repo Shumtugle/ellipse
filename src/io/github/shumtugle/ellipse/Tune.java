@@ -38,8 +38,7 @@ import java.util.Set;
  *
  * Inside a room a line is one of four things: a switch, a choice that
  * opens the application's one menu beside it, a deed, or a door to a
- * further room. A line of what is still to come is shown quietly and does
- * nothing.
+ * further room.
  */
 public final class Tune extends Activity {
 
@@ -47,7 +46,6 @@ public final class Tune extends Activity {
     private static final int SWITCH = 1;
     private static final int CHOICE = 2;
     private static final int DEED = 3;
-    private static final int SOON = 4;
 
     /** One line of the settings. */
     private static final class Line {
@@ -91,10 +89,6 @@ public final class Tune extends Activity {
 
     private static Line deed(int glyph, String title, String about, int which) {
         return new Line(DEED, glyph, title, about, which, null, 0, null, null);
-    }
-
-    private static Line soon(String title, String about) {
-        return new Line(SOON, -1, title, about, 0, null, 0, null, null);
     }
 
     private static final int ROOT = 0;
@@ -141,7 +135,6 @@ public final class Tune extends Activity {
     private static final String SEARCH = "Search settings";
     private static final String RESTART_LINE = "Restart launcher";
     private static final String AGAIN = "Tap again to reset everything";
-    private static final String LATER = "Coming in a later version";
     private static final String ALREADY = "Done: the Home button opens Ellipse";
 
     private static final String[] GRIDS = {"3 \u00D7 4", "4 \u00D7 5", "4 \u00D7 6", "5 \u00D7 5", "5 \u00D7 6",
@@ -262,9 +255,7 @@ public final class Tune extends Activity {
             case BACKUP:
                 return new Line[0];
             case LANGUAGE:
-                return new Line[] {
-                    soon("Language modules", "The words of the home screen in another language")
-                };
+                return new Line[0];
             case OTHER:
                 return new Line[] {
                     deed(Glyph.DESK, "Set as default home app",
@@ -639,10 +630,7 @@ public final class Tune extends Activity {
         made.setGravity(Gravity.CENTER_VERTICAL);
         boolean drawn = line.glyph >= 0;
         made.setPadding(dp(drawn ? 28 : 24), dp(22), dp(24), dp(22));
-        boolean soon = line.kind == SOON;
-        if (!soon) {
-            made.setBackground(Tone.touch(null, 0f));
-        }
+        made.setBackground(Tone.touch(null, 0f));
         if (drawn) {
             Glyph drawing = new Glyph(this, line.glyph, dp(28));
             drawing.tint(Tone.primary());
@@ -653,14 +641,14 @@ public final class Tune extends Activity {
         words.setPadding(drawn ? dp(28) : 0, 0, dp(12), 0);
         TextView title = new TextView(this);
         title.setText(Words.t(line.title));
-        title.setTextColor(soon ? Tone.faint() : Tone.onSurface());
+        title.setTextColor(Tone.onSurface());
         title.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
         words.addView(title);
         final TextView about = new TextView(this);
         String said = line.kind == DEED && line.room == DEFAULT && isHome() ? ALREADY
             : line.kind == DEED && line.room == PLACE && Keep.here(this)[0].length() > 0 ? Keep.here(this)[0]
             : line.about;
-        about.setText(soon ? Words.t(line.about) + ". " + Words.t(LATER) + "." : Words.t(said));
+        about.setText(Words.t(said));
         about.setTextColor(Tone.faint());
         about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
         about.setPadding(0, dp(2), 0, 0);
@@ -826,7 +814,7 @@ public final class Tune extends Activity {
                     groundChanged(true);
                     return;
                 }
-                Ask.show(host, "Name this ground", Words.t("Ground") + " " + (mine.size() + 1), new Ask.Answer() {
+                Ask.show(host, "Name this ground", Words.f("Ground %1", mine.size() + 1), new Ask.Answer() {
                     public void answered(String text) {
                         String name = text == null ? "" : text.trim().replace("\t", " ").replace("\n", " ");
                         if (!name.isEmpty()) {
@@ -1828,7 +1816,7 @@ public final class Tune extends Activity {
             caption("SMALL RINGS");
             final int[] ids = Keep.ringIds(this);
             for (int i = 0; i < ids.length; i++) {
-                rows.addView(row(choice("Ring " + (i + 1), "What it holds", Keep.RING_KIND + ids[i], Rings.CITY,
+                rows.addView(row(choice(Words.f("Ring %1", i + 1), "What it holds", Keep.RING_KIND + ids[i], Rings.CITY,
                     Rings.SMALL_NAMES, Rings.SMALL_KINDS)));
             }
             if (ids.length < Keep.RINGS_MOST) {
@@ -2278,7 +2266,7 @@ public final class Tune extends Activity {
         caption("MINE");
         rows.addView(deed("Keep the look as it is now", new Runnable() {
             public void run() {
-                Ask.show(host, "Name this look", "Look " + (Looks.names(Tune.this).size() + 1), new Ask.Answer() {
+                Ask.show(host, "Name this look", Words.f("Look %1", Looks.names(Tune.this).size() + 1), new Ask.Answer() {
                     public void answered(String text) {
                         String name = text == null ? "" : text.trim();
                         if (name.isEmpty()) {
@@ -2318,7 +2306,7 @@ public final class Tune extends Activity {
             TextView again = (TextView) deed("Keep now", new Runnable() {
                 public void run() {
                     Looks.keep(Tune.this, name);
-                    said("\u201C" + name + "\u201D now holds the look as it is");
+                    said(Words.f("\u201C%1\u201D now holds the look as it is", name));
                 }
             });
             again.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
@@ -2560,11 +2548,9 @@ public final class Tune extends Activity {
             restart();
             return;
         }
-        StringBuilder told = new StringBuilder(Words.t("These widgets are to be added again, for the phone asks first:"));
-        for (int i = 0; i < Copy.unmade.size(); i++) {
-            told.append(i == 0 ? " " : ", ").append(Copy.unmade.get(i));
-        }
-        told.append(". ").append(Words.t("Allow Ellipse to make widgets always, and a restore makes them itself."));
+        StringBuilder told = new StringBuilder(Words.f("These widgets are to be added again, for the phone "
+            + "asks first: %1.", joined(Copy.unmade)));
+        told.append(' ').append(Words.t("Allow Ellipse to make widgets always, and a restore makes them itself."));
         Ask.tell(host, "Restored", told.toString(), "Done", new Runnable() {
             public void run() {
                 restart();
@@ -2678,63 +2664,59 @@ public final class Tune extends Activity {
             }
             int columns = Math.max(3, Math.min(7, found.columns));
             int rowsOf = Math.max(3, Math.min(12, found.rows));
-            String what = found.screens.size() + (found.screens.size() == 1 ? " screen" : " screens")
-                + " of " + columns + " \u00D7 " + rowsOf + ": " + found.count(Foreign.Item.APP) + " apps, "
-                + found.count(Foreign.Item.FOLDER) + " folders, " + found.count(Foreign.Item.WIDGET) + " widgets. "
-                + "It takes the place of the set-out here, which is copied aside first: "
-                + "Undo the last restore brings it back.";
+            String what = Words.n("%1 screen of %2 \u00D7 %3 | %1 screens of %2 \u00D7 %3", found.screens.size(), columns, rowsOf)
+                + ": " + Words.f("apps %1, folders %2, widgets %3.", found.count(Foreign.Item.APP),
+                    found.count(Foreign.Item.FOLDER), found.count(Foreign.Item.WIDGET))
+                + " " + Words.t("It takes the place of the set-out here, which is copied aside first: "
+                    + "Undo the last restore brings it back.");
             Ask.tell(host, "Bring in this set-out?", what, "Bring in", new Runnable() {
                 public void run() {
                     android.appwidget.AppWidgetHost widgets = new android.appwidget.AppWidgetHost(Tune.this,
                         Home.WIDGET_HOST);
                     Foreign.Report done = Foreign.bringIn(Tune.this, found, widgets);
+                    /* Each part put into words whole, so a language may order its own. */
                     StringBuilder told = new StringBuilder();
-                    told.append(done.apps).append(" apps, ").append(done.folders).append(" folders and ")
-                        .append(done.widgets).append(" widgets are in their places.");
+                    told.append(Words.f("In their places: apps %1, folders %2, widgets %3.",
+                        done.apps, done.folders, done.widgets));
                     if (done.look > 0) {
-                        told.append(" Taken over too, as it looked there, where its settings told: names, dock, "
-                            + "the icons' outline and pack, the screens' points, endless turning and edges, "
-                            + "and the list of every app.");
+                        told.append(' ').append(Words.t("Taken over too, as it looked there, where its settings "
+                            + "told: names, dock, the icons' outline and pack, the screens' points, endless "
+                            + "turning and edges, and the list of every app."));
                     }
-                    told.append(done.clock ? " The widget clock stands as this home screen's own, in its face."
-                        : " This home screen's own clock is put away; the widget shelf brings it back.");
+                    told.append(' ').append(Words.t(done.clock
+                        ? "The widget clock stands as this home screen's own, in its face."
+                        : "This home screen's own clock is put away; the widget shelf brings it back."));
                     if (done.packMissing != null) {
-                        told.append(" Its pack of icons, ").append(done.packMissing)
-                            .append(", is not on this phone: it is chosen, and the icons take it once it is installed.");
+                        told.append(' ').append(Words.f("Its pack of icons, %1, is not on this phone: it is "
+                            + "chosen, and the icons take it once it is installed.", done.packMissing));
                     }
                     if (done.hidden > 0) {
-                        told.append(" Hidden as there: ").append(done.hidden).append('.');
+                        told.append(' ').append(Words.f("Hidden as there: %1.", done.hidden));
                     }
                     if (done.kinds > 0) {
-                        told.append(" Its kinds of apps, as categories: ").append(done.kinds).append('.');
+                        told.append(' ').append(Words.f("Its kinds of apps, as categories: %1.", done.kinds));
                     }
                     if (done.wallpaper) {
-                        told.append(" Its wallpaper is set.");
+                        told.append(' ').append(Words.t("Its wallpaper is set."));
                     }
                     if (done.links > 0) {
-                        told.append(" Shortcuts and links: ").append(done.links).append('.');
+                        told.append(' ').append(Words.f("Shortcuts and links: %1.", done.links));
                     }
                     if (!done.lost.isEmpty()) {
-                        told.append(" Shortcuts their apps no longer hold, to be made again: ");
-                        for (int i = 0; i < done.lost.size(); i++) {
-                            told.append(i > 0 ? ", " : "").append(done.lost.get(i));
-                        }
-                        told.append('.');
+                        told.append(' ').append(Words.f("Shortcuts their apps no longer hold, to be made "
+                            + "again: %1.", joined(done.lost)));
                     }
                     if (done.missing > 0) {
-                        told.append(" Not on this phone, waiting grey in their places until installed: ")
-                            .append(done.missing).append('.');
+                        told.append(' ').append(Words.f("Not on this phone, waiting grey in their places "
+                            + "until installed: %1.", done.missing));
                     }
                     if (done.others > 0) {
-                        told.append(" Left behind, as shortcuts and the other home screen's own things: ")
-                            .append(done.others).append('.');
+                        told.append(' ').append(Words.f("Left behind, as shortcuts and the other home "
+                            + "screen's own things: %1.", done.others));
                     }
                     if (!done.unmade.isEmpty()) {
-                        told.append(" Widgets to add again, for the phone asks first: ");
-                        for (int i = 0; i < done.unmade.size(); i++) {
-                            told.append(i > 0 ? ", " : "").append(done.unmade.get(i));
-                        }
-                        told.append('.');
+                        told.append(' ').append(Words.f("Widgets to add again, for the phone asks first: %1.",
+                            joined(done.unmade)));
                     }
                     Ask.tell(host, "Brought in", told.toString(), "Done", new Runnable() {
                         public void run() {
@@ -2745,6 +2727,15 @@ public final class Tune extends Activity {
             });
 
         }
+    }
+
+    /** Names one after another, apart by commas. */
+    private static String joined(java.util.List<String> names) {
+        StringBuilder all = new StringBuilder();
+        for (int i = 0; i < names.size(); i++) {
+            all.append(i > 0 ? ", " : "").append(names.get(i));
+        }
+        return all.toString();
     }
 
     /** A frame's measure in dp, seen at once on the sample widget above it. */

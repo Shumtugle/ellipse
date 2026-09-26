@@ -196,6 +196,49 @@ final class Words {
         return english == null ? null : t(english.toString());
     }
 
+    /**
+     * An English phrase with places in it, %1 to %9, in the language chosen,
+     * the places filled after it is put into words: the order of the places
+     * is the module's own, as its language needs.
+     */
+    static String f(String english, Object... filled) {
+        return fill(t(english), filled);
+    }
+
+    /**
+     * The same, for a phrase that counts: %1 is the count. A module may give
+     * the phrase in forms apart by " | ": two forms are one and more than one;
+     * three are the forms of languages that count by the last digits (one,
+     * a few, many), as 1, 3 and 5 are told apart.
+     */
+    static String n(String english, int count, Object... more) {
+        String said = t(english);
+        String[] forms = said.split(" \\| ");
+        if (forms.length == 2) {
+            said = forms[count == 1 ? 0 : 1];
+        } else if (forms.length >= 3) {
+            int last = Math.abs(count) % 10;
+            int lastTwo = Math.abs(count) % 100;
+            said = last == 1 && lastTwo != 11 ? forms[0]
+                : last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? forms[1]
+                : forms[2];
+        }
+        Object[] all = new Object[more.length + 1];
+        all[0] = count;
+        System.arraycopy(more, 0, all, 1, more.length);
+        return fill(said, all);
+    }
+
+    private static String fill(String said, Object[] filled) {
+        if (said == null) {
+            return null;
+        }
+        for (int i = Math.min(9, filled.length); i >= 1; i--) {
+            said = said.replace("%" + i, String.valueOf(filled[i - 1]));
+        }
+        return said;
+    }
+
     /** The module chosen read, once, whenever the choice changes. */
     static void read(android.content.Context context) {
         String now = Keep.word(context, Keep.LANGUAGE);

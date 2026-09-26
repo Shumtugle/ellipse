@@ -691,7 +691,8 @@ final class Foreign {
         } catch (RuntimeException none) {
             // No dock kept.
         }
-        /* The list of every app: its folders become kinds; the group it hides apps in, hidden. */
+        /* The list of every app: its folders become kinds. What it hid is not taken on its word:
+           which apps to hide is chosen here, by hand. */
         if (has(db, "appgroups") && has(db, "drawer_groups")) {
             try (Cursor g = db.rawQuery("SELECT a.groupId, a.component, d.title, d.groupType FROM appgroups a "
                 + "LEFT JOIN drawer_groups d ON d._id=a.groupId", null)) {
@@ -705,10 +706,7 @@ final class Foreign {
                     if (app == null) {
                         continue;
                     }
-                    long group = g.getLong(0);
-                    if (group == CONTAINER_SCREENS) {
-                        layout.hidden.add(app.flattenToString());
-                    } else if (!g.isNull(2) && "FOLDER_APP_GROUP".equals(g.getString(3))) {
+                    if (!g.isNull(2) && "FOLDER_APP_GROUP".equals(g.getString(3))) {
                         String kind = g.getString(2);
                         List<String> in = layout.kinds.get(kind);
                         if (in == null) {

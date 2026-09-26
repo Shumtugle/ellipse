@@ -67,6 +67,8 @@ def literals(src):
 
 
 def readable(s):
+    # A phrase that counts gives its forms apart by " | "; each form is read as words.
+    s = s.replace(' | ', ' ')
     if not re.search(r'[A-Za-z]{2}', s) or '\n' in s or '(' in s:
         return False
     if re.search(r'[{}<>=\[\]\\|^$*]', s):
