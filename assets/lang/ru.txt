@@ -583,3 +583,5 @@ Shortcuts their apps no longer hold, to be made again: %1. = Ярлыки, ко�
 Not on this phone, waiting grey in their places until installed: %1. = Нет на телефоне, ждут серыми на своих местах до установки: %1.
 Left behind, as shortcuts and the other home screen's own things: %1. = Оставлено — ярлыки и собственные вещи того лаунчера: %1.
 Widgets to add again, for the phone asks first: %1. = Виджеты добавить заново — телефон сначала спрашивает: %1.
+Names given by hand: %1. = Имён, данных руками: %1.
+Icons chosen by hand: %1. = Значков, выбранных руками: %1.

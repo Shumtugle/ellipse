@@ -43,6 +43,20 @@ final class Style {
     static final int OWN = 0;
     static final int ALL = 1;
     static final int ABLE = 2;
+    /** Names given by hand, by the word each thing is kept by. */
+    private static java.util.Map<String, String> names = new java.util.HashMap<>();
+
+    /** The name a thing was given by hand, or none. */
+    static String nameOf(String token) {
+        return token == null ? null : names.get(token);
+    }
+
+    /** A thing named by hand, kept and known at once; an empty name gives it back its own. */
+    static void name(Context context, String token, String name) {
+        Keep.saveName(context, token, name);
+        names = Keep.names(context);
+    }
+
     /** Icons given a face of their own, by the word they are kept by. */
     private static java.util.Map<String, String[]> faces = new java.util.HashMap<>();
 
@@ -123,6 +137,7 @@ final class Style {
         font(Keep.number(context, Keep.FONT, 0));
         tint = Keep.number(context, Keep.ICON_TINT, OWN);
         faces = Keep.faces(context);
+        names = Keep.names(context);
         Stack.layout = Keep.number(context, Keep.FOLDER_FACE, Stack.FOUR);
         Stack.ground = Keep.flag(context, Keep.FOLDER_GROUND, true);
         Rim.materials(context.getResources());

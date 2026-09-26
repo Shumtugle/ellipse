@@ -583,3 +583,5 @@ Shortcuts their apps no longer hold, to be made again: %1. = Pikakuvakkeet, joit
 Not on this phone, waiting grey in their places until installed: %1. = Ei tässä puhelimessa, odottavat harmaina paikoillaan asennukseen asti: %1.
 Left behind, as shortcuts and the other home screen's own things: %1. = Jätetty pois, pikakuvakkeina ja toisen kotinäytön omina asioina: %1.
 Widgets to add again, for the phone asks first: %1. = Lisättävät widgetit uudelleen, sillä puhelin kysyy ensin: %1.
+Names given by hand: %1. = Käsin annettuja nimiä: %1.
+Icons chosen by hand: %1. = Käsin valittuja kuvakkeita: %1.

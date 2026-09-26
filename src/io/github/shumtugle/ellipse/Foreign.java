@@ -102,6 +102,9 @@ final class Foreign {
            hidden, and its wallpaper as a picture. */
         final List<String> dockApps = new ArrayList<>();
         final List<String> hidden = new ArrayList<>();
+        /* What its owner chose by hand for single apps: names, by the app, and pictures in place of icons. */
+        final Map<String, String> given = new HashMap<>();
+        final Map<String, byte[]> faces = new HashMap<>();
         final Map<String, List<String>> kinds = new java.util.LinkedHashMap<>();
         Boolean hideStatus;
         Boolean hideNavigation;
@@ -168,6 +171,17 @@ final class Foreign {
                         picture.write(buffer, 0, n);
                     }
                     seen.wallpaper = picture.toByteArray();
+                    continue;
+                }
+                Matcher chosen = OWN_ICON.matcher(name);
+                if (chosen.find()) {
+                    /* A picture its owner put in place of one icon, by the thing's number. */
+                    try (OutputStream write = new FileOutputStream(new File(dir, FACE + chosen.group(1) + ".png"))) {
+                        int n;
+                        while ((n = in.read(buffer)) > 0) {
+                            write.write(buffer, 0, n);
+                        }
+                    }
                     continue;
                 }
                 if (base.endsWith(".xml")) {
@@ -422,6 +436,29 @@ final class Foreign {
 
     // ------------------------------------------------------------ databases
 
+    /** Where one kind of copy keeps the pictures put in place of icons on its screens. */
+    private static final Pattern OWN_ICON = Pattern.compile("icons/home/custom/ic_(\\d+)_1\\.png$");
+    private static final String FACE = "face.";
+
+    /** A picture put aside while the copy was read, by the thing's number; or none. */
+    private static byte[] face(File room, long id) {
+        File file = new File(room, FACE + id + ".png");
+        if (!file.isFile() || file.length() > 4L * 1024 * 1024) {
+            return null;
+        }
+        try (java.io.FileInputStream in = new java.io.FileInputStream(file)) {
+            byte[] all = new byte[(int) file.length()];
+            int at = 0;
+            int n;
+            while (at < all.length && (n = in.read(all, at, all.length - at)) > 0) {
+                at += n;
+            }
+            return at == all.length ? all : null;
+        } catch (IOException unread) {
+            return null;
+        }
+    }
+
     private static Layout open(File file) {
         SQLiteDatabase db;
         try {
@@ -431,7 +468,7 @@ final class Foreign {
         }
         try {
             if (has(db, "HomeItem") && has(db, "Launchable") && has(db, "Action")) {
-                return items(db);
+                return items(db, file.getParentFile());
             }
             if (has(db, "favorites")) {
                 return favourites(db);
@@ -477,7 +514,7 @@ final class Foreign {
     private static final int APP_WIDGET = 1;
 
     /** Home items, launchables and their actions. */
-    private static Layout items(SQLiteDatabase db) {
+    private static Layout items(SQLiteDatabase db, File room) {
         long config = 0;
         try (Cursor most = db.rawQuery("SELECT configId, COUNT(*) AS n FROM HomeItem GROUP BY configId "
             + "ORDER BY n DESC LIMIT 1", null)) {
@@ -500,7 +537,7 @@ final class Foreign {
                         item.h = span(c.getDouble(6));
                     }
                 } else if (!c.isNull(0)) {
-                    item = launchable(db, c.getLong(0), x, y);
+                    item = launchable(db, c.getLong(0), x, y, room, layout);
                 } else {
                     item = null;
                 }
@@ -516,7 +553,7 @@ final class Foreign {
                 if (d.isNull(0)) {
                     continue;
                 }
-                Item one = launchable(db, d.getLong(0), 0, 0);
+                Item one = launchable(db, d.getLong(0), 0, 0, room, layout);
                 if (one != null && one.kind == Item.APP && !layout.dockApps.contains(one.component)) {
                     layout.dockApps.add(one.component);
                 }
@@ -565,18 +602,21 @@ final class Foreign {
         }
     }
 
-    private static Item launchable(SQLiteDatabase db, long id, int x, int y) {
+    private static Item launchable(SQLiteDatabase db, long id, int x, int y, File room, Layout layout) {
         int type;
         String uri;
         String label;
-        try (Cursor c = db.rawQuery("SELECT type, intentUri, label FROM Action WHERE idLaunchable=? AND actionId=1",
-            new String[] {String.valueOf(id)})) {
+        boolean relabelled;
+        try (Cursor c = db.rawQuery("SELECT type, intentUri, label, "
+            + (column(db, "Action", "customLabel") ? "customLabel" : "0")
+            + " FROM Action WHERE idLaunchable=? AND actionId=1", new String[] {String.valueOf(id)})) {
             if (!c.moveToFirst()) {
                 return null;
             }
             type = c.getInt(0);
             uri = c.getString(1);
             label = c.isNull(2) ? "" : c.getString(2);
+            relabelled = !c.isNull(3) && c.getInt(3) != 0;
         }
         if (type == OPENS_APP) {
             String door = door(uri);
@@ -586,6 +626,13 @@ final class Foreign {
             Item item = new Item(Item.APP, x, y);
             item.component = door;
             item.name = label;
+            if (relabelled && !label.trim().isEmpty()) {
+                layout.given.put(door, label.trim());
+            }
+            byte[] picture = face(room, id);
+            if (picture != null) {
+                layout.faces.put(door, picture);
+            }
             return item;
         }
         if (type == OPENS_FOLDER) {
@@ -594,7 +641,7 @@ final class Foreign {
             try (Cursor kids = db.rawQuery("SELECT id FROM Launchable WHERE idParentFolderLaunchable=? "
                 + "ORDER BY position", new String[] {String.valueOf(id)})) {
                 while (kids.moveToNext()) {
-                    Item kid = launchable(db, kids.getLong(0), 0, 0);
+                    Item kid = launchable(db, kids.getLong(0), 0, 0, room, layout);
                     if (kid != null && kid.kind == Item.APP) {
                         folder.apps.add(kid.component);
                     }
@@ -619,6 +666,7 @@ final class Foreign {
         boolean providers = column(db, "favorites", "appWidgetProvider");
         boolean titled = column(db, "favorites", "title");
         boolean pictured = column(db, "favorites", "icon");
+        boolean chosenIcons = column(db, "favorites", "customIconSource") && has(db, "customIcons");
         List<Long> order = new ArrayList<>();
         try (Cursor d = db.rawQuery("SELECT DISTINCT screen FROM favorites WHERE container=? ORDER BY screen",
             new String[] {String.valueOf(CONTAINER_SCREENS)})) {
@@ -635,7 +683,8 @@ final class Foreign {
         }
         try (Cursor c = db.rawQuery("SELECT _id, intent, screen, cellX, cellY, spanX, spanY, itemType, "
             + (providers ? "appWidgetProvider" : "NULL") + ", " + (titled ? "title" : "NULL") + ", "
-            + (pictured ? "icon" : "NULL") + " FROM favorites WHERE container=?",
+            + (pictured ? "icon" : "NULL") + ", " + (chosenIcons ? "customIconSource" : "NULL")
+            + " FROM favorites WHERE container=?",
             new String[] {String.valueOf(CONTAINER_SCREENS)})) {
             while (c.moveToNext()) {
                 int x = place(c.getDouble(3));
@@ -647,6 +696,10 @@ final class Foreign {
                     item = new Item(door == null ? Item.OTHER : Item.APP, x, y);
                     item.component = door;
                     item.name = c.isNull(9) ? "" : c.getString(9);
+                    byte[] picture = door == null ? null : chosenIcon(db, c.isNull(11) ? null : c.getString(11));
+                    if (picture != null) {
+                        layout.faces.put(door, picture);
+                    }
                 } else if (kind == KIND_FOLDER) {
                     item = new Item(Item.FOLDER, x, y);
                     item.name = c.isNull(9) ? "" : c.getString(9);
@@ -664,6 +717,11 @@ final class Foreign {
                     item.call = c.getString(1);
                     item.name = c.isNull(9) ? "" : c.getString(9);
                     item.picture = c.isNull(10) ? null : c.getBlob(10);
+                    /* A picture chosen by hand is kept larger than the one beside the shortcut. */
+                    byte[] chosen = chosenIcon(db, c.isNull(11) ? null : c.getString(11));
+                    if (chosen != null) {
+                        item.picture = chosen;
+                    }
                 } else if (kind == KIND_DEEP && !c.isNull(1)) {
                     item = new Item(Item.DEEP, x, y);
                     item.call = c.getString(1);
@@ -690,6 +748,30 @@ final class Foreign {
             }
         } catch (RuntimeException none) {
             // No dock kept.
+        }
+        /* The list of every app as its owner changed it: a name given, a picture chosen. */
+        if (has(db, "allapps") && column(db, "allapps", "customIconSource") && column(db, "allapps", "title")) {
+            try (Cursor a = db.rawQuery("SELECT componentName, title, customIconSource FROM allapps", null)) {
+                while (a.moveToNext()) {
+                    String app = a.isNull(0) ? null : door(a.getString(0));
+                    if (app == null) {
+                        ComponentName plain = a.isNull(0) ? null : ComponentName.unflattenFromString(a.getString(0));
+                        app = plain == null ? null : plain.flattenToString();
+                    }
+                    if (app == null) {
+                        continue;
+                    }
+                    if (!a.isNull(1) && !a.getString(1).trim().isEmpty()) {
+                        layout.given.put(app, a.getString(1).trim());
+                    }
+                    byte[] picture = chosenIcon(db, a.isNull(2) ? null : a.getString(2));
+                    if (picture != null) {
+                        layout.faces.put(app, picture);
+                    }
+                }
+            } catch (RuntimeException none) {
+                // No changes kept.
+            }
         }
         /* The list of every app: its folders become kinds. What it hid is not taken on its word:
            which apps to hide is chosen here, by hand. */
@@ -721,6 +803,22 @@ final class Foreign {
             }
         }
         return layout;
+    }
+
+    /** A picture chosen by hand, by the source a favourite names: the last number is its row. */
+    private static byte[] chosenIcon(SQLiteDatabase db, String source) {
+        if (source == null) {
+            return null;
+        }
+        Matcher row = Pattern.compile("customIcons/(\\d+)$").matcher(source);
+        if (!row.find()) {
+            return null;
+        }
+        try (Cursor c = db.rawQuery("SELECT icon FROM customIcons WHERE _id=?", new String[] {row.group(1)})) {
+            return c.moveToFirst() && !c.isNull(0) ? c.getBlob(0) : null;
+        } catch (RuntimeException none) {
+            return null;
+        }
     }
 
     /** The application an intent opens, as a component; or none if it opens something else. */
@@ -766,6 +864,9 @@ final class Foreign {
         int hidden;
         int kinds;
         boolean wallpaper;
+        /** Names given by hand, and pictures put in place of icons, taken over for single apps. */
+        int named;
+        int drawn;
         /** Whether the owner's widget clock was stood in for by this home screen's own. */
         boolean clock;
         /** The pack of icons the other home screen read, not on this phone; or none. */
@@ -1008,6 +1109,29 @@ final class Foreign {
             if (name != null) {
                 Keep.hide(context, name.flattenToString(), true);
                 report.hidden++;
+            }
+        }
+        /* What its owner chose by hand for single apps: names, and pictures in place of icons. */
+        for (Map.Entry<String, String> one : layout.given.entrySet()) {
+            ComponentName name = ComponentName.unflattenFromString(one.getKey());
+            if (name != null) {
+                Keep.saveName(context, name.flattenToString(), one.getValue());
+                report.named++;
+            }
+        }
+        for (Map.Entry<String, byte[]> one : layout.faces.entrySet()) {
+            ComponentName name = ComponentName.unflattenFromString(one.getKey());
+            if (name == null || android.graphics.BitmapFactory.decodeByteArray(one.getValue(), 0,
+                one.getValue().length) == null) {
+                continue;
+            }
+            String token = name.flattenToString();
+            try (OutputStream out = new FileOutputStream(Style.pictureOf(context, token))) {
+                out.write(one.getValue());
+                Keep.saveFace(context, token, -1, -1, 0, 1, "");
+                report.drawn++;
+            } catch (IOException unsaved) {
+                // The icon keeps its own picture.
             }
         }
         /* Its kinds of apps, as kinds put together by hand here. */

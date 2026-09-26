@@ -2713,7 +2713,8 @@ public final class Home extends Activity {
             keys.add(KEY_UNINSTALL);
             glyphs.add(Glyph.TRASH);
         }
-        if (token.startsWith(Keep.FOLDER_THING)) {
+        if (token.startsWith(Keep.FOLDER_THING) || door != null || token.startsWith(Keep.SHORTCUT_THING)
+            || token.startsWith(Keep.LINK_THING)) {
             lines.add(RENAME);
             keys.add(KEY_RENAME);
             glyphs.add(Glyph.PEN);
@@ -2962,7 +2963,11 @@ public final class Home extends Activity {
             } else if (key == KEY_ARRANGE && offerView instanceof Rings) {
                 arrange((Rings) offerView);
             } else if (key == KEY_RENAME) {
-                rename(folderId(offerToken));
+                if (offerToken.startsWith(Keep.FOLDER_THING)) {
+                    rename(folderId(offerToken));
+                } else {
+                    renameThing(offerToken, nameOfThing(offerView, offerToken, offerDoor));
+                }
             } else if (key == KEY_FACE) {
                 chooseFace(offerToken, offerDoor);
 
@@ -3059,7 +3064,7 @@ public final class Home extends Activity {
         } catch (RuntimeException none) {
             icon = null;
         }
-        CharSequence label = info.getShortLabel();
+        CharSequence label = Style.nameOf(token) != null ? Style.nameOf(token) : info.getShortLabel();
         final Cell cell = new Cell(this, icon, label == null ? "" : label, iconSize,
             named && Style.namesOnScreens);
         cell.setOnClickListener(new View.OnClickListener() {
@@ -3130,7 +3135,9 @@ public final class Home extends Activity {
         if (picture == null) {
             picture = new android.graphics.drawable.ColorDrawable(Tone.primaryContainer());
         }
-        final Cell cell = new Cell(this, Style.dress(this, spot.token, picture, null), Keep.linkName(this, id),
+        String given = Style.nameOf(spot.token);
+        final Cell cell = new Cell(this, Style.dress(this, spot.token, picture, null),
+            given != null ? given : Keep.linkName(this, id),
             iconSize, Style.namesOnScreens);
         cell.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -3539,6 +3546,19 @@ public final class Home extends Activity {
                     Keep.renameFolder(Home.this, id, name);
                     fill();
                 }
+            }
+        });
+    }
+
+    /**
+     * An app, a shortcut or a link given a name of the owner's own, shown
+     * wherever it stands; left empty, it is shown under its own name again.
+     */
+    private void renameThing(final String token, String now) {
+        Ask.show(root, RENAME, now, new Ask.Answer() {
+            public void answered(String text) {
+                Style.name(Home.this, token, text);
+                fill();
             }
         });
     }

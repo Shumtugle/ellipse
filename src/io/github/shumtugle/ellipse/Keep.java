@@ -577,6 +577,36 @@ final class Keep {
         touch(context);
     }
 
+    private static final String NAMED = "named.";
+
+    /**
+     * The name an app, a shortcut or a link is shown under, given by hand,
+     * kept by the word the thing is kept by. An empty name forgets it, and
+     * the thing is shown under its own name again.
+     */
+    static void saveName(Context context, String token, String name) {
+        String given = name == null ? "" : name.trim();
+        SharedPreferences.Editor edit = store(context).edit();
+        if (given.isEmpty()) {
+            edit.remove(NAMED + token);
+        } else {
+            edit.putString(NAMED + token, given);
+        }
+        edit.apply();
+        touch(context);
+    }
+
+    /** Every name given by hand, by the word each thing is kept by. */
+    static java.util.Map<String, String> names(Context context) {
+        java.util.Map<String, String> all = new java.util.HashMap<>();
+        for (java.util.Map.Entry<String, ?> each : store(context).getAll().entrySet()) {
+            if (each.getKey().startsWith(NAMED) && each.getValue() instanceof String) {
+                all.put(each.getKey().substring(NAMED.length()), (String) each.getValue());
+            }
+        }
+        return all;
+    }
+
     /** Every icon given a face of its own: word, and the parts of its face as kept. */
     static java.util.Map<String, String[]> faces(Context context) {
         java.util.Map<String, String[]> all = new java.util.HashMap<>();

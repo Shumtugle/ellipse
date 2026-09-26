@@ -2702,6 +2702,12 @@ public final class Tune extends Activity {
                     if (done.links > 0) {
                         told.append(' ').append(Words.f("Shortcuts and links: %1.", done.links));
                     }
+                    if (done.named > 0) {
+                        told.append(' ').append(Words.f("Names given by hand: %1.", done.named));
+                    }
+                    if (done.drawn > 0) {
+                        told.append(' ').append(Words.f("Icons chosen by hand: %1.", done.drawn));
+                    }
                     if (!done.lost.isEmpty()) {
                         told.append(' ').append(Words.f("Shortcuts their apps no longer hold, to be made "
                             + "again: %1.", joined(done.lost)));

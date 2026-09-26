@@ -32,7 +32,10 @@ final class Apps {
     static final class Door {
         final ComponentName name;
         final UserHandle user;
+        /** The name it is shown under: the one given by hand, or its own. */
         final CharSequence label;
+        /** The name the app gives itself, found by the search too. */
+        final CharSequence own;
         /** Which of the phone's profiles it lives in: nought for the owner's own, a number for a work profile. */
         final long serial;
         private final LauncherActivityInfo info;
@@ -51,7 +54,9 @@ final class Apps {
             serial = Apps.serialOf(user);
             installed = info.getFirstInstallTime();
             CharSequence named = info.getLabel();
-            label = named == null ? "" : named;
+            own = named == null ? "" : named;
+            String given = Style.nameOf(Apps.token(name, serial));
+            label = given == null ? own : given;
         }
 
         /** Drawn once, when first asked for: a long list is not painted all at once. A work app wears its badge. */

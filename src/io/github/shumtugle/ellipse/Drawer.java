@@ -464,6 +464,10 @@ final class Drawer extends FrameLayout {
             List<Apps.Door> inside = new ArrayList<>();
             for (Apps.Door door : base) {
                 int rank = Match.rank(Match.norm(door.label.toString()), key);
+                if (rank == Match.NONE && door.own != door.label) {
+                    /* A renamed app is still found by the name it gives itself. */
+                    rank = Match.rank(Match.norm(door.own.toString()), key);
+                }
                 if (rank == Match.START) {
                     start.add(door);
                 } else if (rank == Match.WORD) {
