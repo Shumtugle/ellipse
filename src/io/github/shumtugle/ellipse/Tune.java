@@ -1311,8 +1311,32 @@ public final class Tune extends Activity {
                 }
             }));
         }
-        across.addView(row);
-        return across;
+        return words(row);
+    }
+
+    /** Words gathered in a row laid instead in lines that wrap: nothing past the screen's edge. */
+    private View words(LinearLayout row) {
+        Flow made = new Flow(this, dp(8));
+        made.setPadding(row.getPaddingLeft(), row.getPaddingTop(), row.getPaddingRight(), row.getPaddingBottom());
+        while (row.getChildCount() > 0) {
+            View one = row.getChildAt(0);
+            row.removeViewAt(0);
+            made.addView(one);
+        }
+        return made;
+    }
+
+    /** Pictures gathered in a row laid instead in an even grid: all of them in sight. */
+    private View pictures(LinearLayout row) {
+        Tiles made = new Tiles(this, dp(8));
+        made.setPadding(Math.max(dp(18), row.getPaddingLeft()), row.getPaddingTop(),
+            Math.max(dp(18), row.getPaddingRight()), row.getPaddingBottom());
+        while (row.getChildCount() > 0) {
+            View one = row.getChildAt(0);
+            row.removeViewAt(0);
+            made.addView(one);
+        }
+        return made;
     }
 
     private TextView chip(String word, boolean on, final Runnable does) {
@@ -1759,9 +1783,9 @@ public final class Tune extends Activity {
             }
             tiles.addView(tile(i));
         }
-        across.addView(tiles);
-        rows.addView(across);
-        arrive(across, 1);
+        View grid = pictures(tiles);
+        rows.addView(grid);
+        arrive(grid, 1);
 
         caption("SIZE");
         /* As large as the places allow: with everything to the edges, nearly the whole place. */
@@ -1794,8 +1818,7 @@ public final class Tune extends Activity {
         for (int i = 0; i < tintNames.length; i++) {
             tintChips.addView(chip(tintNames[i], Style.tint == i, Keep.ICON_TINT, i));
         }
-        tints.addView(tintChips);
-        rows.addView(tints);
+        rows.addView(words(tintChips));
         caption("WINDOW");
         rows.addView(swatches(Keep.WINDOW, Shape.window, windowValues(), Shape.WINDOW_NAMES, new Painter() {
             public void paint(android.graphics.Canvas c, float w, float h, int value) {
@@ -2261,8 +2284,7 @@ public final class Tune extends Activity {
             at.rightMargin = dp(4);
             line.addView(dot, at);
         }
-        across.addView(line);
-        return across;
+        return pictures(line);
     }
 
     /** How strong the widget clock's fine lines are: its ring, its edges. */
@@ -3445,20 +3467,8 @@ public final class Tune extends Activity {
             });
             line.addView(one);
         }
-        across.addView(line);
-        /* On entering, the chosen one is in sight. */
-        final android.widget.HorizontalScrollView row = across;
-        final LinearLayout all = line;
-        final int at = indexOf(values, now);
-        across.post(new Runnable() {
-            public void run() {
-                if (at >= 0 && at < all.getChildCount()) {
-                    View chosenView = all.getChildAt(at);
-                    row.scrollTo(Math.max(0, chosenView.getLeft() - (row.getWidth() - chosenView.getWidth()) / 2), 0);
-                }
-            }
-        });
-        return across;
+        /* All of them in sight, the chosen one among them: nothing to find past the edge. */
+        return pictures(line);
     }
 
     private static int indexOf(int[] values, int value) {
