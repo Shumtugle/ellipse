@@ -1,6 +1,4 @@
-build/
+tools/__pycache__/
 out/
-keys/
-*.keystore
-*.jks
-art/*.png
+build/
+*.idsig

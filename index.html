@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ellipse — a home screen for Android</title>
+<meta name="description" content="A home screen for Android: icons cut from materials, ten clock faces, a wallpaper factory, its own status strip. Built entirely by AI, in conversation.">
+<meta property="og:title" content="Ellipse">
+<meta property="og:description" content="A home screen for Android, built entirely by AI, in conversation.">
+<meta property="og:image" content="./icon.png">
+<meta property="og:type" content="website">
+<link rel="icon" href="./icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#0b0b0d;
+    --void-2:#121215;
+    --hairline:rgba(255,255,255,0.20);
+    --hairline-soft:rgba(255,255,255,0.09);
+    --ink:#ebe7e0;
+    --ink-dim:#8e9198;
+    --ink-faint:#585b62;
+    /* the icon's own three: two red dots, one gold, on grey paper */
+    --red:#b8302e;
+    --red-lit:#d23d3a;
+    --gold:#d8a338;
+    --paper:#d9d6d0;
+    --navy:#2b3345;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:var(--void);color:var(--ink);font-family:"Inter",system-ui,sans-serif;line-height:1.6;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit}
+  .wrap{max-width:940px;margin:0 auto;padding:0 28px}
+  .glow{position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(62vw 55vh at 50% 18%, rgba(216,163,56,0.09), transparent 62%),
+      radial-gradient(40vw 38vh at 26% 10%, rgba(184,48,46,0.07), transparent 60%)}
+  main{position:relative;z-index:1}
+
+  .hero{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:60px 24px 72px}
+  .chip{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-dim);border:1px solid var(--hairline-soft);border-radius:100px;padding:5px 12px;
+    margin-bottom:34px;background:rgba(255,255,255,0.02)}
+  .chip b{color:var(--ink);font-weight:500}
+
+  /* The Eclipse face, running: the time in one circle, the weather in the other, the charge in the lens. */
+  .stage{width:min(560px,100%);margin:0 auto 20px;padding:22px;border-radius:28px;
+    background:linear-gradient(150deg,#1d1a17 0%,#26211b 55%,#2f271c 100%);box-shadow:0 44px 90px rgba(0,0,0,0.62)}
+  .stage svg{width:100%;height:auto;display:block;font-family:"Roboto",system-ui,sans-serif}
+  .stage-note{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.05em;color:var(--ink-faint);
+    margin:0 auto 40px}
+  .stage-note b{color:var(--ink-dim);font-weight:400}
+
+  .mark{width:84px;height:84px;border-radius:50%;margin:0 auto 18px;display:block;
+    box-shadow:0 18px 40px rgba(0,0,0,0.5)}
+  .wordmark{font-family:"Familjen Grotesk",sans-serif;font-weight:500;font-size:clamp(56px,13vw,104px);
+    line-height:.9;letter-spacing:-.02em;color:var(--ink);margin-bottom:14px}
+  .tagline{font-size:clamp(16px,2.4vw,20px);color:var(--ink);max-width:32ch;margin:0 auto 8px}
+  .provenance{color:var(--ink-dim);font-size:14px;max-width:54ch;margin:0 auto 34px}
+  .provenance b{color:var(--paper);font-weight:500}
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center;margin-bottom:16px}
+  .btn{font-family:"Familjen Grotesk",sans-serif;font-weight:500;font-size:16px;padding:14px 26px;border-radius:14px;
+    text-decoration:none;display:inline-flex;align-items:center;gap:10px;
+    transition:transform .18s ease, background .18s ease, border-color .18s ease}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-primary{background:var(--red);color:#fff}
+  .btn-primary:hover{background:var(--red-lit)}
+  .btn-ghost{color:var(--ink);border:1px solid var(--hairline)}
+  .btn-ghost:hover{border-color:var(--ink-dim);background:rgba(255,255,255,0.03)}
+  .meta{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-faint);letter-spacing:.03em}
+
+  section.block{padding:72px 0;border-top:1px solid var(--hairline-soft)}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:18px}
+  h2{font-family:"Familjen Grotesk",sans-serif;font-weight:500;font-size:clamp(26px,4vw,36px);letter-spacing:-.01em;
+    margin-bottom:32px;color:var(--ink)}
+  .lede{color:var(--ink-dim);max-width:62ch;margin:-14px 0 28px;font-size:15.5px}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--hairline-soft);
+    border:1px solid var(--hairline-soft);border-radius:16px;overflow:hidden}
+  .cell{background:var(--void);padding:26px 24px}
+  .cell h3{font-family:"Familjen Grotesk",sans-serif;font-weight:500;font-size:18px;color:var(--ink);margin-bottom:7px}
+  .cell p{color:var(--ink-dim);font-size:14.5px}
+  .taps{display:flex;flex-direction:column}
+  .tap{display:flex;justify-content:space-between;align-items:baseline;gap:20px;padding:16px 2px;
+    border-bottom:1px solid var(--hairline-soft)}
+  .tap:last-child{border-bottom:none}
+  .tap .zone{font-family:"Familjen Grotesk",sans-serif;font-weight:500;font-size:17px;color:var(--ink)}
+  .tap .act{color:var(--ink-dim);font-size:14px;text-align:right;font-family:"JetBrains Mono",monospace}
+  .made p{color:var(--ink-dim);max-width:62ch;margin-bottom:22px;font-size:15.5px}
+  .made p b{color:var(--paper);font-weight:500}
+  pre{background:var(--void-2);border:1px solid var(--hairline-soft);border-radius:14px;padding:20px 22px;
+    overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:13px;line-height:1.75;color:var(--ink-dim)}
+  pre .c{color:var(--ink-faint)}
+  .perms{display:flex;flex-direction:column;gap:14px;max-width:66ch}
+  .perm{display:flex;gap:14px;align-items:baseline}
+  .perm .n{font-family:"Familjen Grotesk",sans-serif;font-weight:500;color:var(--ink);min-width:170px}
+  .perm .d{color:var(--ink-dim);font-size:14.5px}
+  .perm .d i{color:var(--ink-faint);font-style:normal}
+  footer{border-top:1px solid var(--hairline-soft);padding:44px 0 60px}
+  .foot{display:flex;flex-wrap:wrap;gap:8px 26px;align-items:center;color:var(--ink-faint);font-size:13px;
+    font-family:"JetBrains Mono",monospace}
+  .foot a{color:var(--ink-dim);text-decoration:none;transition:color .15s}
+  .foot a:hover{color:var(--ink)}
+  @media(max-width:640px){
+    .grid{grid-template-columns:1fr}
+    section.block{padding:56px 0}
+    .tap .act{max-width:52%}
+    .perm{flex-direction:column;gap:2px}
+  }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<main>
+  <section class="hero">
+    <span class="chip">Ellipse · <b>v2.15.1</b> · Android home screen</span>
+
+    <div class="stage">
+      <svg viewBox="0 0 300 150" role="img" aria-label="The Eclipse clock face, running: the time, the weather and the charge.">
+        <defs>
+          <clipPath id="a"><circle cx="98" cy="75" r="68"/></clipPath>
+        </defs>
+        <circle cx="98" cy="75" r="68" fill="rgba(22,19,15,0.92)"/>
+        <circle cx="202" cy="75" r="68" fill="rgba(58,52,45,0.72)"/>
+        <circle cx="202" cy="75" r="68" fill="#d8a338" clip-path="url(#a)"/>
+        <text id="t" x="78" y="80" text-anchor="middle" font-size="31" font-weight="700" fill="#f2eee6">--:--</text>
+        <text id="d" x="78" y="100" text-anchor="middle" font-size="12" fill="#a8a29a">…</text>
+        <g id="sun" transform="translate(222 56)" stroke="#f2eee6" stroke-width="2.2" stroke-linecap="round" fill="none">
+          <circle r="7"/>
+          <path d="M0-13v3M0 10v3M-13 0h3M10 0h3M-9.2-9.2l2.1 2.1M7.1 7.1l2.1 2.1M-9.2 9.2l2.1-2.1M7.1-7.1l2.1-2.1"/>
+        </g>
+        <text id="w" x="222" y="97" text-anchor="middle" font-size="21" font-weight="700" fill="#f2eee6">…</text>
+        <text id="c" x="150" y="81" text-anchor="middle" font-size="17" font-weight="700" fill="#1e1a16">…</text>
+      </svg>
+    </div>
+    <p class="stage-note">live · the <b>Eclipse</b> face, drawn in the page · weather in Helsinki by <b>Open-Meteo</b></p>
+
+    <img class="mark" src="./icon.png" alt="The Ellipse icon: two red dots and a gold one on an ellipse, on grey paper.">
+    <h1 class="wordmark">Ellipse</h1>
+    <p class="tagline">A home screen for Android, made one small release at a time.</p>
+    <p class="provenance">Every screen, every material, every line of logic was generated by AI — <b>Claude Opus 5.5</b> —
+      through plain conversation, and tried on a phone after each release. No Android Studio, no Gradle, no libraries.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="./ellipse-2.15.1.apk" download>Download the APK</a>
+      <a class="btn btn-ghost" href="https://github.com/Shumtugle/ellipse">View source</a>
+    </div>
+    <p class="meta">Android 8+ · ~0.9 MB · sideload · English, Russian, Finnish</p>
+  </section>
+
+  <section class="block"><div class="wrap">
+    <p class="eyebrow">On the screens</p>
+    <h2>A home screen that is also a workshop</h2>
+    <div class="grid">
+      <div class="cell"><h3>Icons cut from materials</h3><p>Outlines from circle to a wide paper tile; rims of wood, steel, gold, glass, silk and mesh; embossing inside the plate; symbols in round windows; icon packs, and a picture of your own for any app.</p></div>
+      <div class="cell"><h3>Ten clock faces</h3><p>The first, a plate, a glass card, bubbles you drag and size by hand — and eclipse, horizon, reservoir, flip cards, a monogram, three stones. Each with the time, the weather and the charge.</p></div>
+      <div class="cell"><h3>A wallpaper factory</h3><p>Grounds drawn in layers — a light, a texture, an ornament — with dice for new ones, and a new ground while the phone sleeps if you like.</p></div>
+      <div class="cell"><h3>Presets and a random look</h3><p>Ready looks, tried on before they are taken. The dice throw a look under rules of what belongs together; a lucky one kept a minute is remembered.</p></div>
+      <div class="cell"><h3>Folders, everywhere</h3><p>On the screens, with faces of four, nine, a ring, a stack — or widgets inside; and in the list of every app, which the search still looks into.</p></div>
+      <div class="cell"><h3>Its own status strip</h3><p>Where the hidden status bar stood: the signal, Wi-Fi, what waits unread, the date, the charge — dark on a light wallpaper, as the phone's own.</p></div>
+      <div class="cell"><h3>A night clock</h3><p>The clock across the whole screen on its side, darker than by day, into full black when untouched, quiet while open.</p></div>
+      <div class="cell"><h3>Sideways, too</h3><p>Lying down, every screen is seen whole: widgets and dock, rows of icons, and the rest turned into columns.</p></div>
+    </div>
+  </div></section>
+
+  <section class="block"><div class="wrap">
+    <p class="eyebrow">Pages</p>
+    <h2>Weather, the phone's state, and copies</h2>
+    <div class="grid">
+      <div class="cell"><h3>Weather</h3><p>Now, the next two hours in quarters, the hours and the days, the air, pollen and the aurora — from Open-Meteo and NOAA.</p></div>
+      <div class="cell"><h3>State</h3><p>The charge, the free memory and storage as three rings; the battery's health and cycles, warmth and volts; the day as the home screen counted it.</p></div>
+      <div class="cell"><h3>Copies with a picture</h3><p>Every copy carries a small picture of the home screen as it stood. Open a copy file anywhere, and it shows itself before it comes back.</p></div>
+      <div class="cell"><h3>From another home screen</h3><p>The backups of some other launchers come in too: screens, folders, widgets, dock, hidden apps, much of the look.</p></div>
+    </div>
+  </div></section>
+
+  <section class="block"><div class="wrap">
+    <p class="eyebrow">Touch</p>
+    <h2>Every part of the clock goes somewhere</h2>
+    <div class="taps">
+      <div class="tap"><span class="zone">Time</span><span class="act">the clock and alarms</span></div>
+      <div class="tap"><span class="zone">Date</span><span class="act">the calendar</span></div>
+      <div class="tap"><span class="zone">Weather</span><span class="act">the weather page</span></div>
+      <div class="tap"><span class="zone">Charge</span><span class="act">the phone's state</span></div>
+      <div class="tap"><span class="zone">Headphones</span><span class="act">Bluetooth</span></div>
+      <div class="tap"><span class="zone">Status strip, swipe down</span><span class="act">notifications · quick settings</span></div>
+    </div>
+  </div></section>
+
+  <section class="block made"><div class="wrap">
+    <p class="eyebrow">How it's made</p>
+    <h2>Plain Java against the platform, nothing else</h2>
+    <p>Ellipse is <b>not</b> a Gradle project and uses no library: plain Java written against <b>android.jar</b>, built by
+      one short script — aapt, javac, dx, zipalign, apksigner. It went from a bare grid to what it is now through
+      <b>206 tagged versions in six days</b>, each tried on a phone, the next asked for in words.</p>
+    <pre><span class="c"># build.sh, in short</span>
+aapt package -m -J build/gen -M AndroidManifest.xml -S res -I android.jar
+javac -bootclasspath android.jar -d build/classes $(find src build/gen -name '*.java')
+dx --dex --min-sdk-version=26 --output=build/classes.dex build/classes
+aapt package -M AndroidManifest.xml -S res -A assets -I android.jar -F build/base.apk
+zipalign -f 4 build/base.apk build/aligned.apk
+apksigner sign --ks your.keystore --out ellipse.apk build/aligned.apk</pre>
+    <p style="margin-top:22px">The words of the interface are in English inside the app; Russian and Finnish come as
+      language modules, and a template lets anyone bring another from a file.</p>
+  </div></section>
+
+  <section class="block"><div class="wrap">
+    <p class="eyebrow">Permissions</p>
+    <h2>What it asks, and why</h2>
+    <div class="perms">
+      <div class="perm"><span class="n">Internet</span><span class="d">the weather, the air and the place search; nothing else leaves the phone — no counts, no statistics, no advertising.</span></div>
+      <div class="perm"><span class="n">Location (coarse)</span><span class="d">the weather where you are. <i>Optional: a place can be chosen by name.</i></span></div>
+      <div class="perm"><span class="n">Set wallpaper</span><span class="d">the wallpaper factory's grounds and your own picture.</span></div>
+      <div class="perm"><span class="n">Bluetooth</span><span class="d">the headphones' charge on the clock.</span></div>
+      <div class="perm"><span class="n">Expand status bar</span><span class="d">gestures and the status strip lower the shade.</span></div>
+      <div class="perm"><span class="n">Uninstall request</span><span class="d">Uninstall in an icon's menu; the phone asks you first.</span></div>
+      <div class="perm"><span class="n">Notification access</span><span class="d">dots on icons, the unread count, the player. <i>Asked only when turned on.</i></span></div>
+      <div class="perm"><span class="n">Do Not Disturb access</span><span class="d">the night clock's quiet. <i>Asked only when turned on.</i></span></div>
+      <div class="perm"><span class="n">All files access</span><span class="d">to keep a wallpaper set elsewhere in a copy; nothing else is read. <i>Asked only when turned on.</i></span></div>
+      <div class="perm"><span class="n">Device admin / accessibility</span><span class="d">to lock the screen by a gesture. <i>Only if you choose that gesture.</i></span></div>
+    </div>
+  </div></section>
+
+  <footer>
+    <div class="wrap foot">
+      <a href="https://github.com/Shumtugle/ellipse">Source</a><span>/</span>
+      <a href="./ellipse-2.15.1.apk" download>Download</a><span>/</span>
+      <a href="https://open-meteo.com">Open-Meteo</a><span>/</span>
+      <a href="https://claude.ai">Claude Opus 5.5</a><span>/</span>
+      <a href="https://shumtugle.github.io">Shumtugle</a><span>·</span><span>Finland</span>
+    </div>
+  </footer>
+</main>
+
+<script>
+(function () {
+  var t = document.getElementById('t'), d = document.getElementById('d');
+  var w = document.getElementById('w'), c = document.getElementById('c');
+  function tick() {
+    var now = new Date();
+    t.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    d.textContent = now.toLocaleDateString('en-GB', {weekday: 'short', day: 'numeric'});
+  }
+  tick();
+  setInterval(tick, 1000);
+  /* The charge, where the browser tells it; the lens keeps a dash where it does not. */
+  if (navigator.getBattery) {
+    navigator.getBattery().then(function (b) {
+      function show() { c.textContent = Math.round(b.level * 100); }
+      show();
+      b.addEventListener('levelchange', show);
+    }).catch(function () { c.textContent = '—'; });
+  } else {
+    c.textContent = '—';
+  }
+  /* Helsinki's temperature now, as the clock itself asks for it. */
+  fetch('https://api.open-meteo.com/v1/forecast?latitude=60.17&longitude=24.94&current=temperature_2m')
+    .then(function (r) { return r.json(); })
+    .then(function (j) { w.textContent = Math.round(j.current.temperature_2m) + '°'; })
+    .catch(function () { w.textContent = '—'; });
+})();
+</script>
+</body>
+</html>
