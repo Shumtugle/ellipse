@@ -238,7 +238,8 @@ final class Looks {
      * up belongs together: one material for the icons' rims, the clock's
      * plate and the widgets' frames; an accent whose hue belongs to that
      * material — warm for wood and gold, cool for steel, any for glass and
-     * black — never louder than half saturation, bright enough to read;
+     * black — held to a hint, as the home screen's colour is meant to be:
+     * a glow and a suggestion, never a flood, and bright enough to read;
      * windows with symbols only in the heavier materials; glass thin, the
      * rest of some weight; glass wearing the glass card or the rings, the
      * others the plate in their own material.
@@ -252,21 +253,21 @@ final class Looks {
             case Rim.WOOD:
             case Rim.STAMPED:
                 hue = 20f + r.nextFloat() * 25f;
-                sat = 0.28f + r.nextFloat() * 0.2f;
+                sat = 0.16f + r.nextFloat() * 0.12f;
                 break;
             case Rim.GOLD:
             case Rim.SEQUINS:
                 hue = 38f + r.nextFloat() * 12f;
-                sat = 0.4f + r.nextFloat() * 0.15f;
+                sat = 0.24f + r.nextFloat() * 0.12f;
                 break;
             case Rim.STEEL:
             case Rim.METAL:
                 hue = 195f + r.nextFloat() * 35f;
-                sat = 0.14f + r.nextFloat() * 0.16f;
+                sat = 0.08f + r.nextFloat() * 0.1f;
                 break;
             default:
                 hue = r.nextFloat() * 360f;
-                sat = 0.2f + r.nextFloat() * 0.3f;
+                sat = 0.1f + r.nextFloat() * 0.16f;
                 break;
         }
         float val = 0.8f + r.nextFloat() * 0.1f;
