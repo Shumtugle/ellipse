@@ -111,6 +111,16 @@ def gather(folder):
     for path in sorted(glob.glob(folder + '/*.java')):
         name = path.rsplit('/', 1)[-1]
         if name in SKIP_FILES:
+            if name == 'Looks.java':
+                # The presets' names and what each is, shown in the settings, are words of the screen.
+                text = open(path, encoding='utf-8').read()
+                for start in ('READY = {', 'READY_ABOUT = {'):
+                    at = text.find(start)
+                    if at >= 0:
+                        for s in literals(text[at:text.find('};', at)]):
+                            joined = s
+                            if readable(joined) and joined not in found:
+                                found.append(joined)
             continue
         for s in literals(open(path, encoding='utf-8').read()):
             if readable(s) and s not in found:
