@@ -378,6 +378,14 @@ final class Drawer extends FrameLayout {
     }
 
     void fill(List<Apps.Door> doors) {
+        fill(doors, new ArrayList<Apps.Door>());
+    }
+
+    /** The apps kept in the list's folders: not shown in the list, but found by a search all the same. */
+    private List<Apps.Door> folded = new ArrayList<>();
+
+    void fill(List<Apps.Door> doors, List<Apps.Door> inFolders) {
+        this.folded = inFolders;
         this.every = doors;
         tabs();
         narrow(field.getText().toString());
@@ -462,7 +470,9 @@ final class Drawer extends FrameLayout {
             List<Apps.Door> start = new ArrayList<>();
             List<Apps.Door> word = new ArrayList<>();
             List<Apps.Door> inside = new ArrayList<>();
-            for (Apps.Door door : base) {
+            List<Apps.Door> searched = new ArrayList<>(base);
+            searched.addAll(folded);
+            for (Apps.Door door : searched) {
                 int rank = Match.rank(Match.norm(door.label.toString()), key);
                 if (rank == Match.NONE && door.own != door.label) {
                     /* A renamed app is still found by the name it gives itself. */

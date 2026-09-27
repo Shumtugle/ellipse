@@ -159,6 +159,13 @@ public final class Home extends Activity {
     private static final int KEY_FRAME = 11;
     private static final int KEY_KIND = 12;
     private static final int KEY_KIND_PICK = 9000;
+    private static final int KEY_INTO = 13;
+    private static final int KEY_INTO_PICK = 9100;
+    private static final int KEY_LIST_RENAME = 14;
+    private static final int KEY_LIST_APART = 15;
+    private static final String INTO_FOLDER = "Into a folder\u2026";
+    private static final String NEW_LIST_FOLDER = "A new folder\u2026";
+    private static final String APART = "Ungroup";
     private static final String KIND = "Category";
     private static final String NEW_KIND = "New category\u2026";
     /** Where the last menu of a thing stood, for a second one to stand in its place. */
@@ -902,10 +909,18 @@ public final class Home extends Activity {
 
         drawer = new Drawer(this, iconSize, new Drawer.Opener() {
             public void open(View from, Apps.Door door, int[] icon) {
+                if (door.folder >= 0) {
+                    openListFolder(from, door, icon);
+                    return;
+                }
                 launch(from, door, icon);
             }
 
             public void lift(final View from, final Apps.Door door, final int[] icon, float rawX, float rawY) {
+                if (door.folder >= 0) {
+                    offerListFolder(from, door);
+                    return;
+                }
                 offerNew(from, door, icon, null);
             }
 
@@ -1380,17 +1395,10 @@ public final class Home extends Activity {
             }
         }
 
-        java.util.Set<String> hidden = Keep.hidden(this);
-        List<Apps.Door> listed = new ArrayList<>();
-        for (Apps.Door door : found.all(Keep.order(this))) {
-            if (!hidden.contains(door.token())) {
-                listed.add(door);
-            }
-        }
         int listGrid = Keep.number(this, Keep.LIST_GRID, 45);
         drawer.grid(Keep.columns(listGrid), Keep.rows(listGrid),
             Keep.flag(this, Keep.LIST_ENDLESS, false), Keep.flag(this, Keep.LIST_DOTS, true));
-        drawer.fill(listed);
+        drawer.fill(listed(found), foldedAway);
         screens.home(lying ? uprightToLying(Keep.home(this)) : Keep.home(this));
         screens.show(Math.max(0, Math.min(pages.size() - 1, showing)), false);
         dots();
@@ -2572,6 +2580,111 @@ public final class Home extends Activity {
     }
 
     /** What a folder holds, found afresh. */
+    /**
+     * The list of every app: the hidden left out; the list's own folders
+     * standing among the apps as apps do — by their names when the list goes
+     * by name, first otherwise — and their apps not in the list twice. A
+     * folder emptied goes with its last app.
+     */
+    private List<Apps.Door> listed(Apps found) {
+        foldedAway = new ArrayList<>();
+        java.util.Set<String> hidden = Keep.hidden(this);
+        java.util.Set<String> held = new java.util.HashSet<>();
+        List<Apps.Door> folders = new ArrayList<>();
+        List<Integer> ids = Keep.listFolders(this);
+        List<Integer> kept = new ArrayList<>();
+        for (int id : ids) {
+            List<Apps.Door> inside = new ArrayList<>();
+            for (String item : Keep.folderItems(this, id)) {
+                Apps.Door door = found.door(item);
+                if (door != null) {
+                    inside.add(door);
+                    held.add(item);
+                    foldedAway.add(door);
+                }
+            }
+            if (inside.isEmpty()) {
+                continue;
+            }
+            kept.add(id);
+            String token = Keep.FOLDER_THING + id;
+            folders.add(new Apps.Door(this, id, Keep.folderName(this, id), folderFace(token, inside)));
+        }
+        if (kept.size() != ids.size()) {
+            Keep.saveListFolders(this, kept);
+        }
+        List<Apps.Door> listed = new ArrayList<>();
+        for (Apps.Door door : found.all(Keep.order(this))) {
+            if (!hidden.contains(door.token()) && !held.contains(door.token())) {
+                listed.add(door);
+            }
+        }
+        if (Keep.order(this) == Keep.BY_NAME) {
+            for (Apps.Door folder : folders) {
+                int at = 0;
+                while (at < listed.size() && String.valueOf(listed.get(at).label)
+                    .compareToIgnoreCase(String.valueOf(folder.label)) < 0) {
+                    at++;
+                }
+                listed.add(at, folder);
+            }
+        } else {
+            listed.addAll(0, folders);
+        }
+        return listed;
+    }
+
+    /** The apps in the list's folders, for the list's search to find them too. */
+    private List<Apps.Door> foldedAway = new ArrayList<>();
+
+    /** The list made again from what is kept, as its folders change. */
+    private void refillList() {
+        drawer.fill(listed(new Apps(this)), foldedAway);
+    }
+
+    /** A folder of the list held: renamed, or let go of. */
+    private void offerListFolder(View from, Apps.Door folder) {
+        offerDoor = folder;
+        offerToken = folder.token();
+        offerWhence = null;
+        offerView = from;
+        offerShortcuts = new ArrayList<>();
+        menuFor = MENU_THING;
+        int[] at = new int[2];
+        int[] floorAt = new int[2];
+        from.getLocationOnScreen(at);
+        root.getLocationOnScreen(floorAt);
+        menuX = at[0] - floorAt[0] + from.getWidth() / 2f;
+        menuY = at[1] - floorAt[1] + from.getHeight() / 2f;
+        menuGap = from.getHeight() / 2f + dp(8);
+        from.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+        Menu.Section ours = pictured(java.util.Arrays.asList(RENAME), java.util.Arrays.asList(KEY_LIST_RENAME),
+            java.util.Arrays.asList(Glyph.PEN));
+        Menu.Section apart = pictured(java.util.Arrays.asList(APART), java.util.Arrays.asList(KEY_LIST_APART),
+            java.util.Arrays.asList(Glyph.CROSS));
+        apart.danger = true;
+        menu.show(new Menu.Section[] {ours, apart}, menuX, menuY, menuGap);
+    }
+
+    /** A folder of the list opened: its card over the list, as a folder of the screens opens. */
+    private void openListFolder(View from, Apps.Door folder, int[] icon) {
+        Apps found = new Apps(this);
+        List<Apps.Door> inside = new ArrayList<>();
+        for (String item : Keep.folderItems(this, folder.folder)) {
+            Apps.Door door = found.door(item);
+            if (door != null) {
+                inside.add(door);
+            }
+        }
+        int[] at = new int[2];
+        int[] floorAt = new int[2];
+        from.getLocationOnScreen(at);
+        root.getLocationOnScreen(floorAt);
+        trayFolder = folder.folder;
+        tray.show(folder.label, inside, at[0] - floorAt[0] + (icon == null ? from.getWidth() / 2f : icon[0] + icon[2] / 2f),
+            at[1] - floorAt[1] + (icon == null ? from.getHeight() / 2f : icon[1] + icon[3] / 2f));
+    }
+
     private List<Apps.Door> folderDoors(String token, Apps found, Set<String> taken) {
         String word = base(token);
         if (Keep.VENDOR_THING.equals(word)) {
@@ -3509,6 +3622,11 @@ public final class Home extends Activity {
             keys.add(KEY_KIND);
             glyphs.add(Glyph.LIST);
         }
+        if (door != null && door.folder < 0 && whence == null && drawer.shown()) {
+            lines.add(INTO_FOLDER);
+            keys.add(KEY_INTO);
+            glyphs.add(Glyph.LIST);
+        }
         if (door != null && !systemApp(door)) {
             lines.add(UNINSTALL);
             keys.add(KEY_UNINSTALL);
@@ -3739,6 +3857,60 @@ public final class Home extends Activity {
                             menuX, menuY, menuGap);
                     }
                 }, Pace.PRESS);
+            } else if (key == KEY_INTO && offerDoor != null) {
+                /* The list's folders to choose from, in the first menu's place, and a new one. */
+                final List<Integer> ids = Keep.listFolders(this);
+                final List<String> shown = new ArrayList<>();
+                for (int id : ids) {
+                    shown.add(Keep.folderName(this, id));
+                }
+                shown.add(NEW_LIST_FOLDER);
+                final int[] picks = new int[shown.size()];
+                for (int i = 0; i < picks.length; i++) {
+                    picks[i] = KEY_INTO_PICK + i;
+                }
+                root.postDelayed(new Runnable() {
+                    public void run() {
+                        menu.show(new Menu.Section[] {new Menu.Section(INTO_FOLDER.replace("\u2026", ""),
+                            shown.toArray(new String[0]), picks)}, menuX, menuY, menuGap);
+                    }
+                }, Pace.PRESS);
+            } else if (key >= KEY_INTO_PICK && key < KEY_INTO_PICK + 100 && offerDoor != null) {
+                final List<Integer> ids = Keep.listFolders(this);
+                final String token = offerDoor.token();
+                int which = key - KEY_INTO_PICK;
+                if (which < ids.size()) {
+                    Keep.folderAdd(this, ids.get(which), token);
+                    refillList();
+                } else {
+                    Ask.show(root, NEW_FOLDER, Words.t(NEW_FOLDER) + " " + (ids.size() + 1), new Ask.Answer() {
+                        public void answered(String text) {
+                            String named = text == null || text.trim().isEmpty() ? Words.t(NEW_FOLDER) : text.trim();
+                            int id = Keep.newFolder(Home.this, named);
+                            List<Integer> all = Keep.listFolders(Home.this);
+                            all.add(id);
+                            Keep.saveListFolders(Home.this, all);
+                            Keep.folderAdd(Home.this, id, token);
+                            refillList();
+                        }
+                    });
+                }
+            } else if (key == KEY_LIST_RENAME && offerDoor != null && offerDoor.folder >= 0) {
+                final int id = offerDoor.folder;
+                Ask.show(root, RENAME, Keep.folderName(this, id), new Ask.Answer() {
+                    public void answered(String text) {
+                        if (text != null && !text.trim().isEmpty()) {
+                            Keep.saveFolderName(Home.this, id, text.trim());
+                            refillList();
+                        }
+                    }
+                });
+            } else if (key == KEY_LIST_APART && offerDoor != null && offerDoor.folder >= 0) {
+                /* The folder let go of: its apps back in the list, each in its place. */
+                List<Integer> all = Keep.listFolders(this);
+                all.remove(Integer.valueOf(offerDoor.folder));
+                Keep.saveListFolders(this, all);
+                refillList();
             } else if (key >= KEY_KIND_PICK && key < KEY_KIND_PICK + 100 && offerDoor != null) {
                 final Apps.Door door = offerDoor;
                 int which = key - KEY_KIND_PICK;

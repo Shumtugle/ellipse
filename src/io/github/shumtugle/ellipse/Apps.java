@@ -45,8 +45,30 @@ final class Apps {
         long when;
         /** When it came to the phone. */
         final long installed;
+        /** A folder of the list standing among the apps: its number; less than nought for an app. */
+        final int folder;
+
+        /**
+         * A folder of the list, standing among the apps as one of them: its
+         * name, its face, and nothing to open but its own card.
+         */
+        Door(Context context, int folder, CharSequence name, Drawable face) {
+            this.info = null;
+            this.density = 0;
+            this.folder = folder;
+            this.name = new ComponentName(context.getPackageName(), LIST_FOLDER + folder);
+            this.user = Process.myUserHandle();
+            this.serial = 0L;
+            this.installed = 0L;
+            this.own = name;
+            this.label = name;
+            this.icon = face;
+        }
+
+        static final String LIST_FOLDER = "#listfolder:";
 
         Door(LauncherActivityInfo info, int density) {
+            this.folder = -1;
             this.info = info;
             this.density = density;
             name = info.getComponentName();
@@ -61,7 +83,7 @@ final class Apps {
 
         /** Drawn once, when first asked for: a long list is not painted all at once. A work app wears its badge. */
         Drawable icon() {
-            if (icon == null) {
+            if (icon == null && info != null) {
                 icon = serial == 0 ? Style.dress(appContext, token(), Pack.icon(name, info.getIcon(density)), name.getPackageName())
                     : info.getBadgedIcon(density);
             }
@@ -70,17 +92,17 @@ final class Apps {
 
         /** The icon as the app gives it, before any cutting: for a preview of other outlines. */
         Drawable plain() {
-            return Pack.icon(name, info.getIcon(density));
+            return info == null ? icon : Pack.icon(name, info.getIcon(density));
         }
 
         /** The kind the app says it is, as the platform lets it say; less than nought if it says none. */
         int kind() {
-            return info.getApplicationInfo().category;
+            return info == null ? -1 : info.getApplicationInfo().category;
         }
 
         /** How it is kept: its component, and after an at sign its profile when that is not the owner's own. */
         String token() {
-            return Apps.token(name, serial);
+            return folder >= 0 ? LIST_FOLDER + folder : Apps.token(name, serial);
         }
     }
 

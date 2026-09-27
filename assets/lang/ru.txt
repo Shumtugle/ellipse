@@ -714,3 +714,7 @@ Only looked at until it is worn: going back, or leaving the settings, takes it o
 Bring back this copy? = Вернуть эту копию?
 Bring back = Вернуть
 The home screen as it stood when the copy was made. = Рабочий стол, каким он был, когда делалась копия.
+Into a folder… = В папку…
+A new folder… = Новая папка…
+Ungroup = Распустить папку
+Into a folder = В папку

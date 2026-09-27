@@ -714,3 +714,7 @@ Only looked at until it is worn: going back, or leaving the settings, takes it o
 Bring back this copy? = Palautetaanko tämä kopio?
 Bring back = Palauta
 The home screen as it stood when the copy was made. = Kotinäyttö sellaisena kuin se oli kopion tekohetkellä.
+Into a folder… = Kansioon…
+A new folder… = Uusi kansio…
+Ungroup = Pura kansio
+Into a folder = Kansioon

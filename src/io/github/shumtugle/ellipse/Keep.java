@@ -794,6 +794,38 @@ final class Keep {
         return id;
     }
 
+    /** The folders of the list of every app, by their numbers. */
+    static List<Integer> listFolders(Context context) {
+        List<Integer> ids = new ArrayList<>();
+        for (String one : store(context).getString("list_folders", "").split(",")) {
+            try {
+                if (!one.isEmpty()) {
+                    ids.add(Integer.parseInt(one));
+                }
+            } catch (NumberFormatException broken) {
+                // Not a folder.
+            }
+        }
+        return ids;
+    }
+
+    static void saveListFolders(Context context, List<Integer> ids) {
+        StringBuilder out = new StringBuilder();
+        for (int id : ids) {
+            if (out.length() > 0) {
+                out.append(',');
+            }
+            out.append(id);
+        }
+        store(context).edit().putString("list_folders", out.toString()).apply();
+        touch(context);
+    }
+
+    static void saveFolderName(Context context, int id, String name) {
+        store(context).edit().putString(FOLDER + id + ".name", name).apply();
+        touch(context);
+    }
+
     static String folderName(Context context, int id) {
         return store(context).getString(FOLDER + id + ".name", "Folder");
     }
