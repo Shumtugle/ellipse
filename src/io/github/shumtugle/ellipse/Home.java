@@ -300,6 +300,8 @@ public final class Home extends Activity {
         /* The day's copy, if the home screen has stayed open since before the day began. */
         Copy.onUpdate(this);
         super.onResume();
+        /* Held the way it was last turned, in the settings or its menu. */
+        turnAsKept();
         /* Back on the home screen: a step aside at once, then one every three minutes. */
         step(false);
         drifting.removeCallbacks(driftOn);
@@ -679,7 +681,7 @@ public final class Home extends Activity {
         boolean wasLying = lying;
         lying = getResources().getConfiguration().orientation
             == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
-        Keep.frozen = lying;
+        Keep.lying = lying;
         if (screens != null && !pages.isEmpty() && wasLying == lying) {
             restore = screens.page();
         } else {
@@ -706,6 +708,11 @@ public final class Home extends Activity {
             float row = (Math.max(wide, tall) - dp(120)) / (float) Keep.rows(grid);
             int across = Math.max(Keep.columns(grid), (int) Math.floor((Math.max(wide, tall) - dp(120)) / column));
             int down = Math.max(2, (int) Math.floor((Math.min(wide, tall) - dp(16)) / row));
+            int own = Keep.number(this, Keep.LYING_GRID, 0);
+            if (own > 0) {
+                across = Math.max(3, own / 100);
+                down = Math.max(2, own % 100);
+            }
             columns = across * fine;
             rows = down * fine;
         }
@@ -1053,13 +1060,19 @@ public final class Home extends Activity {
         for (Keep.Spot spot : spots) {
             count = Math.max(count, spot.screen + 1);
         }
-        if (lying) {
-            spots = lieDown(spots, count);
-            count = Math.max(1, lyingCount);
-            if (showing < 0) {
-                showing = uprightToLying(Keep.home(this));
+        if (lying && !Keep.lyingLaid(this)) {
+            /* The first time it lies down: the upright set-out laid again in this grid, kept as its own. */
+            List<Keep.Spot> seeded = lieDown(Keep.placedUpright(this), Keep.screensUpright(this));
+            Keep.lay(this, seeded);
+            Keep.saveScreens(this, Math.max(1, lyingCount));
+            Keep.saveHome(this, uprightToLying(Keep.homeUpright(this)));
+            spots = Keep.placed(this);
+            count = Keep.screens(this);
+            for (Keep.Spot spot : spots) {
+                count = Math.max(count, spot.screen + 1);
             }
-        } else if (showing < 0) {
+        }
+        if (showing < 0) {
             showing = Keep.home(this);
         }
         rowShare = shapeRows();
@@ -1175,7 +1188,7 @@ public final class Home extends Activity {
             place(dock, door, lying ? 0 : i, lying ? i : 0, false);
         }
 
-        int home = Math.min(lying ? uprightToLying(Keep.roles(this)) : Keep.roles(this), count - 1);
+        int home = Math.min(Keep.roles(this), count - 1);
         if (laid) {
             boolean clocked = false;
             List<Keep.Spot> folders = new ArrayList<>();
@@ -1232,7 +1245,7 @@ public final class Home extends Activity {
             }
             /* Over one another, things stand in the order they were set
                down, apps and widgets alike: the last on top. */
-            if (Keep.flag(this, Keep.OVERLAP, false) && !lying) {
+            if (Keep.flag(this, Keep.OVERLAP, false)) {
                 for (Keep.Spot spot : Keep.placed(this)) {
                     if (spot.screen < 0 || spot.screen >= pages.size()) {
                         continue;
@@ -1316,7 +1329,7 @@ public final class Home extends Activity {
         drawer.grid(Keep.columns(listGrid), Keep.rows(listGrid),
             Keep.flag(this, Keep.LIST_ENDLESS, false), Keep.flag(this, Keep.LIST_DOTS, true));
         drawer.fill(listed);
-        screens.home(lying ? uprightToLying(Keep.home(this)) : Keep.home(this));
+        screens.home(Keep.home(this));
         screens.show(Math.max(0, Math.min(pages.size() - 1, showing)), false);
         dots();
     }
@@ -1477,18 +1490,12 @@ public final class Home extends Activity {
     static final int TURNED_UPRIGHT = 1;
     static final int TURNED_LYING = 2;
 
-    /**
-     * The home screen stands upright. Lying down it is to be a set-out of its
-     * own, with its own grid, screens and settings; until that is made, the
-     * way it lay down by laying the upright things again left the owner with
-     * only widgets and no way back — so it does not lie down at all, and a
-     * turn kept from before is forgotten.
-     */
-    private void turnAsKept() {
-        if (Keep.number(this, Keep.TURNED, 0) != 0) {
-            Keep.saveNumber(this, Keep.TURNED, 0);
-        }
-        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+    /** The home screen held the way the owner last turned it by hand; as the phone turns, if never. */
+    void turnAsKept() {
+        int way = Keep.number(this, Keep.TURNED, 0);
+        setRequestedOrientation(way == TURNED_LYING ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            : way == TURNED_UPRIGHT ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
 
     /** A veil over nothing, while the desk is away: the first touch brings it back. */
@@ -2037,26 +2044,21 @@ public final class Home extends Activity {
     private void ask(View on) {
         boolean home = screens.page() == Keep.home(this);
         List<Integer> offered = new ArrayList<>();
-        /* Lying down, the screens are only looked at: nothing is added or taken away. */
-        if (!lying) {
-            for (int i = ADD_SCREEN; i <= ADD_FOLDER; i++) {
-                offered.add(i);
-            }
-            if (!home) {
-                offered.add(MAKE_HOME);
-            }
-            if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
-                offered.add(REMOVE_SCREEN);
-            }
-            offered.add(PORTRAIT);
+        for (int i = ADD_SCREEN; i <= ADD_FOLDER; i++) {
+            offered.add(i);
         }
+        if (!home) {
+            offered.add(MAKE_HOME);
+        }
+        if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
+            offered.add(REMOVE_SCREEN);
+        }
+        offered.add(PORTRAIT);
         /* The night clock and the bare wallpaper, last before the settings. */
         offered.add(NIGHT);
         offered.add(BARE);
-        /* Lying down is to come back as a set-out of its own; until then, only the way back upright. */
-        if (lying) {
-            offered.add(STAND_UP);
-        }
+        /* The home screen turned by hand, and held so until turned back. */
+        offered.add(lying ? STAND_UP : LIE_DOWN);
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
         askY = root.fingerY();
@@ -2388,7 +2390,7 @@ public final class Home extends Activity {
 
     private void carry(View from, String token, android.graphics.drawable.Drawable face, int[] icon,
                        int across, int down, int[] whence, float rawX, float rawY) {
-        if (lift != null || lying) {
+        if (lift != null) {
             return;
         }
         int[] floorAt = new int[2];
@@ -2795,8 +2797,8 @@ public final class Home extends Activity {
      * settings, where it can be switched on again.
      */
     private void removeThing(String token, int[] whence) {
-        if (isFolder(token) && whence[0] != -2) {
-            /* A folder taken off lets go of the widgets it held. */
+        if (isFolder(token) && whence[0] != -2 && !Keep.inTheOther(this, base(token))) {
+            /* A folder taken off lets go of the widgets it held — unless the other set-out still has it. */
             for (String item : Keep.folderItems(this, folderId(token))) {
                 if (item.startsWith(WIDGET)) {
                     try {
@@ -2845,8 +2847,8 @@ public final class Home extends Activity {
             } catch (NumberFormatException broken) {
                 // Nothing to let go.
             }
-        } else if (token.startsWith(Keep.PILE_THING)) {
-            /* A pile taken off lets go of every widget it held. */
+        } else if (token.startsWith(Keep.PILE_THING) && !Keep.inTheOther(this, base(token))) {
+            /* A pile taken off lets go of every widget it held — unless the other set-out still has it. */
             int pile = pileId(token);
             for (int id : Keep.pileItems(this, pile)) {
                 drop(id);
@@ -3021,8 +3023,7 @@ public final class Home extends Activity {
             return;
         }
         int[] at = (int[]) thing.getTag();
-        /* Lying down, where a thing stands is not where it is kept: its menu offers nothing that moves it. */
-        int[] whence = lying ? null : new int[] {pages.indexOf((Grid) thing.getParent()), at[0], at[1]};
+        int[] whence = {pages.indexOf((Grid) thing.getParent()), at[0], at[1]};
         Apps.Door door = thing instanceof Cell ? ((Cell) thing).door : null;
         offerThing(thing, token, whence, door);
     }
@@ -4650,6 +4651,11 @@ public final class Home extends Activity {
 
     private void drop(int id) {
         widgetViews.remove(id);
+        /* A widget standing on the other set-out too — upright or lying — stays alive for it. */
+        if (Keep.inTheOther(this, WIDGET + id)) {
+            pendingWidget = -1;
+            return;
+        }
         try {
             host.deleteAppWidgetId(id);
         } catch (RuntimeException gone) {

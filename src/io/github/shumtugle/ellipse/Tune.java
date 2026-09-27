@@ -126,6 +126,7 @@ public final class Tune extends Activity {
     private static final int GROUNDS = 16;
     private static final int GROUND_FINE = 17;
     private static final int NIGHT = 18;
+    private static final int LYING = 19;
     private Ground ground;
     private android.widget.ImageView groundView;
     private int groundDrawn;
@@ -147,6 +148,7 @@ public final class Tune extends Activity {
 
     private static final Line[] ROOMS = {
         door(Glyph.DESK, "Desktop", "Dock, grid, scrolling, page points, new apps", DESK),
+        door(Glyph.DESK, "Lying down", "The home screen on its side: a set-out and a grid of its own", LYING),
         door(Glyph.LIST, "All apps", "Grid, lines or pages, hidden apps", LIST),
         door(Glyph.LOOK, "Look", "Colour, icons, the clock, notification dots", LOOK),
         door(Glyph.HANDS, "Gestures", "Up, down, Back and Home on the home screen", HANDS),
@@ -591,6 +593,10 @@ public final class Tune extends Activity {
             fillNight();
             return;
         }
+        if (room() == LYING) {
+            fillLying();
+            return;
+        }
         List<Line> lines = new ArrayList<>();
         if (room() != ROOT) {
             for (Line line : inside(room())) {
@@ -990,6 +996,28 @@ public final class Tune extends Activity {
         }
         rows.addView(row(door(Glyph.BRUSH, "Fine tuning", "Each layer's kind, colour, strength and scale",
             GROUND_FINE)));
+    }
+
+    /**
+     * The home screen on its side: which way it stands, its grid lying down,
+     * and the way to begin its set-out again from the upright one.
+     */
+    private void fillLying() {
+        rows.addView(row(choice("Which way", "As the phone turns, or held upright or lying until changed; "
+            + "the home screen's menu turns it too", Keep.TURNED, 0,
+            new String[] {"As the phone turns", "Upright", "Lying"},
+            new int[] {0, Home.TURNED_UPRIGHT, Home.TURNED_LYING})));
+        rows.addView(row(choice("Grid lying down", "Columns and rows of every screen on its side",
+            Keep.LYING_GRID, 0, new String[] {"As many as fit", "8 \u00D7 3", "9 \u00D7 4", "10 \u00D7 4",
+                "10 \u00D7 5", "11 \u00D7 5", "12 \u00D7 5"}, new int[] {0, 803, 904, 1004, 1005, 1105, 1205})));
+        rows.addView(deed("Lay it out again from upright", new Runnable() {
+            public void run() {
+                Keep.unlayLying(Tune.this);
+                said("The next time it lies down, it begins again from the upright set-out");
+            }
+        }));
+        note("Lying down is a set-out of its own: moved, added or taken away there, nothing changes upright. "
+            + "It began as the upright one laid in its grid. Nothing lying down goes to the screen's edges.");
     }
 
     /** The night clock: open it now, and how it is to be. */
