@@ -650,3 +650,6 @@ Kept on = Päällä
 How long the screen stays on; after, the phone sleeps as always = Kuinka kauan näyttö pysyy päällä; sen jälkeen puhelin nukkuu tavalliseen tapaan
 Into the dark = Pimeään
 Half a minute untouched, the clock goes down into full black; a touch brings it back. A double touch or two fingers close it = Puoli minuuttia koskematta kello painuu täyteen mustaan; kosketus tuo sen takaisin. Kaksoiskosketus tai kaksi sormea sulkee sen
+Show the wallpaper = Näytä taustakuva
+Step aside = Siirto palamista vastaan
+Every three minutes, and each time it comes back, the home screen moves a few points, too slowly to see, so the screen keeps no line burnt in = Kolmen minuutin välein ja aina palatessa kotinäyttö siirtyy huomaamatta muutaman pisteen, jotta näyttöön ei pala jälkiä

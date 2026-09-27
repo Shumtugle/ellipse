@@ -19,6 +19,13 @@ final class Keep {
      * one of the home screen's own things by a word after a hash — the
      * clock, a folder the phone fills, the door to the settings.
      */
+    /**
+     * While the phone lies on its side the screens are laid again in a grid
+     * of their own, and nothing of that is where things stand upright: the
+     * upright set-out is not written while it is so.
+     */
+    static volatile boolean frozen;
+
     static final class Spot {
         final String token;
         /** The application, when the thing is one; otherwise none. */
@@ -124,6 +131,8 @@ final class Keep {
     static final String NIGHT_FACE = "night_face";
     static final String NIGHT_DIM = "night_dim";
     static final String NIGHT_LASTS = "night_lasts";
+    /** Whether the whole home screen steps a few points aside now and then, against burning in. */
+    static final String DRIFT = "drift";
     static final String NIGHT_HIDE = "night_hide";
     static final String NIGHT_QUIET = "night_quiet";
     static final String NIGHT_AUTO = "night_auto";
@@ -1277,6 +1286,9 @@ final class Keep {
     }
 
     static void saveScreens(Context context, int count) {
+        if (frozen) {
+            return;
+        }
         store(context).edit().putInt(SCREENS, Math.max(1, count)).apply();
     }
 
@@ -1287,6 +1299,9 @@ final class Keep {
     }
 
     static void saveHome(Context context, int screen) {
+        if (frozen) {
+            return;
+        }
         store(context).edit().putInt(HOME, screen).apply();
     }
 
@@ -1331,6 +1346,9 @@ final class Keep {
 
     /** Sets a thing down in a place; whatever stood exactly there before gives way. */
     static void place(Context context, String token, int screen, int x, int y) {
+        if (frozen) {
+            return;
+        }
         List<Spot> kept = new ArrayList<>();
         for (Spot spot : placed(context)) {
             if (spot.screen == screen && spot.x == x && spot.y == y) {
@@ -1348,6 +1366,9 @@ final class Keep {
      * word given.
      */
     static void keepOnly(Context context, String kind, String token, int screen, int x, int y) {
+        if (frozen) {
+            return;
+        }
         List<Spot> kept = new ArrayList<>();
         for (Spot spot : placed(context)) {
             boolean same = spot.token.equals(kind) || spot.token.startsWith(kind + ":");
@@ -1384,6 +1405,9 @@ final class Keep {
      * on top.
      */
     static void stack(Context context, int screen, int x, int y, boolean top) {
+        if (frozen) {
+            return;
+        }
         List<Spot> kept = new ArrayList<>();
         Spot moved = null;
         for (Spot spot : placed(context)) {
@@ -1406,6 +1430,9 @@ final class Keep {
 
     /** Takes away whatever stands in a place. */
     static void remove(Context context, int screen, int x, int y) {
+        if (frozen) {
+            return;
+        }
         List<Spot> kept = new ArrayList<>();
         for (Spot spot : placed(context)) {
             if (!(spot.screen == screen && spot.x == x && spot.y == y)) {
@@ -1417,6 +1444,9 @@ final class Keep {
 
     /** The thing in one place is kept again under a new word and in a new place: a new size, as a rule. */
     static void reshape(Context context, int screen, int x, int y, String token, int toX, int toY) {
+        if (frozen) {
+            return;
+        }
         List<Spot> kept = new ArrayList<>();
         for (Spot spot : placed(context)) {
             if (spot.screen == screen && spot.x == x && spot.y == y) {
@@ -1439,6 +1469,9 @@ final class Keep {
 
     /** Keeps the whole set-out as it stands, and from now on only it. */
     static void lay(Context context, List<Spot> spots) {
+        if (frozen) {
+            return;
+        }
         write(context, spots);
         store(context).edit().putBoolean(LAID, true).apply();
     }

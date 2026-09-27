@@ -299,6 +299,10 @@ public final class Home extends Activity {
         /* The day's copy, if the home screen has stayed open since before the day began. */
         Copy.onUpdate(this);
         super.onResume();
+        /* Back on the home screen: a step aside at once, then one every three minutes. */
+        step(false);
+        drifting.removeCallbacks(driftOn);
+        drifting.postDelayed(driftOn, 180000L);
         /* By its hours, the night clock opens instead of the home screen, once a night. */
         if (Night.due(this)) {
             Night.open(this, true);
@@ -355,6 +359,8 @@ public final class Home extends Activity {
 
     @Override
     protected void onStop() {
+        drifting.removeCallbacks(driftOn);
+        unbare();
         super.onStop();
         giveBack();
         unlisten();
@@ -659,10 +665,23 @@ public final class Home extends Activity {
      * first one.
      */
     private int restore = -1;
+    /** Whether the phone lies on its side: the screens laid again in a grid of their own, nothing written. */
+    private boolean lying;
+    /** The phone just turned: the screens open on the home one, in the grid of the way it now lies. */
+    private boolean turned;
+    /** Lying down, the screen each upright screen begins on. */
+    private int[] lyingFirst = new int[0];
 
     private void build() {
-        if (screens != null && !pages.isEmpty()) {
+        boolean wasLying = lying;
+        lying = getResources().getConfiguration().orientation
+            == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        Keep.frozen = lying;
+        if (screens != null && !pages.isEmpty() && wasLying == lying) {
             restore = screens.page();
+        } else {
+            restore = -1;
+            turned = true;
         }
         density = getResources().getDisplayMetrics().density;
         scaled = getResources().getDisplayMetrics().scaledDensity;
@@ -677,6 +696,15 @@ public final class Home extends Activity {
         rows = Keep.rows(grid) * fine;
         stamp = Keep.stamp(this);
         float column = (Math.min(wide, tall) - dp(16)) / (float) Keep.columns(grid);
+        if (lying) {
+            /* Lying down, places keep their upright size, and as many as fit make a grid of their own:
+               across, the long side less the dock's column; down, the short side. */
+            float row = (Math.max(wide, tall) - dp(120)) / (float) Keep.rows(grid);
+            int across = Math.max(Keep.columns(grid), (int) Math.floor((Math.max(wide, tall) - dp(120)) / column));
+            int down = Math.max(2, (int) Math.floor((Math.min(wide, tall) - dp(16)) / row));
+            columns = across * fine;
+            rows = down * fine;
+        }
         iconSize = Math.max(dp(48), Math.min(dp(64), column * 0.58f));
         /* The owner's own size, within the cell. */
         iconSize = Math.min(column * 0.86f, iconSize * Style.iconScale);
@@ -705,8 +733,10 @@ public final class Home extends Activity {
 
         FrameLayout stage = new FrameLayout(this);
         stage.setClipChildren(false);
-        frame.addView(stage, new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        /* Lying down, the dock stands as a column at the right edge. */
+        frame.setOrientation(lying ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+        frame.addView(stage, lying ? new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         frame.cut(stage);
 
         screens = new Pager(this);
@@ -749,16 +779,20 @@ public final class Home extends Activity {
            names, and the round button at its end is the way into every
            application, marked with six dots, as a grid of them would be. */
         bar = new LinearLayout(this);
-        bar.setOrientation(LinearLayout.HORIZONTAL);
-        bar.setGravity(Gravity.CENTER_VERTICAL);
+        bar.setOrientation(lying ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
+        bar.setGravity(lying ? Gravity.CENTER_HORIZONTAL : Gravity.CENTER_VERTICAL);
         bar.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
-        bar.setPadding(dp(4), dp(8), dp(10), dp(8));
+        if (lying) {
+            bar.setPadding(dp(8), dp(4), dp(8), dp(10));
+        } else {
+            bar.setPadding(dp(4), dp(8), dp(10), dp(8));
+        }
         bar.setClipChildren(false);
 
-        dock = new Grid(this, DOCK, 1);
+        dock = lying ? new Grid(this, 1, DOCK) : new Grid(this, DOCK, 1);
         dock.shape(iconSize, 0f);
-        bar.addView(dock, new LinearLayout.LayoutParams(0,
-            Math.round(iconSize + dp(16)), 1f));
+        bar.addView(dock, lying ? new LinearLayout.LayoutParams(Math.round(iconSize + dp(16)), 0, 1f)
+            : new LinearLayout.LayoutParams(0, Math.round(iconSize + dp(16)), 1f));
 
         blob = new Blob(this, iconSize, Blob.GRID);
         blob.shaped(true);
@@ -783,12 +817,21 @@ public final class Home extends Activity {
         });
         LinearLayout.LayoutParams blobParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        blobParams.leftMargin = dp(4);
+        if (lying) {
+            blobParams.topMargin = dp(4);
+        } else {
+            blobParams.leftMargin = dp(4);
+        }
         bar.addView(blob, blobParams);
 
-        LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        barParams.setMargins(dp(8), dp(6), dp(8), dp(10));
+        LinearLayout.LayoutParams barParams = lying
+            ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        if (lying) {
+            barParams.setMargins(dp(6), dp(12), dp(10), dp(12));
+        } else {
+            barParams.setMargins(dp(8), dp(6), dp(8), dp(10));
+        }
         frame.addView(bar, barParams);
         /* Without the dock the screens reach down to the foot; the list of
            every application is still a pull upward away. */
@@ -986,8 +1029,9 @@ public final class Home extends Activity {
         if (blob != null) {
             blob.face(allFace());
         }
-        int showing = restore >= 0 ? restore : (pages.isEmpty() ? Keep.home(this) : screens.page());
+        int showing = restore >= 0 ? restore : (pages.isEmpty() || turned ? -1 : screens.page());
         restore = -1;
+        turned = false;
         screens.removeAllViews();
         pages.clear();
         dock.removeAllViews();
@@ -1004,6 +1048,15 @@ public final class Home extends Activity {
         int count = Keep.screens(this);
         for (Keep.Spot spot : spots) {
             count = Math.max(count, spot.screen + 1);
+        }
+        if (lying) {
+            spots = lieDown(spots, count);
+            count = Math.max(1, lyingCount);
+            if (showing < 0) {
+                showing = uprightToLying(Keep.home(this));
+            }
+        } else if (showing < 0) {
+            showing = Keep.home(this);
         }
         rowShare = shapeRows();
         for (int i = 0; i < count; i++) {
@@ -1115,10 +1168,10 @@ public final class Home extends Activity {
                     taken.add(door.name.getPackageName());
                 }
             }
-            place(dock, door, i, 0, false);
+            place(dock, door, lying ? 0 : i, lying ? i : 0, false);
         }
 
-        int home = Math.min(Keep.roles(this), count - 1);
+        int home = Math.min(lying ? uprightToLying(Keep.roles(this)) : Keep.roles(this), count - 1);
         if (laid) {
             boolean clocked = false;
             List<Keep.Spot> folders = new ArrayList<>();
@@ -1175,7 +1228,7 @@ public final class Home extends Activity {
             }
             /* Over one another, things stand in the order they were set
                down, apps and widgets alike: the last on top. */
-            if (Keep.flag(this, Keep.OVERLAP, false)) {
+            if (Keep.flag(this, Keep.OVERLAP, false) && !lying) {
                 for (Keep.Spot spot : Keep.placed(this)) {
                     if (spot.screen < 0 || spot.screen >= pages.size()) {
                         continue;
@@ -1259,7 +1312,7 @@ public final class Home extends Activity {
         drawer.grid(Keep.columns(listGrid), Keep.rows(listGrid),
             Keep.flag(this, Keep.LIST_ENDLESS, false), Keep.flag(this, Keep.LIST_DOTS, true));
         drawer.fill(listed);
-        screens.home(Keep.home(this));
+        screens.home(lying ? uprightToLying(Keep.home(this)) : Keep.home(this));
         screens.show(Math.max(0, Math.min(pages.size() - 1, showing)), false);
         dots();
     }
@@ -1415,6 +1468,183 @@ public final class Home extends Activity {
      * in places of this grid. A grid of many small places gives it more of
      * them, so the clock is never drawn smaller than its face allows.
      */
+    private int lyingCount;
+
+    /** A veil over nothing, while the desk is away: the first touch brings it back. */
+    private View bareVeil;
+
+    /**
+     * The wallpaper alone: everything on the screens and the dock goes away
+     * softly, and the first touch anywhere brings it back.
+     */
+    private void bare() {
+        if (bareVeil != null || frame == null) {
+            return;
+        }
+        frame.animate().cancel();
+        frame.animate().alpha(0f).setDuration(Pace.ARRIVE).start();
+        bareVeil = new View(this);
+        bareVeil.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, android.view.MotionEvent event) {
+                if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
+                    unbare();
+                }
+                return true;
+            }
+        });
+        root.addView(bareVeil, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    private void unbare() {
+        if (bareVeil == null) {
+            return;
+        }
+        root.removeView(bareVeil);
+        bareVeil = null;
+        if (frame != null) {
+            frame.animate().cancel();
+            frame.animate().alpha(1f).setDuration(Pace.ARRIVE).start();
+        }
+    }
+
+    // ------------------------------------------------------------- drift
+
+    private final android.os.Handler drifting = new android.os.Handler(android.os.Looper.getMainLooper());
+    private final java.util.Random drift = new java.util.Random();
+
+    /**
+     * Every three minutes, and each time the home screen comes back, all of
+     * it steps a few points aside, too slowly to be seen: an OLED screen then
+     * keeps no line of it burnt in.
+     */
+    private final Runnable driftOn = new Runnable() {
+        public void run() {
+            step(true);
+            drifting.postDelayed(this, 180000L);
+        }
+    };
+
+    private void step(boolean slowly) {
+        if (root == null) {
+            return;
+        }
+        float reach = dp(3);
+        float x = Keep.flag(this, Keep.DRIFT, true) ? (drift.nextFloat() * 2 - 1) * reach : 0f;
+        float y = Keep.flag(this, Keep.DRIFT, true) ? (drift.nextFloat() * 2 - 1) * reach : 0f;
+        if (slowly) {
+            root.animate().translationX(x).translationY(y).setDuration(6000).start();
+        } else {
+            root.setTranslationX(x);
+            root.setTranslationY(y);
+        }
+    }
+
+    private int uprightToLying(int screen) {
+        if (lyingFirst.length == 0) {
+            return 0;
+        }
+        return lyingFirst[Math.max(0, Math.min(lyingFirst.length - 1, screen))];
+    }
+
+    /** A thing's size in places, as it stands upright, held within the grid lying down. */
+    private int[] lyingSpan(Keep.Spot spot) {
+        String token = spot.token;
+        int[] span = {fine, fine};
+        if (spot.name == null) {
+            String[] part = token.split(":");
+            try {
+                if (token.startsWith(WIDGET) || token.startsWith(Keep.PILE_THING)) {
+                    if (part.length >= 4) {
+                        span = new int[] {Integer.parseInt(part[2]), Integer.parseInt(part[3])};
+                    }
+                } else if (token.startsWith(Keep.FOLDER_THING)) {
+                    if (part.length >= 4) {
+                        span = new int[] {Integer.parseInt(part[2]), Integer.parseInt(part[3])};
+                    }
+                } else if (Keep.CLOCK_THING.equals(base(token))) {
+                    int[] least = clockLeast(place());
+                    span = token.indexOf(':') > 0 ? folderSpan(token) : new int[] {columns, least[1]};
+                    span[1] = Math.max(span[1], least[1]);
+                }
+            } catch (NumberFormatException broken) {
+                span = new int[] {fine, fine};
+            }
+        }
+        return new int[] {Math.max(1, Math.min(columns, span[0])), Math.max(1, Math.min(rows, span[1]))};
+    }
+
+    /**
+     * The things of every upright screen laid again in the grid lying down,
+     * in the order they stand upright — row by row, left to right — each
+     * upright screen beginning a screen of its own and running on to the next
+     * where it does not fit. Nothing of it is kept: turned upright again,
+     * everything is where it was.
+     */
+    private List<Keep.Spot> lieDown(List<Keep.Spot> upright, int screens) {
+        List<Keep.Spot> laid = new ArrayList<>();
+        lyingFirst = new int[Math.max(1, screens)];
+        int page = -1;
+        boolean[][] used = null;
+        for (int s = 0; s < screens; s++) {
+            List<Keep.Spot> mine = new ArrayList<>();
+            for (Keep.Spot spot : upright) {
+                if (spot.screen == s) {
+                    mine.add(spot);
+                }
+            }
+            java.util.Collections.sort(mine, new java.util.Comparator<Keep.Spot>() {
+                public int compare(Keep.Spot a, Keep.Spot b) {
+                    return a.y != b.y ? Integer.compare(a.y, b.y) : Integer.compare(a.x, b.x);
+                }
+            });
+            page++;
+            used = new boolean[rows][columns];
+            lyingFirst[s] = page;
+            for (Keep.Spot spot : mine) {
+                int[] span = lyingSpan(spot);
+                int[] at = firstFree(used, span);
+                if (at == null) {
+                    page++;
+                    used = new boolean[rows][columns];
+                    at = firstFree(used, span);
+                    if (at == null) {
+                        continue;
+                    }
+                }
+                for (int r = at[1]; r < at[1] + span[1]; r++) {
+                    for (int c = at[0]; c < at[0] + span[0]; c++) {
+                        used[r][c] = true;
+                    }
+                }
+                laid.add(new Keep.Spot(spot.token, page, at[0], at[1]));
+            }
+        }
+        lyingCount = page + 1;
+        return laid;
+    }
+
+    /** The first place, row by row, where a thing of this size fits whole, on the grid's whole steps. */
+    private int[] firstFree(boolean[][] used, int[] span) {
+        for (int r = 0; r + span[1] <= rows; r += fine) {
+            for (int c = 0; c + span[0] <= columns; c += fine) {
+                boolean free = true;
+                for (int y = r; y < r + span[1] && free; y++) {
+                    for (int x = c; x < c + span[0]; x++) {
+                        if (used[y][x]) {
+                            free = false;
+                            break;
+                        }
+                    }
+                }
+                if (free) {
+                    return new int[] {c, r};
+                }
+            }
+        }
+        return null;
+    }
+
     private int[] clockLeast(float[] cell) {
         float d = getResources().getDisplayMetrics().density;
         float[] box = leastBox(this);
@@ -1761,8 +1991,9 @@ public final class Home extends Activity {
 
     private static final String[] ASKS = {
         "Add screen", "Add shortcut", "Add widget", "Add folder", "Make home screen", "Settings",
-        "Remove screen", "Picture of the home screen", "Night clock"
+        "Remove screen", "Picture of the home screen", "Night clock", "Show the wallpaper"
     };
+    private static final int BARE = 9;
     private static final int REMOVE_SCREEN = 6;
     private static final int PORTRAIT = 7;
     private static final int NIGHT = 8;
@@ -1783,18 +2014,22 @@ public final class Home extends Activity {
     private void ask(View on) {
         boolean home = screens.page() == Keep.home(this);
         List<Integer> offered = new ArrayList<>();
-        for (int i = ADD_SCREEN; i <= ADD_FOLDER; i++) {
-            offered.add(i);
+        /* Lying down, the screens are only looked at: nothing is added or taken away. */
+        if (!lying) {
+            for (int i = ADD_SCREEN; i <= ADD_FOLDER; i++) {
+                offered.add(i);
+            }
+            if (!home) {
+                offered.add(MAKE_HOME);
+            }
+            if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
+                offered.add(REMOVE_SCREEN);
+            }
+            offered.add(PORTRAIT);
         }
-        if (!home) {
-            offered.add(MAKE_HOME);
-        }
-        if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
-            offered.add(REMOVE_SCREEN);
-        }
-        offered.add(PORTRAIT);
-        /* The night clock, last before the settings. */
+        /* The night clock and the bare wallpaper, last before the settings. */
         offered.add(NIGHT);
+        offered.add(BARE);
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
         askY = root.fingerY();
@@ -1816,6 +2051,9 @@ public final class Home extends Activity {
         switch (key) {
             case NIGHT:
                 Night.open(this, false);
+                break;
+            case BARE:
+                bare();
                 break;
             case ADD_SCREEN:
                 /* A new screen is added at the end, and the screens slide
@@ -2118,7 +2356,7 @@ public final class Home extends Activity {
 
     private void carry(View from, String token, android.graphics.drawable.Drawable face, int[] icon,
                        int across, int down, int[] whence, float rawX, float rawY) {
-        if (lift != null) {
+        if (lift != null || lying) {
             return;
         }
         int[] floorAt = new int[2];
@@ -2751,7 +2989,8 @@ public final class Home extends Activity {
             return;
         }
         int[] at = (int[]) thing.getTag();
-        int[] whence = {pages.indexOf((Grid) thing.getParent()), at[0], at[1]};
+        /* Lying down, where a thing stands is not where it is kept: its menu offers nothing that moves it. */
+        int[] whence = lying ? null : new int[] {pages.indexOf((Grid) thing.getParent()), at[0], at[1]};
         Apps.Door door = thing instanceof Cell ? ((Cell) thing).door : null;
         offerThing(thing, token, whence, door);
     }

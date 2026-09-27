@@ -226,6 +226,8 @@ public final class Tune extends Activity {
                     deed(Glyph.LOOK, "Colour and text",
                         "The accent, the ground, how solid the cards are, the size of words", COLOUR),
                     door(Glyph.ICONS, "Icons", "The outline every icon is cut to", ICONS),
+                    toggle("Step aside", "Every three minutes, and each time it comes back, the home screen moves "
+                        + "a few points, too slowly to see, so the screen keeps no line burnt in", Keep.DRIFT, true),
                     deed(Glyph.DESK, "The weather's place", "Where the clock's weather is for", PLACE),
                     toggle("Clock", "The home screen's own clock across the top of the home screen",
                         Keep.CLOCK, true),
