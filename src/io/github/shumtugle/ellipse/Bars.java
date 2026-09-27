@@ -18,13 +18,13 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * The home screen's own strips, standing where the phone's bars stand while
- * the home screen hides them: at the top a strip of signs — the signal,
- * Wi-Fi, what waits unread, the date, the charge — and at the foot four signs
- * on a hairline — back, home, the recent ones, the menu. Each sign may be
- * left out; all are drawn in the theme's ink, in the accent, or in a colour
- * of the owner's own. Nothing here asks for any leave: what is shown is what
- * the phone tells any home screen.
+ * The home screen's own status strip, standing where the phone's status
+ * bar stands while the home screen hides it: a strip of signs — the signal,
+ * Wi-Fi, what waits unread, the date, the charge. Each sign may be left out;
+ * all are drawn in ink that reads on the wallpaper — dark on a light one, as
+ * the phone's own bar does — in the accent, or in a colour of the owner's
+ * own. Nothing here asks for any leave: what is shown is what the phone
+ * tells any home screen.
  */
 final class Bars {
 
@@ -42,14 +42,31 @@ final class Bars {
     static final String SIGNAL = "signal";
     static final String DATE = "date";
     static final String CHARGE = "charge";
-    static final String BACK = "back";
-    static final String HOME = "home";
-    static final String RECENT = "recent";
-    static final String MENU = "menu";
-
     static final int INK = 0xFFF2EEE6;
+    static final int DARK_INK = 0xFF1C1A17;
 
-    /** The strips' colour: the theme's ink, the accent, or the owner's own from the palette. */
+    /**
+     * Whether the wallpaper under the strip is light, as the phone itself
+     * judges it for its own bar's icons: the wallpaper's colours say whether
+     * dark text reads on them.
+     */
+    static boolean lightBehind(Context context) {
+        try {
+            android.app.WallpaperManager walls = android.app.WallpaperManager.getInstance(context);
+            android.app.WallpaperColors colours = walls.getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM);
+            if (colours == null) {
+                return false;
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 31) {
+                return (colours.getColorHints() & android.app.WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0;
+            }
+            return android.graphics.Color.luminance(colours.getPrimaryColor().toArgb()) > 0.6f;
+        } catch (RuntimeException unread) {
+            return false;
+        }
+    }
+
+    /** The strip's colour: ink that reads on the wallpaper, the accent, or the owner's own from the palette. */
     static int colour(Context context) {
         int mode = Keep.number(context, Keep.BARS_COLOUR, 0);
         if (mode == 1) {
@@ -58,7 +75,20 @@ final class Bars {
         if (mode == 2) {
             return Rings.colour(Math.max(1, Keep.number(context, Keep.BARS_OWN_COLOUR, 7)));
         }
-        return INK;
+        return lightBehind(context) ? DARK_INK : INK;
+    }
+
+    /** The accent as it reads on the wallpaper: deepened on a light one, as the ink darkens. */
+    static int accentOn(Context context) {
+        int accent = Tone.primary();
+        if (!lightBehind(context)) {
+            return accent;
+        }
+        float[] hsv = new float[3];
+        android.graphics.Color.colorToHSV(accent, hsv);
+        hsv[1] = Math.min(1f, hsv[1] + 0.25f);
+        hsv[2] = Math.min(hsv[2], 0.45f);
+        return android.graphics.Color.HSVToColor(hsv);
     }
 
     abstract static class Strip extends View {
@@ -100,7 +130,7 @@ final class Bars {
         /** The colours and the chosen signs, read again as the settings change. */
         void read() {
             ink = colour(getContext());
-            accent = Keep.number(getContext(), Keep.BARS_COLOUR, 0) == 0 ? Tone.primary() : ink;
+            accent = Keep.number(getContext(), Keep.BARS_COLOUR, 0) == 0 ? accentOn(getContext()) : ink;
             invalidate();
         }
 
@@ -360,71 +390,6 @@ final class Bars {
                 return rssi > -60 ? 3 : rssi > -72 ? 2 : 1;
             } catch (RuntimeException withheld) {
                 return -1;
-            }
-        }
-    }
-
-    // ------------------------------------------------------------- the foot
-
-    /** The navigation strip: back, home, the recent ones, the menu, on a hairline. */
-    static final class Nav extends Strip {
-        Nav(Context context, Hand hand) {
-            super(context, hand);
-        }
-
-        void draw(Canvas c, float w, float h) {
-            Context context = getContext();
-            java.util.List<String> shown = new java.util.ArrayList<>();
-            if (Keep.flag(context, Keep.NAV_BACK, true)) {
-                shown.add(BACK);
-            }
-            if (Keep.flag(context, Keep.NAV_HOME, true)) {
-                shown.add(HOME);
-            }
-            if (Keep.flag(context, Keep.NAV_RECENT, true)) {
-                shown.add(RECENT);
-            }
-            if (Keep.flag(context, Keep.NAV_MENU, true)) {
-                shown.add(MENU);
-            }
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(Math.max(1f, dp(0.6f)));
-            paint.setColor((ink & 0x00FFFFFF) | 0x33000000);
-            c.drawLine(dp(28), dp(1), w - dp(28), dp(1), paint);
-            if (shown.isEmpty()) {
-                return;
-            }
-            float cy = h / 2f + dp(1);
-            float s = Math.min(h * 0.36f, dp(10));
-            float step = w / (shown.size() + 1f);
-            paint.setStrokeWidth(Math.max(1.5f, dp(1.8f)));
-            paint.setStrokeCap(Paint.Cap.ROUND);
-            paint.setStrokeJoin(Paint.Join.ROUND);
-            for (int i = 0; i < shown.size(); i++) {
-                float x = step * (i + 1);
-                String what = shown.get(i);
-                paint.setStyle(Paint.Style.STROKE);
-                paint.setColor(ink);
-                if (BACK.equals(what)) {
-                    android.graphics.Path arrow = new android.graphics.Path();
-                    arrow.moveTo(x + s * 0.5f, cy - s);
-                    arrow.lineTo(x - s * 0.5f, cy);
-                    arrow.lineTo(x + s * 0.5f, cy + s);
-                    c.drawPath(arrow, paint);
-                } else if (HOME.equals(what)) {
-                    paint.setColor(accent);
-                    c.drawCircle(x, cy, s, paint);
-                } else if (RECENT.equals(what)) {
-                    c.drawRoundRect(new RectF(x - s * 0.9f, cy - s * 0.9f, x + s * 0.9f, cy + s * 0.9f), dp(3), dp(3),
-                        paint);
-                } else {
-                    paint.setStyle(Paint.Style.FILL);
-                    paint.setColor(ink);
-                    for (int k = -1; k <= 1; k++) {
-                        c.drawCircle(x, cy + k * s * 0.7f, s * 0.18f, paint);
-                    }
-                }
-                window(what, x - step / 2f, 0, x + step / 2f, h);
             }
         }
     }

@@ -628,7 +628,6 @@ public final class Home extends Activity {
     }
 
     private Bars.Status statusStrip;
-    private Bars.Nav navStrip;
 
     /**
      * A strip's sign touched: the shade, the quick settings, Wi-Fi, the
@@ -643,41 +642,6 @@ public final class Home extends Activity {
         }
         if (Bars.CHARGE.equals(what)) {
             startActivity(new Intent(this, Folio.class).putExtra(Folio.PAGE, Folio.STATE));
-            return;
-        }
-        if (Bars.BACK.equals(what)) {
-            onBackPressed();
-            return;
-        }
-        if (Bars.HOME.equals(what)) {
-            onNewIntent(new Intent());
-            return;
-        }
-        if (Bars.MENU.equals(what)) {
-            ask(from);
-            return;
-        }
-        if (Bars.RECENT.equals(what)) {
-            /* The recent ones this home screen opened, in a folder's card: the phone's own recent screen is
-               the phone's to open. */
-            Apps found = new Apps(this);
-            List<Apps.Door> recent = new ArrayList<>();
-            for (String token : Keep.recent(this)) {
-                Apps.Door door = found.door(token);
-                if (door != null && recent.size() < 12) {
-                    recent.add(door);
-                }
-            }
-            if (recent.isEmpty()) {
-                refuse(from);
-                return;
-            }
-            int[] at = new int[2];
-            int[] floorAt = new int[2];
-            from.getLocationOnScreen(at);
-            root.getLocationOnScreen(floorAt);
-            trayFolder = 0;
-            tray.show(Words.t("Recent"), recent, at[0] - floorAt[0] + box.centerX(), at[1] - floorAt[1] + box.top);
             return;
         }
         if (Bars.WIFI.equals(what)) {
@@ -723,30 +687,17 @@ public final class Home extends Activity {
                    and only while the phone's own are away; the screens keep clear of them as of the bars. */
                 if (Build.VERSION.SDK_INT >= 30 && statusStrip != null) {
                     boolean statusSeen = insets.isVisible(WindowInsets.Type.statusBars());
-                    boolean navSeen = insets.isVisible(WindowInsets.Type.navigationBars());
                     android.graphics.Insets was = insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars());
-                    android.graphics.Insets wasNav = insets.getInsetsIgnoringVisibility(
-                        WindowInsets.Type.navigationBars());
                     boolean ownTop = Keep.flag(Home.this, Keep.HIDE_STATUS, false)
                         && Keep.flag(Home.this, Keep.STRIP_OWN, false) && !statusSeen;
-                    boolean ownFoot = Keep.flag(Home.this, Keep.HIDE_NAVIGATION, false)
-                        && Keep.flag(Home.this, Keep.NAV_OWN, false) && !navSeen;
                     int tall = Math.max(Math.max(was.top, top), Math.round(dp(24)));
-                    int foot = Math.max(wasNav.bottom, Math.round(dp(40)));
                     statusStrip.setVisibility(ownTop ? View.VISIBLE : View.GONE);
                     statusStrip.getLayoutParams().height = tall;
                     statusStrip.setPadding(left, 0, right, 0);
-                    navStrip.setVisibility(ownFoot ? View.VISIBLE : View.GONE);
-                    navStrip.getLayoutParams().height = foot;
                     statusStrip.read();
-                    navStrip.read();
                     statusStrip.requestLayout();
-                    navStrip.requestLayout();
                     if (ownTop) {
                         top = Math.max(top, tall);
-                    }
-                    if (ownFoot) {
-                        bottom = Math.max(bottom, foot);
                     }
                 }
                 /* The keyboard only ever rises over the list, so only the
@@ -1055,10 +1006,7 @@ public final class Home extends Activity {
         statusStrip.setVisibility(View.GONE);
         root.addView(statusStrip, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0,
             android.view.Gravity.TOP));
-        navStrip = new Bars.Nav(this, strips);
-        navStrip.setVisibility(View.GONE);
-        root.addView(navStrip, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0,
-            android.view.Gravity.BOTTOM));
+
         drawer.order(Keep.order(this), Keep.view(this));
 
         fresh = new Fresh(this, iconSize, new Fresh.Hand() {
@@ -2546,6 +2494,14 @@ public final class Home extends Activity {
     private final android.content.BroadcastReceiver sleep = new android.content.BroadcastReceiver() {
         public void onReceive(Context context, Intent intent) {
             if (Intent.ACTION_WALLPAPER_CHANGED.equals(intent.getAction())) {
+                /* Another wallpaper: the strip's ink reads it again, dark on light. */
+                if (statusStrip != null) {
+                    statusStrip.postDelayed(new Runnable() {
+                        public void run() {
+                            statusStrip.read();
+                        }
+                    }, 1500L);
+                }
                 /* Another wallpaper, not set by the factory a moment ago: the factory's word is taken back. */
                 if (System.currentTimeMillis() - Keep.clock(context, Keep.GROUND_SET_AT) > 15000L) {
                     Keep.saveFlag(context, Keep.GROUND_WORN, false);

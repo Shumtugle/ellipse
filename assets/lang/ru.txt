@@ -781,3 +781,5 @@ Own colour = Свой цвет
 When the strips wear a colour of your own = Если полосы в своём цвете
 Own bars = Свои полосы
 Strips of the home screen's own where the hidden bars stood: signs at the top, four keys at the foot = Полосы стола на месте скрытых системных: знаки сверху, четыре кнопки снизу
+The signs: as the phone's own bar, dark on a light wallpaper and light on a dark one; the accent; or a colour of your own = Знаки: как у системной строки — тёмные на светлых обоях и светлые на тёмных; цвет акцента; или свой цвет
+A strip of signs of the home screen's own where the hidden status bar stood = Своя строка знаков на месте скрытой строки состояния

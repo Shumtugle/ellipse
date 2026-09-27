@@ -781,3 +781,5 @@ Own colour = Oma väri
 When the strips wear a colour of your own = Kun rivit ovat omassa värissä
 Own bars = Omat palkit
 Strips of the home screen's own where the hidden bars stood: signs at the top, four keys at the foot = Kotinäytön omat rivit piilotettujen palkkien paikalla: merkit ylhäällä, neljä näppäintä alhaalla
+The signs: as the phone's own bar, dark on a light wallpaper and light on a dark one; the accent; or a colour of your own = Merkit: kuten puhelimen oma palkki, tummat vaalealla taustakuvalla ja vaaleat tummalla; korostusväri; tai oma väri
+A strip of signs of the home screen's own where the hidden status bar stood = Kotinäytön oma merkkirivi piilotetun tilapalkin paikalla
