@@ -267,6 +267,7 @@ The clock · on the home screen = The clock · on the home screen
 Tap to set it on the home screen = Tap to set it on the home screen
 Tap to go to it = Tap to go to it
 %1 widget | %1 widgets = %1 widget | %1 widgets
+One place; a touch sets a new wallpaper = One place; a touch sets a new wallpaper
 Four = Four
 Nine = Nine
 Ring = Ring

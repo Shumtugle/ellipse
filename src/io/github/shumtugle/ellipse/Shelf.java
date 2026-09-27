@@ -56,6 +56,12 @@ final class Shelf extends FrameLayout {
 
         /** The launcher's settings were asked for from the shelf's menu. */
         void settings();
+
+        /** The face of the launcher's own dice, a new ground at a touch. */
+        android.graphics.drawable.Drawable diceFace();
+
+        /** The dice was chosen, to stand on a screen. */
+        void dice();
     }
 
     private static final String WIDGETS = "Search widgets";
@@ -509,7 +515,42 @@ final class Shelf extends FrameLayout {
         said.setGravity(Gravity.CENTER_HORIZONTAL);
         said.setPadding(0, dp(8), 0, 0);
         inside.addView(said);
+
+        /* The dice: one place, and a touch on it throws a new ground. */
+        LinearLayout dice = new LinearLayout(context);
+        dice.setGravity(Gravity.CENTER_VERTICAL);
+        dice.setPadding(dp(8), dp(12), dp(8), dp(12));
+        dice.setBackground(Tone.touch(null, dp(20)));
+        ImageView face = new ImageView(context);
+        face.setImageDrawable(hand.diceFace());
+        dice.addView(face, new LinearLayout.LayoutParams(dp(64), dp(64)));
+        LinearLayout words = new LinearLayout(context);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.setPadding(dp(16), 0, 0, 0);
+        TextView name = new TextView(context);
+        name.setText(Words.t(DICE));
+        name.setTextColor(Tone.onSurface());
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 19f * scaled);
+        words.addView(name);
+        TextView about = new TextView(context);
+        about.setText(Words.t(DICE_ABOUT));
+        about.setTextColor(Tone.faint());
+        about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 15f * scaled);
+        words.addView(about);
+        dice.addView(words, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        dice.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                hand.dice();
+            }
+        });
+        LinearLayout.LayoutParams diceAt = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT);
+        diceAt.topMargin = dp(12);
+        inside.addView(dice, diceAt);
     }
+
+    private static final String DICE = "A new ground";
+    private static final String DICE_ABOUT = "One place; a touch sets a new wallpaper";
 
     /** Each widget as a picture of itself, with its name, its places and what it is for. */
     private void fillInside(LinearLayout inside, List<AppWidgetProviderInfo> offers) {

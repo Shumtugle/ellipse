@@ -970,6 +970,15 @@ public final class Home extends Activity {
                 takeClock();
             }
 
+            public android.graphics.drawable.Drawable diceFace() {
+                return Home.this.diceFace();
+            }
+
+            public void dice() {
+                shelf.close(true);
+                setAnywhere(Keep.DICE_THING, pendingPage);
+            }
+
             public void settings() {
                 tune(screens);
             }
