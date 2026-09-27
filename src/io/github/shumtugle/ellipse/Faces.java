@@ -504,10 +504,22 @@ final class Faces {
             c.restore();
             paint.setColor(0x66000000);
             c.drawRect(tank - 1f, 14f, tank + 1f, 106f, paint);
-            boolean light = android.graphics.Color.luminance(accent()) > 0.45f && charge > 45;
-            text(c, percent(), (tank + 316f) / 2f, 60f, 20f, 80f, light ? DARK_INK : INK, true, Paint.Align.CENTER);
+            /* The words in the tank in two inks, cut at the level: light above it, and on the fill whatever
+               reads there, so they stay whole and legible at any charge, full, half or nearly gone. */
+            boolean lightFill = android.graphics.Color.luminance(charging ? 0xFF8FBF8A : accent()) > 0.45f;
+            for (int part = 0; part < 2; part++) {
+                c.save();
+                if (part == 0) {
+                    c.clipRect(tank, 0f, 316f, level);
+                } else {
+                    c.clipRect(tank, level, 316f, 120f);
+                }
+                int ink = part == 1 && lightFill ? DARK_INK : INK;
+                text(c, percent(), (tank + 316f) / 2f, 52f, 20f, 80f, ink, true, Paint.Align.CENTER);
+                drawEars(c, (tank + 316f) / 2f, 80f, 11f, ink, Paint.Align.CENTER);
+                c.restore();
+            }
             window(Almanac.CHARGE, tank, 6f, 316f, 114f);
-            drawEars(c, (tank + 316f) / 2f, 86f, 11f, light ? DARK_INK : INK, Paint.Align.CENTER);
             text(c, time(now), 34f, 50f, 40f, 170f, INK, true, Paint.Align.LEFT);
             text(c, day(now, "EE, d MMM"), 34f, 84f, 13f, 100f, FAINT, false, Paint.Align.LEFT);
             window(Almanac.TIME, 4f, 6f, 150f, 70f);
