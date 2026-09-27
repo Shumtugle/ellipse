@@ -1503,12 +1503,12 @@ public final class Home extends Activity {
     static final int TURNED_UPRIGHT = 1;
     static final int TURNED_LYING = 2;
 
-    /** The home screen held the way the owner last turned it by hand; as the phone turns, if never. */
+    /** The home screen turns as the phone turns; a turn once held by hand is let go. */
     void turnAsKept() {
-        int way = Keep.number(this, Keep.TURNED, 0);
-        setRequestedOrientation(way == TURNED_LYING ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            : way == TURNED_UPRIGHT ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        if (Keep.number(this, Keep.TURNED, 0) != 0) {
+            Keep.saveNumber(this, Keep.TURNED, 0);
+        }
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
     }
 
     /** A veil over nothing, while the desk is away: the first touch brings it back. */
@@ -2072,11 +2072,7 @@ public final class Home extends Activity {
         /* The night clock and the bare wallpaper, last before the settings. */
         offered.add(NIGHT);
         offered.add(BARE);
-        /* The home screen turned by hand, and held so until turned back; held, it may follow the phone again. */
-        offered.add(lying ? STAND_UP : LIE_DOWN);
-        if (Keep.number(this, Keep.TURNED, 0) != 0) {
-            offered.add(AS_PHONE);
-        }
+
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
         askY = root.fingerY();
@@ -2862,6 +2858,12 @@ public final class Home extends Activity {
         Keep.remove(this, whence[0], whence[1], whence[2]);
         if (token.startsWith(Keep.SHORTCUT_THING)) {
             unpin(token);
+        }
+        /* A widget, or a stack of them, taken away is gone from the other set-out too. */
+        if (token.startsWith(WIDGET)) {
+            Keep.removeFromTheOther(this, WIDGET + token.substring(WIDGET.length()).split(":")[0]);
+        } else if (token.startsWith(Keep.PILE_THING)) {
+            Keep.removeFromTheOther(this, base(token));
         }
         if (token.startsWith(WIDGET)) {
             try {

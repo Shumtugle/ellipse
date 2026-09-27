@@ -1003,10 +1003,6 @@ public final class Tune extends Activity {
      * and the way to begin its set-out again from the upright one.
      */
     private void fillLying() {
-        rows.addView(row(choice("Which way", "As the phone turns, or held upright or lying until changed; "
-            + "the home screen's menu turns it too", Keep.TURNED, 0,
-            new String[] {"As the phone turns", "Upright", "Lying"},
-            new int[] {0, Home.TURNED_UPRIGHT, Home.TURNED_LYING})));
         rows.addView(row(choice("Grid lying down", "Columns and rows of every screen on its side",
             Keep.LYING_GRID, 0, new String[] {"As many as fit", "8 \u00D7 3", "9 \u00D7 4", "10 \u00D7 4",
                 "10 \u00D7 5", "11 \u00D7 5", "12 \u00D7 5"}, new int[] {0, 803, 904, 1004, 1005, 1105, 1205})));
@@ -1016,8 +1012,9 @@ public final class Tune extends Activity {
                 said("The next time it lies down, it begins again from the upright set-out");
             }
         }));
-        note("Lying down is a set-out of its own: moved, added or taken away there, nothing changes upright. "
-            + "It began as the upright one laid in its grid. Nothing lying down goes to the screen's edges.");
+        note("Lying down is a set-out of its own, as the phone turns: moved or added there, nothing changes "
+            + "upright; a widget taken away is gone from both. It began as the upright one laid in its grid. "
+            + "Nothing lying down goes to the screen's edges.");
     }
 
     /** The night clock: open it now, and how it is to be. */

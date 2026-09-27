@@ -66,6 +66,30 @@ final class Keep {
     }
 
     /**
+     * A thing taken off the other set-out too: a widget taken away from one
+     * is gone from both.
+     */
+    static void removeFromTheOther(Context context, String word) {
+        String key = lying ? PLACED : PLACED + LYING;
+        List<Spot> other = read(store(context).getString(key, ""));
+        StringBuilder out = new StringBuilder();
+        boolean changed = false;
+        for (Spot spot : other) {
+            if (spot.token.equals(word) || spot.token.startsWith(word + ":")) {
+                changed = true;
+                continue;
+            }
+            if (out.length() > 0) {
+                out.append('\n');
+            }
+            out.append(spot.line());
+        }
+        if (changed) {
+            store(context).edit().putString(key, out.toString()).apply();
+        }
+    }
+
+    /**
      * Whether the other set-out — upright when lying, lying when upright —
      * holds this thing: its word, or its word with a size after it.
      */
