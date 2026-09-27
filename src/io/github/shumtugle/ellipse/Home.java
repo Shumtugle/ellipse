@@ -2021,7 +2021,7 @@ public final class Home extends Activity {
     /** The dice's face: a die on the plate every icon of the home screen's own wears. */
     private android.graphics.drawable.Drawable diceFace() {
         return Style.dress(this, Keep.DICE_THING, Shape.faceMark(getDrawable(R.mipmap.door), -1,
-            getDrawable(R.drawable.sym_casino)), null);
+            new Die(Die.roll())), null);
     }
 
     /**
@@ -2054,7 +2054,15 @@ public final class Home extends Activity {
         + "touch and carries it in copies.";
 
     private void throwGround(final View from) {
+        /* The die turns over and comes up with another face, as a die does. */
         from.animate().rotationBy(360f).setDuration(700).setInterpolator(Pace.EMPHASIS).start();
+        if (from instanceof Cell) {
+            from.postDelayed(new Runnable() {
+                public void run() {
+                    ((Cell) from).picture(diceFace());
+                }
+            }, 350);
+        }
         final Context app = getApplicationContext();
         new Thread(new Runnable() {
             public void run() {

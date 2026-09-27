@@ -42,6 +42,12 @@ final class Cell extends View {
     }
 
     /** A place that is not one application: a folder, or a door of our own. */
+    /** Another picture in its place, as a die shows another face. */
+    void picture(Drawable face) {
+        icon = face;
+        invalidate();
+    }
+
     Cell(Context context, Drawable icon, CharSequence label, float iconSize) {
         this(context, null, icon, label, iconSize, true);
     }
