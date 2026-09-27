@@ -2152,9 +2152,26 @@ public final class Tune extends Activity {
             caption("SECOND HAND");
             rows.addView(seconds());
         }
-        if (face == Home.FACE_PLATE || face == Home.FACE_STONES) {
+        if (face >= Home.FACE_ECLIPSE && face <= Home.FACE_STONES) {
+            /* The six of other shapes: their ground, and what colour shows the charge; the flip clock its cards. */
+            if (face != Home.FACE_STONES) {
+                rows.addView(row(choice("Ground", "Under the clock: dark, glass, or nothing but itself",
+                    Keep.FACE_GROUND, 0, new String[] {"Dark", "Glass", "None"}, new int[] {0, 1, 2})));
+            }
+            rows.addView(row(choice("Charge colour", "The lens, the horizon, the tank, the minutes: the accent, "
+                + "the charge's own green to red, or white", Keep.FACE_MARK, 0,
+                new String[] {"Accent", "By charge", "White"}, new int[] {0, 1, 2})));
+            if (face == Home.FACE_FLIP) {
+                rows.addView(row(choice("Cards", "Dark as they first were, light, or cut from the clock's material",
+                    Keep.FLIP_CARDS, 0, new String[] {"Dark", "Light", "Material"}, new int[] {0, 1, 2})));
+            }
+            note("The headphones' charge shows on these clocks too, while they are near: Desktop, Headphones on "
+                + "the clock.");
+        }
+        if (face == Home.FACE_PLATE || face == Home.FACE_STONES
+            || (face == Home.FACE_FLIP && Keep.number(this, Keep.FLIP_CARDS, 0) == 2)) {
             /* The plate's material; the three stones are cut from it too. */
-            caption(face == Home.FACE_STONES ? "STONES" : "PLATE");
+            caption(face == Home.FACE_STONES ? "STONES" : face == Home.FACE_FLIP ? "CARDS" : "PLATE");
             int[] kinds = Rim.offered(true);
             rows.addView(swatches(Keep.CLOCK_PLATE, Keep.number(this, Keep.CLOCK_PLATE, Rim.STEEL), kinds,
                 Rim.names(kinds),

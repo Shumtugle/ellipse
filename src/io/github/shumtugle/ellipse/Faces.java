@@ -93,6 +93,10 @@ final class Faces {
         float offX;
         float offY;
         boolean showWeather = true;
+        int ears = -1;
+        /** The ground: dark, glass, or none at all; what shows the charge: the accent, the charge's own, white. */
+        final int ground;
+        final int mark;
         int charge = -1;
         boolean charging;
         boolean seen;
@@ -125,6 +129,8 @@ final class Faces {
             density = context.getResources().getDisplayMetrics().density;
             int dark = Keep.number(context, Keep.CLOCK_GROUND, 10);
             cardAlpha = Math.round(255f * Math.max(25, Math.min(95, dark + 40)) / 100f);
+            ground = Keep.number(context, Keep.FACE_GROUND, 0);
+            mark = Keep.number(context, Keep.FACE_MARK, 0);
             words.setTypeface(Typeface.DEFAULT);
             taps = new GestureDetector(context, new GestureDetector.SimpleOnGestureListener() {
                 @Override
@@ -151,6 +157,31 @@ final class Faces {
         }
 
         public void ears(int level) {
+            ears = level;
+            invalidate();
+        }
+
+        /** The headphones: a band and two cups, and their charge beside them. */
+        void drawEars(Canvas c, float x, float y, float size, int colour, Paint.Align align) {
+            if (ears < 0) {
+                return;
+            }
+            String said = ears + "%";
+            words.setTextSize(size);
+            float wide = words.measureText(said) + size * 1.3f;
+            float left = align == Paint.Align.RIGHT ? x - wide : align == Paint.Align.CENTER ? x - wide / 2f : x;
+            paint.setShader(null);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(size * 0.13f);
+            paint.setColor(colour);
+            float r = size * 0.42f;
+            c.drawArc(new RectF(left, y - r, left + 2 * r, y + r), 180f, 180f, false, paint);
+            paint.setStyle(Paint.Style.FILL);
+            c.drawRoundRect(new RectF(left - size * 0.05f, y, left + size * 0.22f, y + r * 0.95f), 2f, 2f, paint);
+            c.drawRoundRect(new RectF(left + 2 * r - size * 0.22f, y, left + 2 * r + size * 0.05f, y + r * 0.95f), 2f,
+                2f, paint);
+            text(c, said, left + size * 1.3f, y + r * 0.3f, size, 0f, colour, false, Paint.Align.LEFT);
+            window(Almanac.EARS, left - 4f, y - r - 4f, left + wide + 4f, y + r + 4f);
         }
 
         /** Once a second, before drawing: for a face that moves between minutes. */
@@ -328,10 +359,23 @@ final class Faces {
         }
 
         int card() {
+            if (ground == 2) {
+                return 0;
+            }
+            if (ground == 1) {
+                return ((cardAlpha * 2 / 3) << 24) | 0x5A5A62;
+            }
             return (cardAlpha << 24) | 0x16130F;
         }
 
+        /** What shows the charge: the accent; or the charge's own colour, green to amber to red; or white. */
         int accent() {
+            if (mark == 1) {
+                return charging || charge > 50 ? 0xFF8FBF8A : charge > 20 ? 0xFFE0B060 : 0xFFE07A6A;
+            }
+            if (mark == 2) {
+                return INK;
+            }
             return Tone.primary();
         }
     }
@@ -345,9 +389,9 @@ final class Faces {
         }
 
         void draw(Canvas c, Date now) {
-            float r = 70f;
-            float ax = 84f;
-            float bx = 216f;
+            float r = 68f;
+            float ax = 98f;
+            float bx = 202f;
             float cy = 75f;
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(card());
@@ -362,18 +406,19 @@ final class Faces {
             lens.op(a, b, Path.Op.INTERSECT);
             paint.setColor(accent());
             c.drawPath(lens, paint);
-            text(c, time(now), ax - 12f, cy - 6f, 34f, 100f, INK, true, Paint.Align.CENTER);
-            text(c, day(now, "EE d"), ax - 12f, cy + 24f, 13f, 90f, FAINT, false, Paint.Align.CENTER);
-            window(Almanac.TIME, ax - r, cy - r, 150f - 18f, cy + r);
+            text(c, time(now), ax - 20f, cy - 6f, 32f, 92f, INK, true, Paint.Align.CENTER);
+            text(c, day(now, "EE d"), ax - 20f, cy + 22f, 13f, 84f, FAINT, false, Paint.Align.CENTER);
+            window(Almanac.TIME, ax - r, cy - r, 150f - 22f, cy + r);
             if (known()) {
-                drawSky(c, bx + 14f, cy - 18f, 34f);
-                text(c, degrees(), bx + 14f, cy + 22f, 24f, 80f, INK, true, Paint.Align.CENTER);
+                drawSky(c, bx + 20f, cy - 20f, 32f);
+                text(c, degrees(), bx + 20f, cy + 16f, 22f, 74f, INK, true, Paint.Align.CENTER);
             }
-            window(Almanac.WEATHER, 150f + 18f, cy - r, bx + r, cy + r);
+            drawEars(c, bx + 20f, cy + 40f, 11f, FAINT, Paint.Align.CENTER);
+            window(Almanac.WEATHER, 150f + 22f, cy - r, bx + r, cy + 30f);
             boolean light = android.graphics.Color.luminance(accent()) > 0.45f;
-            text(c, charge < 0 ? "\u2026" : String.valueOf(charge), 150f, cy, 17f, 30f, light ? DARK_INK : INK, true,
+            text(c, charge < 0 ? "\u2026" : String.valueOf(charge), 150f, cy, 18f, 30f, light ? DARK_INK : INK, true,
                 Paint.Align.CENTER);
-            window(Almanac.CHARGE, 150f - 18f, cy - r * 0.7f, 150f + 18f, cy + r * 0.7f);
+            window(Almanac.CHARGE, 150f - 22f, cy - r * 0.7f, 150f + 22f, cy + r * 0.7f);
         }
     }
 
@@ -423,7 +468,8 @@ final class Faces {
             paint.setColor(charging ? 0xFF8FBF8A : accent());
             c.drawRect(4f, line - 1.5f, 4f + 312f * Math.max(0, charge) / 100f, line + 1.5f, paint);
             text(c, percent(), 298f, line + 12f, 11f, 60f, FAINT, false, Paint.Align.RIGHT);
-            window(Almanac.CHARGE, 200f, line - 8f, 316f, line + 20f);
+            window(Almanac.CHARGE, 240f, line - 8f, 316f, line + 20f);
+            drawEars(c, 234f, line + 12f, 11f, FAINT, Paint.Align.RIGHT);
             text(c, time(now), 22f, 108f, 50f, 190f, INK, true, Paint.Align.LEFT);
             text(c, day(now, "EEEE"), 298f, 116f, 14f, 100f, FAINT, false, Paint.Align.RIGHT);
             window(Almanac.TIME, 4f, line + 20f, 316f, 146f);
@@ -459,6 +505,7 @@ final class Faces {
             boolean light = android.graphics.Color.luminance(accent()) > 0.45f && charge > 45;
             text(c, percent(), (tank + 316f) / 2f, 60f, 20f, 80f, light ? DARK_INK : INK, true, Paint.Align.CENTER);
             window(Almanac.CHARGE, tank, 6f, 316f, 114f);
+            drawEars(c, (tank + 316f) / 2f, 86f, 11f, light ? DARK_INK : INK, Paint.Align.CENTER);
             text(c, time(now), 34f, 50f, 40f, 170f, INK, true, Paint.Align.LEFT);
             text(c, day(now, "EE, d MMM"), 34f, 84f, 13f, 100f, FAINT, false, Paint.Align.LEFT);
             window(Almanac.TIME, 4f, 6f, 150f, 114f);
@@ -487,8 +534,14 @@ final class Faces {
         private long flipAt;
         private static final long FLIP = 420L;
 
+        /** The cards: dark, light, or cut from the clock's own material. */
+        private final int cards;
+        private final int material;
+
         Flip(Context context, Almanac.Hand hand) {
             super(context, hand, 300f, 160f);
+            cards = Keep.number(context, Keep.FLIP_CARDS, 0);
+            material = Keep.number(context, Keep.CLOCK_PLATE, Rim.BLACK);
         }
 
         @Override
@@ -530,8 +583,10 @@ final class Faces {
                 window(Almanac.WEATHER, 12f, y - 22f, 210f, y + 24f);
             }
             text(c, day(now, "EE d MMM"), 284f, y - 6f, 12f, 90f, FAINT, false, Paint.Align.RIGHT);
-            text(c, percent(), 284f, y + 14f, 12f, 60f, charging ? 0xFF8FBF8A : INK, false, Paint.Align.RIGHT);
-            window(Almanac.CHARGE, 214f, y + 2f, 290f, y + 26f);
+            text(c, percent(), 284f, y + 14f, 12f, 60f, charging ? 0xFF8FBF8A : mark == 0 ? INK : accent(), false,
+                Paint.Align.RIGHT);
+            window(Almanac.CHARGE, 244f, y + 2f, 290f, y + 26f);
+            drawEars(c, 240f, y + 14f, 12f, FAINT, Paint.Align.RIGHT);
         }
 
         /** One flip card: its two halves, the old top leaf falling onto the new bottom as it turns. */
@@ -570,14 +625,36 @@ final class Faces {
         private void half(Canvas c, RectF box, RectF part, String digits, boolean upper, float round) {
             c.save();
             c.clipRect(part);
-            paint.setShader(new LinearGradient(0f, box.top, 0f, box.bottom,
-                new int[] {0xFF3A3632, 0xFF24211E, 0xFF1A1816, 0xFF2A2724}, new float[] {0f, 0.49f, 0.51f, 1f},
-                Shader.TileMode.CLAMP));
-            c.drawRoundRect(box, round, round, paint);
-            paint.setShader(null);
-            text(c, digits, box.centerX(), box.centerY() + 2f, 76f, box.width() - 14f, INK, true, Paint.Align.CENTER);
+            int ink = INK;
+            if (cards == 2) {
+                /* Cut from the clock's material, each half its own plate. */
+                Path plate = new Path();
+                plate.addRoundRect(new RectF(0f, 0f, box.width(), box.height()), round, round, Path.Direction.CW);
+                c.save();
+                c.translate(box.left, box.top);
+                Rim.plate(c, plate, material, box.width(), box.height());
+                c.restore();
+                ink = Watch.light(material) ? DARK_INK : INK;
+            } else {
+                /* Solid, as a card is, whatever lies behind it: the lower half a shade deeper than the upper. */
+                boolean light = cards == 1;
+                paint.setShader(new LinearGradient(0f, box.top, 0f, box.bottom, light
+                    ? new int[] {0xFFF4F1EB, 0xFFE2DED6, 0xFFD2CEC6, 0xFFE0DCD4}
+                    : new int[] {0xFF34302C, 0xFF211F1C, 0xFF151311, 0xFF1F1D1A},
+                    new float[] {0f, 0.49f, 0.51f, 1f}, Shader.TileMode.CLAMP));
+                c.drawRoundRect(box, round, round, paint);
+                paint.setShader(null);
+                ink = light ? DARK_INK : INK;
+            }
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(1f);
+            paint.setColor(cards == 1 ? 0x22000000 : 0x26FFFFFF);
+            c.drawRoundRect(new RectF(box.left + 0.5f, box.top + 0.5f, box.right - 0.5f, box.bottom - 0.5f), round, round,
+                paint);
+            paint.setStyle(Paint.Style.FILL);
+            text(c, digits, box.centerX(), box.centerY() + 2f, 76f, box.width() - 14f, ink, true, Paint.Align.CENTER);
             if (upper) {
-                paint.setColor(0x14FFFFFF);
+                paint.setColor(cards == 1 ? 0x0A000000 : 0x0CFFFFFF);
                 c.drawRect(box.left, box.top, box.right, box.top + (box.height() / 2f) * 0.35f, paint);
             }
             c.restore();
@@ -598,10 +675,19 @@ final class Faces {
             String h = hours(now);
             float gap = 10f;
             float hw = words.measureText(h);
-            text(c, h, 10f, 62f, 118f, 150f, INK, true, Paint.Align.LEFT);
-            text(c, minutes(now), 10f + Math.min(150f, hw) + gap, 62f, 118f, 150f, accent(), true, Paint.Align.LEFT);
+            float colon = 22f;
+            text(c, h, 6f, 62f, 118f, 140f, INK, true, Paint.Align.LEFT);
+            /* A colon, thin and faint, so the hours and the minutes never read as a year. */
+            float at = 6f + Math.min(140f, hw) + gap / 2f;
+            paint.setShader(null);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(FAINT);
+            c.drawCircle(at + colon / 2f - 4f, 40f, 5f, paint);
+            c.drawCircle(at + colon / 2f - 4f, 84f, 5f, paint);
+            text(c, minutes(now), at + colon, 62f, 118f, 140f, accent(), true, Paint.Align.LEFT);
             window(Almanac.TIME, 4f, 4f, 316f, 122f);
-            String line = day(now, "EE d") + (known() ? "  \u00B7  " + degrees() : "") + "  \u00B7  " + percent();
+            String line = day(now, "EE d") + (known() ? "  \u00B7  " + degrees() : "") + "  \u00B7  " + percent()
+                + (ears >= 0 ? "  \u00B7  \u266B " + ears + "%" : "");
             text(c, line, 14f, 136f, 14f, 290f, FAINT, false, Paint.Align.LEFT);
             if (known()) {
                 window(Almanac.WEATHER, 70f, 124f, 190f, 148f);
@@ -640,8 +726,11 @@ final class Faces {
             }
             window(Almanac.WEATHER, 202f, 10f, 302f, 98f);
             stone(c, 282f, 124f, 30f, 24f, 0.08f, 3.7f);
-            text(c, charge < 0 ? "\u2026" : String.valueOf(charge), 282f, 124f, 14f, 44f, charging ? 0xFF8FBF8A : ink,
-                true, Paint.Align.CENTER);
+            text(c, charge < 0 ? "\u2026" : String.valueOf(charge), 282f, ears >= 0 ? 118f : 124f, 14f, 44f,
+                charging ? 0xFF8FBF8A : mark == 0 ? ink : accent(), true, Paint.Align.CENTER);
+            if (ears >= 0) {
+                text(c, "\u266B " + ears, 282f, 134f, 9f, 44f, faint, false, Paint.Align.CENTER);
+            }
             window(Almanac.CHARGE, 252f, 100f, 312f, 148f);
         }
 

@@ -574,6 +574,10 @@ final class Keep {
 
     /** Whether copies keep the wallpaper's pictures. */
     static final String COPY_WALLPAPER = "copy_wallpaper";
+    /** The six clocks of other shapes: their ground, the colour of what shows the charge, the flip cards. */
+    static final String FACE_GROUND = "face_ground";
+    static final String FACE_MARK = "face_mark";
+    static final String FLIP_CARDS = "flip_cards";
     /** The language module chosen, by its code; none for English. */
     static final String LANGUAGE = "language";
     /** Which of its three the panel of fresh apps opens on. */
