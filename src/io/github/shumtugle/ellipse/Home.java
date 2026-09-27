@@ -1477,12 +1477,18 @@ public final class Home extends Activity {
     static final int TURNED_UPRIGHT = 1;
     static final int TURNED_LYING = 2;
 
-    /** The home screen held the way the owner last turned it by hand; as the phone turns, if never. */
+    /**
+     * The home screen stands upright. Lying down it is to be a set-out of its
+     * own, with its own grid, screens and settings; until that is made, the
+     * way it lay down by laying the upright things again left the owner with
+     * only widgets and no way back — so it does not lie down at all, and a
+     * turn kept from before is forgotten.
+     */
     private void turnAsKept() {
-        int way = Keep.number(this, Keep.TURNED, 0);
-        setRequestedOrientation(way == TURNED_LYING ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            : way == TURNED_UPRIGHT ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        if (Keep.number(this, Keep.TURNED, 0) != 0) {
+            Keep.saveNumber(this, Keep.TURNED, 0);
+        }
+        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
     }
 
     /** A veil over nothing, while the desk is away: the first touch brings it back. */
@@ -2047,8 +2053,10 @@ public final class Home extends Activity {
         /* The night clock and the bare wallpaper, last before the settings. */
         offered.add(NIGHT);
         offered.add(BARE);
-        /* The home screen turned by hand, whatever the phone's own turning is set to. */
-        offered.add(lying ? STAND_UP : LIE_DOWN);
+        /* Lying down is to come back as a set-out of its own; until then, only the way back upright. */
+        if (lying) {
+            offered.add(STAND_UP);
+        }
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
         askY = root.fingerY();
