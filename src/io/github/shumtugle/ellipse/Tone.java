@@ -112,7 +112,9 @@ final class Tone {
 
     /** The accent: as mixed on a dark ground; on a light one, deepened so it reads on paper. */
     private static int lead(float sat, float val) {
-        return light ? shade(Math.min(0.85f, sat + 0.25f), Math.max(0.30f, val * 0.46f)) : shade(sat, val);
+        /* On paper, bolder: more colour, deep enough to read, never muddy. */
+        return light ? shade(Math.min(0.95f, sat + 0.35f), Math.max(0.34f, Math.min(0.52f, val * 0.5f)))
+            : shade(sat, val);
     }
 
     /**
@@ -232,7 +234,8 @@ final class Tone {
      */
     static int surface() {
         if (light) {
-            return shade(mix(Math.min(0.06f, rich * 0.1f), Math.min(0.22f, 0.08f + rich * 0.2f)), mix(0.975f, 0.93f));
+            /* The light ground whiter, so the cards on it stand out and the words on it are blacker. */
+            return shade(mix(Math.min(0.05f, rich * 0.08f), Math.min(0.20f, 0.07f + rich * 0.18f)), mix(0.99f, 0.95f));
         }
         float sat = mix(Math.min(0.30f, rich * 0.4f), Math.min(0.80f, 0.30f + rich * 0.6f));
         return shade(sat, mix(0.035f, 0.19f));
@@ -249,8 +252,8 @@ final class Tone {
 
     static int container() {
         if (light) {
-            return veiled(shade(mix(Math.min(0.10f, rich * 0.16f), Math.min(0.30f, 0.12f + rich * 0.26f)),
-                mix(0.935f, 0.88f)));
+            return veiled(shade(mix(Math.min(0.12f, rich * 0.18f), Math.min(0.32f, 0.14f + rich * 0.28f)),
+                mix(0.905f, 0.85f)));
         }
         float sat = mix(Math.min(0.26f, rich * 0.34f), Math.min(0.70f, 0.26f + rich * 0.5f));
         return veiled(shade(sat, mix(0.095f, 0.26f)));
@@ -258,15 +261,15 @@ final class Tone {
 
     static int containerHigh() {
         if (light) {
-            return veiled(shade(mix(Math.min(0.12f, rich * 0.18f), Math.min(0.34f, 0.14f + rich * 0.3f)),
-                mix(0.895f, 0.84f)));
+            return veiled(shade(mix(Math.min(0.14f, rich * 0.2f), Math.min(0.36f, 0.16f + rich * 0.32f)),
+                mix(0.85f, 0.79f)));
         }
         float sat = mix(Math.min(0.24f, rich * 0.30f), Math.min(0.60f, 0.24f + rich * 0.42f));
         return veiled(shade(sat, mix(0.14f, 0.33f)));
     }
 
     static int onSurface() {
-        return light ? shade(Math.min(0.5f, rich * 0.4f), 0.12f) : shade(rich * 0.07f, 0.96f);
+        return light ? shade(Math.min(0.5f, rich * 0.4f), 0.07f) : shade(rich * 0.07f, 0.96f);
     }
 
     /**
@@ -301,12 +304,12 @@ final class Tone {
     }
 
     static int onVariant() {
-        return light ? shade(Math.min(0.4f, rich * 0.35f), 0.34f) : shade(rich * 0.12f, mix(0.66f, 0.80f));
+        return light ? shade(Math.min(0.4f, rich * 0.35f), 0.26f) : shade(rich * 0.12f, mix(0.66f, 0.80f));
     }
 
     /** Quiet words; on a coloured ground they need more light to be read at all. */
     static int faint() {
-        return light ? shade(Math.min(0.3f, rich * 0.25f), 0.52f) : shade(rich * 0.14f, mix(0.42f, 0.64f));
+        return light ? shade(Math.min(0.3f, rich * 0.25f), 0.42f) : shade(rich * 0.14f, mix(0.42f, 0.64f));
     }
 
     static int outline() {

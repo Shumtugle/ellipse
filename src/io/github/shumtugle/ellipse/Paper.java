@@ -316,6 +316,17 @@ private static String round(double value) {
         }
         b.append("</div></div></div>");
         b.append(rise(rank++));
+        /* The day, as the home screen counted it. */
+        if (p.screenToday > 60000L) {
+            row(b, Words.t("Screen today"), duration(p.screenToday));
+        }
+        if (p.firstToday >= 0 && p.level >= 0) {
+            row(b, Words.t("Charge today"), p.firstToday + "% \u2192 " + p.level + "%");
+        }
+        if (!Float.isNaN(p.hottestToday)) {
+            row(b, Words.t("Warmest today"), Math.round(p.hottestToday) + "&#176;");
+        }
+        b.append("</div>").append(rise(rank++));
         row(b, Words.t("Security update"), day(p.safe));
         if (p.update != null && !p.update.isEmpty()) {
             row(b, Words.t("System update"), day(p.update));
@@ -369,6 +380,12 @@ private static String round(double value) {
         } catch (Exception other) {
             return safe(iso == null ? "" : iso);
         }
+    }
+
+    private static String duration(long millis) {
+        long minutes = millis / 60000L;
+        return minutes >= 60 ? Words.n("%1 hour | %1 hours", (int) (minutes / 60)) + " " + (minutes % 60) + " "
+            + Words.s("min") : minutes + " " + Words.s("min");
     }
 
     private static String since(long millis) {

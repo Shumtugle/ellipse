@@ -262,7 +262,11 @@ public final class Home extends Activity {
         android.content.IntentFilter night = new android.content.IntentFilter(Intent.ACTION_SCREEN_OFF);
         night.addAction(Intent.ACTION_SCREEN_ON);
         night.addAction(Intent.ACTION_WALLPAPER_CHANGED);
+        /* The day's own count: the battery as it goes. */
+        night.addAction(Intent.ACTION_BATTERY_CHANGED);
         registerReceiver(sleep, night);
+        /* The screen is on as the home screen starts: the day's count of it begins now. */
+        Day.screenOn(this);
         Lapse.watch(this);
         super.onCreate(saved);
         /* Made again by the phone — as its colours follow a new wallpaper — the screen shown stays shown. */
@@ -372,6 +376,7 @@ public final class Home extends Activity {
 
     @Override
     protected void onStop() {
+        keepGlimpse();
         drifting.removeCallbacks(driftOn);
         unbare();
         super.onStop();
@@ -1756,6 +1761,58 @@ public final class Home extends Activity {
         screens.show(Math.max(0, gone - 1), true);
     }
 
+    /**
+     * A small picture of the home screen as it is left — its screens and
+     * dock over its wallpaper, where the wallpaper can be known — kept for
+     * copies to carry, so a copy shows what it holds before it comes back.
+     */
+    private void keepGlimpse() {
+        if (root == null || lying || bareVeil != null || root.getWidth() <= 0) {
+            return;
+        }
+        final int w = root.getWidth() / 4;
+        final int h = root.getHeight() / 4;
+        final Bitmap front = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+        Canvas c = new Canvas(front);
+        c.scale(0.25f, 0.25f);
+        root.draw(c);
+        final boolean ours = Keep.flag(this, Keep.GROUND_WORN, false);
+        final boolean own = !ours && Keep.flag(this, Keep.PICTURE_WORN, false) && Picture.kept(this);
+        final Ground ground = Ground.kept(this);
+        final java.io.File into = new java.io.File(getFilesDir(), Copy.GLIMPSE);
+        final java.io.File picture = own ? Picture.file(this) : null;
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    Bitmap made = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                    Canvas m = new Canvas(made);
+                    Bitmap back = null;
+                    if (ours) {
+                        back = ground.draw(w, h);
+                    } else if (picture != null) {
+                        android.graphics.BitmapFactory.Options small = new android.graphics.BitmapFactory.Options();
+                        small.inSampleSize = 8;
+                        back = android.graphics.BitmapFactory.decodeFile(picture.getPath(), small);
+                    }
+                    if (back != null) {
+                        m.drawBitmap(back, null, new android.graphics.Rect(0, 0, w, h), null);
+                        back.recycle();
+                    } else {
+                        m.drawColor(0xFF15130F);
+                    }
+                    m.drawBitmap(front, 0, 0, null);
+                    front.recycle();
+                    try (java.io.FileOutputStream out = new java.io.FileOutputStream(into)) {
+                        made.compress(Bitmap.CompressFormat.JPEG, 78, out);
+                    }
+                    made.recycle();
+                } catch (Exception | OutOfMemoryError unkept) {
+                    // The last picture kept stays.
+                }
+            }
+        }).start();
+    }
+
     /** A veil over nothing, while the desk is away: the first touch brings it back. */
     private View bareVeil;
 
@@ -2334,9 +2391,13 @@ public final class Home extends Activity {
                     Keep.saveFlag(context, Keep.GROUND_WORN, false);
                     Keep.saveFlag(context, Keep.PICTURE_WORN, false);
                 }
+            } else if (Intent.ACTION_BATTERY_CHANGED.equals(intent.getAction())) {
+                Day.battery(context, intent);
             } else if (Intent.ACTION_SCREEN_OFF.equals(intent.getAction())) {
+                Day.screenOff(context);
                 Turn.slept(context);
             } else {
+                Day.screenOn(context);
                 Turn.woke(context);
             }
         }

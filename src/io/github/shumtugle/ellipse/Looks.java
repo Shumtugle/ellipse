@@ -234,6 +234,69 @@ final class Looks {
     }
 
     /**
+     * A look thrown by the dice, under the eye of a few rules, so what comes
+     * up belongs together: one material for the icons' rims, the clock's
+     * plate and the widgets' frames; an accent whose hue belongs to that
+     * material — warm for wood and gold, cool for steel, any for glass and
+     * black — never louder than half saturation, bright enough to read;
+     * windows with symbols only in the heavier materials; glass thin, the
+     * rest of some weight; glass wearing the glass card or the rings, the
+     * others the plate in their own material.
+     */
+    static void dice(Context context, java.util.Random r) {
+        int[] materials = {Rim.WOOD, Rim.STEEL, Rim.GOLD, Rim.GLASS, Rim.BLACK, Rim.METAL, Rim.STAMPED, Rim.SEQUINS};
+        int m = materials[r.nextInt(materials.length)];
+        float hue;
+        float sat;
+        switch (m) {
+            case Rim.WOOD:
+            case Rim.STAMPED:
+                hue = 20f + r.nextFloat() * 25f;
+                sat = 0.28f + r.nextFloat() * 0.2f;
+                break;
+            case Rim.GOLD:
+            case Rim.SEQUINS:
+                hue = 38f + r.nextFloat() * 12f;
+                sat = 0.4f + r.nextFloat() * 0.15f;
+                break;
+            case Rim.STEEL:
+            case Rim.METAL:
+                hue = 195f + r.nextFloat() * 35f;
+                sat = 0.14f + r.nextFloat() * 0.16f;
+                break;
+            default:
+                hue = r.nextFloat() * 360f;
+                sat = 0.2f + r.nextFloat() * 0.3f;
+                break;
+        }
+        float val = 0.8f + r.nextFloat() * 0.1f;
+        boolean glass = m == Rim.GLASS;
+        boolean heavy = m == Rim.WOOD || m == Rim.GOLD || m == Rim.BLACK || m == Rim.STEEL;
+        boolean windows = heavy && r.nextBoolean();
+        boolean glaze = glass || r.nextBoolean();
+        java.util.List<Object> sets = new java.util.ArrayList<>();
+        int[] shapes = glass ? new int[] {Shape.CIRCLE, Shape.SQUIRCLE}
+            : windows ? new int[] {Shape.ROUNDED} : new int[] {Shape.PAPER, Shape.ROUNDED, Shape.SQUIRCLE, Shape.CIRCLE};
+        java.util.Collections.addAll(sets, "icon_shape", shapes[r.nextInt(shapes.length)],
+            Keep.RIM_KIND, m, Keep.RIM_WIDTH, glass ? 2 + r.nextInt(3) : 6 + r.nextInt(9), Keep.GLAZE, glaze,
+            "look_from", Keep.FROM_OWN, "hue", hue, "sat", sat, "val", val);
+        if (windows) {
+            java.util.Collections.addAll(sets, Keep.TILE_ASPECT, 110 + r.nextInt(26), Keep.WINDOW, Shape.WINDOW_ROUND,
+                Keep.ICON_TINT, 1, "face.#all", "-1,1,0,3,0,", Keep.NAME_COLOUR, 6);
+        }
+        if (glass) {
+            java.util.Collections.addAll(sets, Keep.CLOCK_FACE, r.nextBoolean() ? Home.FACE_MENO : Home.FACE_RINGS,
+                Keep.WIDGET_FRAME, Rim.GLASS, Keep.WIDGET_FRAME_WIDTH, 3);
+        } else {
+            java.util.Collections.addAll(sets, Keep.CLOCK_FACE, Home.FACE_PLATE, Keep.CLOCK_PLATE, m,
+                Keep.CLOCK_DIAL, r.nextBoolean() ? Rim.BLACK : Watch.EMBOSSED,
+                Keep.WIDGET_FRAME, m, Keep.WIDGET_FRAME_WIDTH, 6 + r.nextInt(15),
+                Keep.WIDGET_FRAME_ROUND, 24 + r.nextInt(25), Keep.WIDGET_GLAZE, glaze);
+        }
+        dress(context, sets.toArray());
+    }
+
+    /**
      * A preset put on: the dress let go of, as the home screen first comes,
      * then the preset's own words written over it — pairs of a word and its
      * value. Nothing the owner set out is touched: the grids, the apps and

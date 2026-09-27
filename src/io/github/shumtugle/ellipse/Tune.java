@@ -645,6 +645,14 @@ public final class Tune extends Activity {
             rows.addView(row);
             arrive(row, i);
         }
+        /* At the foot of the first room, in plain sight, the home screen started afresh: just in case. */
+        if (room() == ROOT && field.getText().length() == 0) {
+            rows.addView(deed(RESTART_LINE, new Runnable() {
+                public void run() {
+                    restart();
+                }
+            }));
+        }
     }
 
     private void arrive(View row, int i) {
@@ -1718,12 +1726,7 @@ public final class Tune extends Activity {
     protected void onPause() {
         super.onPause();
         glow.stop();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        /* Leaving the settings while looking at a preset: the look before is put on again. */
+        /* Leaving the settings while looking at a look: taken off before the home screen shows again. */
         if (!remaking && !isChangingConfigurations() && Looks.previewing(this)) {
             Looks.previewEnd(this, false);
             looking = -1;
@@ -1731,6 +1734,8 @@ public final class Tune extends Activity {
             Style.read(this);
         }
     }
+
+
 
     @Override
     protected void onResume() {
@@ -2479,6 +2484,25 @@ public final class Tune extends Activity {
                 final TextView line = (TextView) deed(title, null);
                 line.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
+                        /* With a picture of the home screen as it stood: shown, and brought back from there. */
+                        try {
+                            final String words = Copy.load(one);
+                            android.graphics.Bitmap seen = Copy.glimpse(words);
+                            if (seen != null) {
+                                Ask.tell(host, "Bring back this copy?", title, seen, "Bring back", new Runnable() {
+                                    public void run() {
+                                        if (Copy.read(Tune.this, words)) {
+                                            restored();
+                                        } else {
+                                            said("That copy could not be read");
+                                        }
+                                    }
+                                });
+                                return;
+                            }
+                        } catch (java.io.IOException gone) {
+                            // Asked twice, as before.
+                        }
                         long now = System.currentTimeMillis();
                         if (!one.equals(armedCopy) || now - armedCopyAt > 4000L) {
                             armedCopy = one;
@@ -2515,6 +2539,9 @@ public final class Tune extends Activity {
      */
     /** Which ready preset is being looked at, across the room made again to show it. */
     private static int looking = -1;
+    private static final int THROWN = 100;
+    private static final String THROWN_ABOUT = "Thrown by the dice under a few rules: one material for rims, "
+        + "clock and frames, an accent that belongs to it, windows only in the heavier ones.";
 
     private void fillLooks() {
         window.removeAllViews();
@@ -2542,9 +2569,18 @@ public final class Tune extends Activity {
                 worn();
             }
         }));
+        /* The dice: a look thrown under a few rules of what belongs together; looked at, as a preset is. */
+        rows.addView(deed("Throw a look", new Runnable() {
+            public void run() {
+                Looks.previewFrom(Tune.this);
+                Looks.dice(Tune.this, new java.util.Random());
+                looking = THROWN;
+                worn();
+            }
+        }));
         if (looking >= 0) {
             TextView about = new TextView(this);
-            about.setText(Words.t(Looks.READY_ABOUT[looking]));
+            about.setText(Words.t(looking == THROWN ? THROWN_ABOUT : Looks.READY_ABOUT[looking]));
             about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
             about.setTextColor(Tone.faint());
             about.setPadding(dp(20), dp(16), dp(20), dp(16));
@@ -2553,7 +2589,15 @@ public final class Tune extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT);
             at.setMargins(dp(20), dp(4), dp(20), dp(8));
             rows.addView(about, at);
-            note("Seen here and on the home screen; the round button wears it, going back takes it off.");
+            /* Put on only by asking so, plainly. */
+            rows.addView(deed("Wear this look", new Runnable() {
+                public void run() {
+                    Looks.previewEnd(Tune.this, true);
+                    looking = -1;
+                    worn();
+                }
+            }));
+            note("Only looked at until it is worn: going back, or leaving the settings, takes it off.");
         } else {
             note("A preset dresses the home screen: icons, colours, the clock, the frames. What you set out stays "
                 + "as it is: grids, apps and their places, the names under the icons, the theme.");
@@ -2959,10 +3003,23 @@ public final class Tune extends Activity {
             }
             String words = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
             if (words.contains("\"" + Copy.KIND + "\"")) {
-                if (Copy.read(this, words)) {
-                    restored();
+                /* Seen before it comes back: the copy's picture of the home screen, if it has one. */
+                final String copy = words;
+                Runnable bring = new Runnable() {
+                    public void run() {
+                        if (Copy.read(Tune.this, copy)) {
+                            restored();
+                        } else {
+                            said("That copy could not be read");
+                        }
+                    }
+                };
+                android.graphics.Bitmap seen = Copy.glimpse(words);
+                if (seen != null) {
+                    Ask.tell(host, "Bring back this copy?", "The home screen as it stood when the copy was made.",
+                        seen, "Bring back", bring);
                 } else {
-                    said("That copy could not be read");
+                    bring.run();
                 }
                 return;
             }

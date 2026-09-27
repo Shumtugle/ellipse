@@ -164,6 +164,16 @@ final class Ask {
         tell(host, caption, text, null, null, go, action);
     }
 
+    /** The card with a picture over its words: what the thing asked about looks like. */
+    static void tell(final FrameLayout host, String caption, String text, android.graphics.Bitmap picture, String go,
+                     final Runnable action) {
+        shown = picture;
+        tell(host, caption, text, null, null, go, action);
+    }
+
+    /** The picture the next card shows, once. */
+    private static android.graphics.Bitmap shown;
+
     /** The same card with a second thing it may do, offered before the first. */
     static void tell(final FrameLayout host, String caption, String text, String other, final Runnable otherAction,
                      String go, final Runnable action) {
@@ -191,6 +201,17 @@ final class Ask {
         said.setTextSize(TypedValue.COMPLEX_UNIT_PX, 18f * scaled);
         said.setTextColor(Tone.onSurface());
         said.setPadding(0, Math.round(12 * density), 0, Math.round(4 * density));
+        if (shown != null) {
+            android.widget.ImageView picture = new android.widget.ImageView(context);
+            picture.setImageBitmap(shown);
+            picture.setAdjustViewBounds(true);
+            picture.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+            LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                Math.round(320 * density));
+            at.topMargin = Math.round(12 * density);
+            card.addView(picture, at);
+            shown = null;
+        }
         card.addView(said);
         LinearLayout foot = new LinearLayout(context);
         foot.setGravity(Gravity.END);

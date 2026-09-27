@@ -158,6 +158,24 @@ final class Copy {
         copy.put("made", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.ROOT).format(new Date()));
         copy.put("version", version(context));
         copy.put("settings", all);
+        /* A small picture of the home screen as it stood, to see before bringing it back. */
+        File glimpse = new File(context.getFilesDir(), GLIMPSE);
+        if (glimpse.isFile() && glimpse.length() < 400000) {
+            try (java.io.FileInputStream in = new java.io.FileInputStream(glimpse)) {
+                byte[] bytes = new byte[(int) glimpse.length()];
+                int read = 0;
+                while (read < bytes.length) {
+                    int n = in.read(bytes, read, bytes.length - read);
+                    if (n < 0) {
+                        break;
+                    }
+                    read += n;
+                }
+                copy.put("glimpse", android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP));
+            } catch (IOException unread) {
+                // A copy without its picture.
+            }
+        }
         copy.put("files", files(context));
         copy.put("widgets", widgets(context));
         return copy.toString(1);
@@ -677,6 +695,23 @@ final class Copy {
      * common ending are still taken.
      */
     static final String EXTENSION = ".ellipse";
+
+    /** The home screen's own small picture of itself, kept as it was last left. */
+    static final String GLIMPSE = "glimpse.jpg";
+
+    /** A copy's picture of the home screen as it stood, or none. */
+    static android.graphics.Bitmap glimpse(String words) {
+        try {
+            String kept = new JSONObject(words).optString("glimpse", "");
+            if (kept.isEmpty()) {
+                return null;
+            }
+            byte[] bytes = android.util.Base64.decode(kept, android.util.Base64.DEFAULT);
+            return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        } catch (JSONException | RuntimeException broken) {
+            return null;
+        }
+    }
     static final String TYPE = "application/octet-stream";
 
 }

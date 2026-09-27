@@ -37,6 +37,10 @@ final class Phone {
     String model = "";
     String build = "";
     long awake;
+    /** The day as the home screen counted it: the screen on, the charge it began with, the warmest. */
+    long screenToday;
+    int firstToday = -1;
+    float hottestToday = Float.NaN;
 
     static final int GOOD = 0;
     static final int WARM = 1;
@@ -112,6 +116,9 @@ final class Phone {
         p.model = Build.MODEL;
         p.build = Build.DISPLAY;
         p.awake = SystemClock.elapsedRealtime();
+        p.screenToday = Day.screen(context);
+        p.firstToday = Day.first(context);
+        p.hottestToday = Day.hottest(context);
         return p;
     }
 
