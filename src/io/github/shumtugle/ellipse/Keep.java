@@ -134,6 +134,8 @@ final class Keep {
     static final String VENDOR_THING = "#vendor";
     static final String SYSTEM_THING = "#system";
     static final String OWN_THING = "#own";
+    /** The dice on a screen: a touch throws a new ground. */
+    static final String DICE_THING = "#dice";
     private static final String LAID = "laid";
 
     private static final String PLACED = "placed";

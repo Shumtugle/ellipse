@@ -185,6 +185,8 @@ public final class Home extends Activity {
     private static final String OWN_SETTINGS = "Ellipse settings";
     private static final String CLOCK_NAME = "Clock";
     private static final int OWN_MAKER = 1000;
+    private static final int DICE_MAKER = 1001;
+    private static final String NEW_GROUND = "A new ground";
     private float carryStartX;
     private float carryStartY;
     private boolean carryMoved;
@@ -728,7 +730,8 @@ public final class Home extends Activity {
         }
         iconSize = Math.max(dp(48), Math.min(dp(64), column * 0.58f));
         /* The owner's own size, within the cell. */
-        iconSize = Math.min(column * 0.86f, iconSize * Style.iconScale);
+        /* With everything to the edges, an icon may fill its place nearly whole. */
+        iconSize = Math.min(column * (Keep.edgeless(this) ? 0.98f : 0.86f), iconSize * Style.iconScale);
 
         boolean was = drawer != null && drawer.shown();
         root = new Floor(this);
@@ -1211,6 +1214,13 @@ public final class Home extends Activity {
                 Grid page = pages.get(spot.screen);
                 if (Keep.CLOCK_THING.equals(base(spot.token))) {
                     clocked = clock(page, spot.x, spot.y, spot.token) || clocked;
+                } else if (Keep.DICE_THING.equals(spot.token)) {
+                    if (page.free(spot.x, spot.y)) {
+                        Cell dice = diceCell();
+                        page.put(dice, spot.x, spot.y);
+                        cells.add(dice);
+                        stand(page, dice, Keep.DICE_THING);
+                    }
                 } else if (Keep.OWN_THING.equals(spot.token)) {
                     if (page.free(spot.x, spot.y)) {
                         ownDoor(page, spot.x, spot.y);
@@ -1477,7 +1487,8 @@ public final class Home extends Activity {
             count = Math.min(16, used);
         }
         rows = count * fine;
-        return Math.min(1f, high * count / tall);
+        /* The rows share the whole height: what would be left under the last row is spread between them. */
+        return 1f;
     }
 
     /** How far down the things on any screen reach, in places of the grid's finest step. */
@@ -1998,6 +2009,55 @@ public final class Home extends Activity {
         return own;
     }
 
+    /** The dice's face: a die on the plate every icon of the home screen's own wears. */
+    private android.graphics.drawable.Drawable diceFace() {
+        return Style.dress(this, Keep.DICE_THING, Shape.faceMark(getDrawable(R.mipmap.door), -1,
+            getDrawable(R.drawable.sym_casino)), null);
+    }
+
+    /**
+     * The dice on a screen: a touch throws a new ground and sets it as the
+     * wallpaper, from where the grounds come from as the settings say — the
+     * dice, the ready ones, or the owner's own.
+     */
+    private Cell diceCell() {
+        final Cell dice = new Cell(this, diceFace(), Words.t(NEW_GROUND), iconSize, Style.namesOnScreens);
+        dice.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (!Picture.replaceable(Home.this)) {
+                    Ask.tell(root, "Replace the wallpaper?", DICE_WARNING, "Replace", new Runnable() {
+                        public void run() {
+                            Keep.saveFlag(Home.this, Keep.WALL_WARNED, true);
+                            throwGround(dice);
+                        }
+                    });
+                    return;
+                }
+                throwGround(dice);
+            }
+        });
+        return dice;
+    }
+
+    private static final String DICE_WARNING = "The wallpaper the phone has now is replaced, and Ellipse "
+        + "cannot keep it for you, for the phone does not let it be read. If it is a picture of your "
+        + "own, bring it in first with Wallpaper from a picture: Ellipse keeps it, sets it again at a "
+        + "touch and carries it in copies.";
+
+    private void throwGround(final View from) {
+        from.animate().rotationBy(360f).setDuration(700).setInterpolator(Pace.EMPHASIS).start();
+        final Context app = getApplicationContext();
+        new Thread(new Runnable() {
+            public void run() {
+                try {
+                    Turn.turn(app);
+                } catch (Exception | OutOfMemoryError failed) {
+                    // The ground stays as it was.
+                }
+            }
+        }).start();
+    }
+
     private void ownDoor(Grid page, int column, int row) {
         Cell own = ownCell(true);
         page.put(own, column, row);
@@ -2255,6 +2315,7 @@ public final class Home extends Activity {
      */
     private void ask(View on) {
         boolean home = screens.page() == Keep.home(this);
+        /* Two parts: what adds to the screens; and, under a hairline, always in sight, what is wanted at hand. */
         List<Integer> offered = new ArrayList<>();
         /* Lying down, the screens are a view of the upright ones: things are added and moved upright. */
         if (!lying) {
@@ -2267,11 +2328,24 @@ public final class Home extends Activity {
             if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
                 offered.add(REMOVE_SCREEN);
             }
-            offered.add(PORTRAIT);
         }
-        /* The night clock and the bare wallpaper, last before the settings. */
-        offered.add(NIGHT);
-        offered.add(BARE);
+        List<String> handLines = new ArrayList<>();
+        List<Integer> handKeys = new ArrayList<>();
+        List<Integer> handGlyphs = new ArrayList<>();
+        if (!lying) {
+            handLines.add(ASKS[PORTRAIT]);
+            handKeys.add(PORTRAIT);
+            handGlyphs.add(Glyph.DESK);
+        }
+        handLines.add(ASKS[NIGHT]);
+        handKeys.add(NIGHT);
+        handGlyphs.add(Glyph.CLOCK);
+        handLines.add(ASKS[BARE]);
+        handKeys.add(BARE);
+        handGlyphs.add(Glyph.LOOK);
+        handLines.add(ASKS[SETTINGS]);
+        handKeys.add(SETTINGS);
+        handGlyphs.add(Glyph.SETTINGS);
 
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
@@ -2283,9 +2357,9 @@ public final class Home extends Activity {
             keys[i] = offered.get(i);
         }
         on.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-        /* The settings stand apart, under a hairline: they lead away. */
-        menu.show(new Menu.Section[] {new Menu.Section(null, lines, keys),
-                settingsLine(ASKS[SETTINGS], SETTINGS)},
+        Menu.Section hand = pictured(handLines, handKeys, handGlyphs);
+        menu.show(offered.isEmpty() ? new Menu.Section[] {hand}
+                : new Menu.Section[] {new Menu.Section(null, lines, keys), hand},
             root.fingerX(), root.fingerY(), dp(20));
     }
 
@@ -3875,6 +3949,7 @@ public final class Home extends Activity {
         List<List<Chooser.Item>> groups = new ArrayList<>();
         List<Chooser.Item> all = new ArrayList<>();
         all.add(new Chooser.Item(Shape.face(getDrawable(R.mipmap.door)), OWN_SETTINGS, OWN_MAKER));
+        all.add(new Chooser.Item(diceFace(), Words.t(NEW_GROUND), DICE_MAKER));
         int dpi = getResources().getDisplayMetrics().densityDpi;
         for (int i = 0; i < makers.size(); i++) {
             all.add(new Chooser.Item(makers.get(i).getIcon(dpi), makers.get(i).getLabel(), i));
@@ -3999,6 +4074,10 @@ public final class Home extends Activity {
         }
         if (which == OWN_MAKER) {
             setAnywhere(Keep.OWN_THING, pendingPage);
+            return;
+        }
+        if (which == DICE_MAKER) {
+            setAnywhere(Keep.DICE_THING, pendingPage);
             return;
         }
         if (which < 0 || which >= makers.size()) {

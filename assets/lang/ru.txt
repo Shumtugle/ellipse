@@ -670,3 +670,4 @@ Lie down = Горизонтально
 Stand up = Вертикально
 Turn as the phone turns = Как повёрнут телефон
 Lying down is a set-out of its own, as the phone turns: moved or added there, nothing changes upright; a widget taken away is gone from both. It began as the upright one laid in its grid. Nothing lying down goes to the screen's edges. = Горизонтальный вид — своя раскладка, по повороту телефона: что там двигаешь или добавляешь, вертикальный стол не меняет; удалённый виджет исчезает с обоих. Начался он с вертикальной раскладки, уложенной в свою сетку. Лёжа ничего не доходит до краёв экрана.
+A new ground = Новый фон
