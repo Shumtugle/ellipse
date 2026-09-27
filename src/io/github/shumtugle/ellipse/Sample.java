@@ -53,6 +53,14 @@ final class Sample extends LinearLayout {
         return Math.round(value * density);
     }
 
+    /** Only the small icons and the folder: for a sample that shares its width with others. */
+    private boolean compact;
+
+    void compact() {
+        compact = true;
+        show();
+    }
+
     /** Draws the icons again in the outline chosen now. */
     void show() {
         removeAllViews();
@@ -65,11 +73,15 @@ final class Sample extends LinearLayout {
         if (doors.isEmpty()) {
             return;
         }
-        addView(icon(doors.get(0), dp(84) * Style.iconScale), new LayoutParams(dp(124), dp(124)));
+        if (!compact) {
+            addView(icon(doors.get(0), dp(84) * Style.iconScale), new LayoutParams(dp(124), dp(124)));
+        } else {
+            setBackground(null);
+        }
         LinearLayout small = new LinearLayout(getContext());
         small.setOrientation(VERTICAL);
         LayoutParams smallAt = new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f);
-        smallAt.leftMargin = dp(16);
+        smallAt.leftMargin = compact ? 0 : dp(16);
         for (int r = 0; r < 2; r++) {
             LinearLayout row = new LinearLayout(getContext());
             row.setOrientation(HORIZONTAL);

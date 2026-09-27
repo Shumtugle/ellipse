@@ -216,7 +216,7 @@ public final class Tune extends Activity {
                 };
             case LOOK:
                 return new Line[] {
-                    door(Glyph.LOOK, "Presets", "Ready looks, your own, and looks thrown by the dice — tried on before worn", LOOKS),
+                    door(Glyph.LOOK, "Presets", "Ready looks, random ones and your own — tried on before accepted", LOOKS),
                     door(Glyph.LOOK, "Typeface", "The letters of every name and every word here", FONTS),
                     door(Glyph.LOOK, "Wallpaper", "A ground drawn from layers of light, texture and ornament",
                         GROUNDS),
@@ -2532,47 +2532,255 @@ public final class Tune extends Activity {
     /** Which ready preset is being looked at, across the room made again to show it. */
     private static int looking = -1;
     private static final int THROWN = 100;
+    /** A lucky look of the past being looked at again: its number after this. */
+    private static final int LUCKY_BASE = 200;
+    private static final String LUCKY_ABOUT = "A random look you once kept a minute and more, back to be looked at.";
+    private static boolean luckyOpen;
+
+    /** The presets as they are shown: the random one in the second place, in the wood's. */
+    private static final int RANDOM = -2;
+    private static final int[] PRESET_ORDER = {0, RANDOM, 2, 3, 4, 5, 6, 7};
+
+    /**
+     * The presets as small pictures of themselves, each in its material,
+     * ringed when looked at: an even grid that asks to be tried.
+     */
+    private View presetTiles() {
+        LinearLayout line = new LinearLayout(this);
+        line.setPadding(dp(18), 0, dp(18), dp(8));
+        for (final int preset : PRESET_ORDER) {
+            final boolean on = preset == RANDOM ? looking == THROWN : looking == preset;
+            LinearLayout one = new LinearLayout(this);
+            one.setOrientation(LinearLayout.VERTICAL);
+            one.setGravity(Gravity.CENTER_HORIZONTAL);
+            one.setPadding(dp(4), 0, dp(4), dp(6));
+            View face = new View(this) {
+                @Override
+                protected void onDraw(android.graphics.Canvas canvas) {
+                    float inset = dp(9);
+                    canvas.save();
+                    canvas.translate(inset, inset);
+                    paintPreset(canvas, getWidth() - 2 * inset, getHeight() - 2 * inset, preset);
+                    canvas.restore();
+                    if (on) {
+                        android.graphics.Paint ring = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                        ring.setStyle(android.graphics.Paint.Style.STROKE);
+                        ring.setStrokeWidth(dp(2.5f));
+                        ring.setColor(Tone.primary());
+                        canvas.drawRoundRect(new android.graphics.RectF(dp(1.5f), dp(1.5f), getWidth() - dp(1.5f),
+                            getHeight() - dp(1.5f)), dp(20), dp(20), ring);
+                    }
+                }
+            };
+            face.setBackground(Tone.box(preset == RANDOM ? Tone.primaryContainer() : Tone.container(), dp(20), 0f));
+            one.addView(face, new LinearLayout.LayoutParams(dp(78), dp(78)));
+            TextView name = new TextView(this);
+            name.setText(Words.t(preset == RANDOM ? "Random" : Looks.READY[preset]));
+            name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+            name.setTextColor(on ? Tone.primary() : Tone.onSurface());
+            name.setGravity(Gravity.CENTER);
+            name.setMaxLines(1);
+            name.setPadding(0, dp(6), 0, 0);
+            one.addView(name, new LinearLayout.LayoutParams(dp(84), LinearLayout.LayoutParams.WRAP_CONTENT));
+            one.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                    /* Shown first: the look till now kept aside, this one put on to be seen. */
+                    Looks.previewFrom(Tune.this);
+                    if (preset == RANDOM) {
+                        Looks.dice(Tune.this, new java.util.Random());
+                        looking = THROWN;
+                    } else {
+                        Looks.ready(Tune.this, preset);
+                        looking = preset;
+                    }
+                    worn();
+                }
+            });
+            line.addView(one);
+        }
+        return pictures(line);
+    }
+
+    /** A preset's picture: its material, as its icons would wear it; the random one a die. */
+    private void paintPreset(android.graphics.Canvas c, float w, float h, int preset) {
+        android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+        switch (preset) {
+            case RANDOM: {
+                Die die = new Die(5);
+                die.setTint(Tone.onPrimaryContainer());
+                die.setBounds(0, 0, Math.round(w), Math.round(h));
+                die.draw(c);
+                break;
+            }
+            case 0:
+                p.setColor(Tone.primary());
+                c.drawCircle(w / 2f, h / 2f, Math.min(w, h) * 0.34f, p);
+                break;
+            case 2:
+                paintMaterial(c, w, h, Rim.STEEL);
+                break;
+            case 3:
+                paintMaterial(c, w, h, Rim.GLASS);
+                break;
+            case 4:
+                p.setStyle(android.graphics.Paint.Style.STROKE);
+                p.setStrokeWidth(Math.min(w, h) * 0.07f);
+                p.setColor(Tone.onSurface());
+                c.drawCircle(w * 0.42f, h * 0.46f, Math.min(w, h) * 0.3f, p);
+                p.setColor(Tone.primary());
+                c.drawCircle(w * 0.72f, h * 0.7f, Math.min(w, h) * 0.16f, p);
+                break;
+            case 5:
+                p.setColor(0xFFF2EFE8);
+                c.drawRoundRect(0f, h * 0.14f, w, h * 0.86f, h * 0.12f, h * 0.12f, p);
+                p.setStyle(android.graphics.Paint.Style.STROKE);
+                p.setStrokeWidth(Math.max(1f, h * 0.03f));
+                p.setColor(0xFFB9B4AA);
+                c.drawRoundRect(0f, h * 0.14f, w, h * 0.86f, h * 0.12f, h * 0.12f, p);
+                break;
+            case 6:
+                paintMaterial(c, w, h, Rim.WOOD);
+                break;
+            default:
+                paintMaterial(c, w, h, Rim.GOLD);
+                break;
+        }
+    }
+
+    /**
+     * The lucky random looks — each worn a minute and more — out of the way
+     * under one line that opens them: twenty at most, the oldest going by
+     * themselves; the dice is meant to be thrown more than the past worn.
+     */
+    private void luckySpoiler() {
+        final java.util.List<Long> lucky = Looks.lucky(this);
+        if (lucky.isEmpty()) {
+            return;
+        }
+        TextView head = (TextView) deed(Words.f("Lucky random looks \u00B7 %1", lucky.size())
+            + (luckyOpen ? "  \u25B4" : "  \u25BE"), new Runnable() {
+                public void run() {
+                    luckyOpen = !luckyOpen;
+                    fill();
+                }
+            });
+        rows.addView(head);
+        if (!luckyOpen) {
+            return;
+        }
+        java.text.DateFormat when = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM,
+            java.text.DateFormat.SHORT);
+        for (int i = 0; i < lucky.size(); i++) {
+            final int which = i;
+            TextView one = (TextView) deed(Words.t("Random") + " \u00B7 " + when.format(new java.util.Date(lucky.get(i))),
+                new Runnable() {
+                    public void run() {
+                        Looks.previewFrom(Tune.this);
+                        if (Looks.wearLucky(Tune.this, which)) {
+                            looking = LUCKY_BASE + which;
+                            worn();
+                        }
+                    }
+                });
+            one.setTextColor(looking == LUCKY_BASE + which ? Tone.primary() : Tone.onSurface());
+            rows.addView(one);
+        }
+    }
+
+    /**
+     * The sample of a look: the clock as it will stand, icons and a folder
+     * as they will, and a piece of the home screen's menu, where the accent
+     * shows best.
+     */
+    private View lookSample() {
+        LinearLayout made = new LinearLayout(this);
+        made.setOrientation(LinearLayout.HORIZONTAL);
+        made.setPadding(dp(14), dp(12), dp(14), dp(12));
+        android.graphics.drawable.GradientDrawable edge = new android.graphics.drawable.GradientDrawable();
+        edge.setCornerRadius(dp(30));
+        edge.setStroke(Math.max(1, dp(0.5f)), Tone.outline());
+        made.setBackground(edge);
+        LinearLayout left = new LinearLayout(this);
+        left.setOrientation(LinearLayout.VERTICAL);
+        View clock = Home.timepiece(this, new Almanac.Hand() {
+            public void pressed(String window, View from, android.graphics.RectF box) {
+            }
+        });
+        if (clock instanceof Timepiece) {
+            ((Timepiece) clock).weather(Keep.flag(this, Keep.WEATHER, true));
+            ((Timepiece) clock).ears(-1);
+        }
+        left.addView(clock, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+        /* A piece of the home screen's menu: two lines, one of them lit. */
+        LinearLayout menu = new LinearLayout(this);
+        menu.setOrientation(LinearLayout.VERTICAL);
+        menu.setPadding(dp(10), dp(8), dp(10), dp(8));
+        menu.setBackground(Tone.box(Tone.containerHigh(), dp(16), 0f));
+        String[] said = {"Night clock", "Show the wallpaper"};
+        int[] signs = {Glyph.CLOCK, Glyph.LOOK};
+        for (int i = 0; i < said.length; i++) {
+            LinearLayout line = new LinearLayout(this);
+            line.setGravity(Gravity.CENTER_VERTICAL);
+            line.setPadding(dp(8), dp(4), dp(8), dp(4));
+            if (i == 0) {
+                line.setBackground(Tone.box(Tone.primaryContainer(), dp(12), 0f));
+            }
+            Glyph sign = new Glyph(this, signs[i], dp(16));
+            sign.tint(Tone.primary());
+            line.addView(sign);
+            TextView word = new TextView(this);
+            word.setText(Words.t(said[i]));
+            word.setTextSize(TypedValue.COMPLEX_UNIT_PX, 12f * scaled);
+            word.setTextColor(i == 0 ? Tone.onPrimaryContainer() : Tone.onSurface());
+            word.setPadding(dp(8), 0, 0, 0);
+            word.setMaxLines(1);
+            line.addView(word);
+            menu.addView(line);
+        }
+        LinearLayout.LayoutParams menuAt = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT);
+        menuAt.topMargin = dp(8);
+        left.addView(menu, menuAt);
+        made.addView(left, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1.1f));
+        /* Icons and a folder, as the screens draw them. */
+        Sample icons = new Sample(this);
+        icons.setBackground(null);
+        icons.setPadding(dp(8), 0, 0, 0);
+        icons.compact();
+        LinearLayout.LayoutParams iconsAt = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f);
+        made.addView(icons, iconsAt);
+        sample = icons;
+        return made;
+    }
     private static final String THROWN_ABOUT = "Thrown by the dice under a few rules: one material for rims, "
         + "clock and frames, an accent that belongs to it, windows only in the heavier ones.";
 
     private void fillLooks() {
         window.removeAllViews();
-        sample = new Sample(this);
-        window.addView(sample, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, sampleTall()));
+        window.addView(lookSample(), new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, sampleTall()));
         if (!Looks.previewing(this)) {
             looking = -1;
         }
-        /* The round button wears what is looked at; until then nothing is changed for good. */
-        foot.done(looking >= 0 ? new Runnable() {
+        final Runnable take = new Runnable() {
             public void run() {
+                boolean thrown = looking == THROWN;
                 Looks.previewEnd(Tune.this, true);
+                if (thrown) {
+                    Looks.luckyTaken(Tune.this);
+                }
                 looking = -1;
                 worn();
             }
-        } : null);
+        };
+        /* The round button in the bar takes what is looked at; until then nothing is changed for good. */
+        foot.done(looking >= 0 ? take : null);
         caption("READY");
-        /* The same chips the grounds are chosen by: one language for choosing things by name. */
-        rows.addView(flow(Looks.READY, looking, new Chosen() {
-            public void chosen(int which) {
-                /* Shown first: the look till now kept aside, this preset put on to be seen. */
-                Looks.previewFrom(Tune.this);
-                Looks.ready(Tune.this, which);
-                looking = which;
-                worn();
-            }
-        }));
-        /* The dice: a look thrown under a few rules of what belongs together; looked at, as a preset is. */
-        rows.addView(deed("Throw a look", new Runnable() {
-            public void run() {
-                Looks.previewFrom(Tune.this);
-                Looks.dice(Tune.this, new java.util.Random());
-                looking = THROWN;
-                worn();
-            }
-        }));
+        rows.addView(presetTiles());
         if (looking >= 0) {
             TextView about = new TextView(this);
-            about.setText(Words.t(looking == THROWN ? THROWN_ABOUT : Looks.READY_ABOUT[looking]));
+            about.setText(Words.t(looking == THROWN ? THROWN_ABOUT : looking >= LUCKY_BASE ? LUCKY_ABOUT
+                : Looks.READY_ABOUT[looking]));
             about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
             about.setTextColor(Tone.faint());
             about.setPadding(dp(20), dp(16), dp(20), dp(16));
@@ -2581,19 +2789,14 @@ public final class Tune extends Activity {
                 ViewGroup.LayoutParams.WRAP_CONTENT);
             at.setMargins(dp(20), dp(4), dp(20), dp(8));
             rows.addView(about, at);
-            /* Put on only by asking so, plainly. */
-            rows.addView(deed("Wear this look", new Runnable() {
-                public void run() {
-                    Looks.previewEnd(Tune.this, true);
-                    looking = -1;
-                    worn();
-                }
-            }));
-            note("Only looked at until it is worn: going back, or leaving the settings, takes it off.");
+            /* Taken only by asking so, plainly; the round button below does the same. */
+            rows.addView(deed("Accept the settings", take));
+            note("Only looked at until accepted: going back, or leaving the settings, takes it off.");
         } else {
             note("A preset dresses the home screen: icons, colours, the clock, the frames. What you set out stays "
-                + "as it is: grids, apps and their places, the names under the icons, the theme.");
+                + "as it is: grids, apps and their places, the size of the words, the names under the icons.");
         }
+        luckySpoiler();
         caption("MINE");
         rows.addView(deed("Keep the look as it is now", new Runnable() {
             public void run() {

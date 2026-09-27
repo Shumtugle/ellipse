@@ -3,6 +3,7 @@ package io.github.shumtugle.ellipse;
 import android.content.Context;
 import android.content.SharedPreferences;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -130,6 +131,7 @@ final class Looks {
      * look worn till now is kept aside, to be put back.
      */
     static boolean wear(Context context, String name) {
+        settle(context, true);
         JSONObject look = all(context).optJSONObject(name);
         if (look == null) {
             return false;
@@ -306,6 +308,7 @@ final class Looks {
      * language. The look worn till now is kept aside, to be put back.
      */
     private static void dress(Context context, Object[] sets) {
+        settle(context, true);
         try {
             store(context).edit().putString(BEFORE, now(context).toString()).apply();
         } catch (JSONException unsaved) {
@@ -380,6 +383,85 @@ final class Looks {
             put(context, new JSONObject(from));
         } catch (JSONException broken) {
             // What is on stays on.
+        }
+    }
+
+    // ------------------------------------------------------------ lucky throws
+
+    private static final String LUCKY = "looks_lucky";
+    private static final String LUCKY_PENDING = "looks_lucky_pending";
+    private static final int LUCKY_MOST = 20;
+    private static final long LUCKY_AFTER = 60000L;
+
+    /**
+     * A thrown look taken on: noted, and kept among the lucky ones once it
+     * has been worn a minute — not if another look comes on sooner.
+     */
+    static void luckyTaken(Context context) {
+        try {
+            JSONObject pending = new JSONObject().put("look", now(context)).put("at", System.currentTimeMillis());
+            store(context).edit().putString(LUCKY_PENDING, pending.toString()).apply();
+        } catch (JSONException unsaved) {
+            // Not kept.
+        }
+    }
+
+    /**
+     * The thrown look worn last, settled: kept among the lucky ones if it
+     * was worn a minute and more, let go of if another came on sooner. The
+     * lucky ones keep twenty, the oldest going first.
+     */
+    static void settle(Context context, boolean another) {
+        String pending = store(context).getString(LUCKY_PENDING, null);
+        if (pending == null) {
+            return;
+        }
+        try {
+            JSONObject one = new JSONObject(pending);
+            long worn = System.currentTimeMillis() - one.optLong("at", 0L);
+            if (worn < LUCKY_AFTER) {
+                if (another) {
+                    store(context).edit().remove(LUCKY_PENDING).apply();
+                }
+                return;
+            }
+            JSONArray all = new JSONArray(store(context).getString(LUCKY, "[]"));
+            JSONArray kept = new JSONArray();
+            kept.put(one);
+            for (int i = 0; i < all.length() && kept.length() < LUCKY_MOST; i++) {
+                kept.put(all.get(i));
+            }
+            store(context).edit().putString(LUCKY, kept.toString()).remove(LUCKY_PENDING).apply();
+        } catch (JSONException broken) {
+            store(context).edit().remove(LUCKY_PENDING).apply();
+        }
+    }
+
+    /** When each lucky look was taken, newest first. */
+    static List<Long> lucky(Context context) {
+        settle(context, false);
+        List<Long> when = new ArrayList<>();
+        try {
+            JSONArray all = new JSONArray(store(context).getString(LUCKY, "[]"));
+            for (int i = 0; i < all.length(); i++) {
+                when.add(all.getJSONObject(i).optLong("at", 0L));
+            }
+        } catch (JSONException broken) {
+            // None.
+        }
+        return when;
+    }
+
+    /** A lucky look put on again, to be looked at as a preset is. */
+    static boolean wearLucky(Context context, int which) {
+        try {
+            JSONArray all = new JSONArray(store(context).getString(LUCKY, "[]"));
+            if (which < 0 || which >= all.length()) {
+                return false;
+            }
+            return put(context, all.getJSONObject(which).getJSONObject("look"));
+        } catch (JSONException broken) {
+            return false;
         }
     }
 
