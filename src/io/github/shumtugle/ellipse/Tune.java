@@ -216,7 +216,7 @@ public final class Tune extends Activity {
                 };
             case LOOK:
                 return new Line[] {
-                    door(Glyph.LOOK, "Presets", "Ready looks to put on at a touch, and your own", LOOKS),
+                    door(Glyph.LOOK, "Presets", "Ready looks, your own, and looks thrown by the dice — tried on before worn", LOOKS),
                     door(Glyph.LOOK, "Typeface", "The letters of every name and every word here", FONTS),
                     door(Glyph.LOOK, "Wallpaper", "A ground drawn from layers of light, texture and ornament",
                         GROUNDS),
