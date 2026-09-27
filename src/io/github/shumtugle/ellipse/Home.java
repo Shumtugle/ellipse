@@ -2136,7 +2136,18 @@ public final class Home extends Activity {
     }
 
     /** A window of the clock was pressed: what it shows about is opened out of it. */
-    private void look(String window, View from, android.graphics.RectF box) {
+    private void look(String window, final View from, android.graphics.RectF box) {
+        if (Almanac.PLAYER.equals(window)) {
+            /* The player's ring pauses or goes on with whatever plays, and says so at once. */
+            Playing.toggle(this);
+            from.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+            from.postDelayed(new Runnable() {
+                public void run() {
+                    from.invalidate();
+                }
+            }, 300);
+            return;
+        }
         if (Almanac.WEATHER.equals(window)) {
             /* The weather, whole, on its own page; the first time, its place. */
             startActivity(new Intent(this, Folio.class).putExtra(Folio.PAGE, Folio.WEATHER));

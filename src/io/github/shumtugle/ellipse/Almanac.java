@@ -44,6 +44,8 @@ final class Almanac extends View implements Timepiece {
     static final String CHARGE = "charge";
     static final String WEATHER = "weather";
     static final String EARS = "ears";
+    /** The player's ring: a touch pauses or goes on with whatever plays. */
+    static final String PLAYER = "player";
 
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint words = new Paint(Paint.ANTI_ALIAS_FLAG);

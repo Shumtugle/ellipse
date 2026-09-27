@@ -664,3 +664,10 @@ Lying down is a set-out of its own: moved, added or taken away there, nothing ch
 A new ground = Новый фон
 One place; a touch sets a new wallpaper = Одно место; касание — новые обои
 Grey = Серый режим
+Free memory = Свободная память
+Ultraviolet = Ультрафиолет
+Pressure = Давление
+Player = Плеер
+hPa = гПа
+RAM = RAM
+UV = UV

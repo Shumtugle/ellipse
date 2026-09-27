@@ -664,3 +664,10 @@ Lying down is a set-out of its own: moved, added or taken away there, nothing ch
 A new ground = Uusi tausta
 One place; a touch sets a new wallpaper = Yksi paikka; kosketus vaihtaa taustakuvan
 Grey = Harmaa tila
+Free memory = Vapaa muisti
+Ultraviolet = UV-indeksi
+Pressure = Ilmanpaine
+Player = Soitin
+hPa = hPa
+RAM = RAM
+UV = UV

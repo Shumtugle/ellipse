@@ -69,9 +69,14 @@ final class Rings extends View implements Timepiece {
     static final int RAIN = 7;
     static final int ALARM = 8;
     static final int TIME = 9;
+    static final int MEMORY = 10;
+    static final int SUN_BURN = 11;
+    static final int PRESSURE = 12;
+    static final int PLAYER = 13;
     static final String[] SMALL_NAMES = {"Time", "Weather", "Calendar", "Charge", "Feels like", "Humidity",
-        "Wind", "Daylight", "Rain", "Alarm"};
-    static final int[] SMALL_KINDS = {TIME, CITY, CALENDAR, CHARGE, FEELS, DAMP, WIND, DAYLIGHT, RAIN, ALARM};
+        "Wind", "Daylight", "Rain", "Alarm", "Free memory", "Ultraviolet", "Pressure", "Player"};
+    static final int[] SMALL_KINDS = {TIME, CITY, CALENDAR, CHARGE, FEELS, DAMP, WIND, DAYLIGHT, RAIN, ALARM, MEMORY,
+        SUN_BURN, PRESSURE, PLAYER};
 
     /** The big ring is the first; the small ones follow in order; the headphones' is the last. */
     private static final int BIG = 0;
@@ -551,8 +556,10 @@ final class Rings extends View implements Timepiece {
             window = Almanac.EARS;
         } else if (kinds[ring] == CALENDAR || kinds[ring] == ALARM || kinds[ring] == TIME) {
             window = Almanac.TIME;
-        } else if (kinds[ring] == CHARGE) {
+        } else if (kinds[ring] == CHARGE || kinds[ring] == MEMORY) {
             window = Almanac.CHARGE;
+        } else if (kinds[ring] == PLAYER) {
+            window = Almanac.PLAYER;
         } else {
             window = Almanac.WEATHER;
         }
@@ -810,6 +817,36 @@ final class Rings extends View implements Timepiece {
                 y + r * 0.42f, r * 0.28f, INK, room);
         } else if (kind == DAYLIGHT) {
             daylight(canvas, at);
+        } else if (kind == MEMORY) {
+            /* How much of the working memory is free now: the ring filled by it. */
+            android.app.ActivityManager manager = (android.app.ActivityManager)
+                getContext().getSystemService(Context.ACTIVITY_SERVICE);
+            android.app.ActivityManager.MemoryInfo memory = new android.app.ActivityManager.MemoryInfo();
+            int free = -1;
+            if (manager != null) {
+                manager.getMemoryInfo(memory);
+                free = memory.totalMem > 0 ? Math.round(100f * memory.availMem / memory.totalMem) : -1;
+            }
+            arc(canvas, at, free < 0 ? 0f : free / 100f, accent, 5f, 3.5f);
+            text(canvas, "RAM", x, y - r * 0.12f, r * 0.2f, QUIET, room);
+            text(canvas, free >= 0 ? free + "%" : "\u2026", x, y + r * 0.3f, r * 0.34f, INK, room);
+        } else if (kind == SUN_BURN) {
+            /* The sun's burning, on its scale of nought to eleven and more. */
+            int burn = Sky.burn();
+            arc(canvas, at, burn == Sky.MISSING ? 0f : Math.min(1f, burn / 11f), accent, 5f, 3.5f);
+            text(canvas, "UV", x, y - r * 0.12f, r * 0.2f, QUIET, room);
+            text(canvas, burn != Sky.MISSING ? String.valueOf(burn) : "\u2026", x, y + r * 0.3f, r * 0.34f, INK,
+                room);
+        } else if (kind == PRESSURE) {
+            /* The air's weight, the ring filled from a deep low to a strong high. */
+            int press = Sky.press();
+            float part = press == Sky.MISSING ? 0f : Math.max(0f, Math.min(1f, (press - 960f) / 90f));
+            arc(canvas, at, part, accent, 5f, 3.5f);
+            text(canvas, Words.t("hPa"), x, y - r * 0.12f, r * 0.2f, QUIET, room);
+            text(canvas, press != Sky.MISSING ? String.valueOf(press) : "\u2026", x, y + r * 0.3f, r * 0.3f, INK,
+                room);
+        } else if (kind == PLAYER) {
+            player(canvas, at);
         } else if (kind == RAIN) {
             int chance = Sky.rain(0);
             arc(canvas, at, chance == Sky.MISSING ? 0f : chance / 100f, accent, 5f, 3.5f);
@@ -829,6 +866,41 @@ final class Rings extends View implements Timepiece {
                     + Words.s("min") : minutes + " " + Words.s("min");
                 text(canvas, said, x, y + r * 0.3f, r * 0.24f, INK, room);
             }
+        }
+    }
+
+    /**
+     * The player's ring: what plays now, if the phone lets the home screen
+     * see it, the ring filled as far as it has played; a sign to pause or to
+     * go on in the middle.
+     */
+    private void player(Canvas canvas, float[] at) {
+        float x = at[0];
+        float y = at[1];
+        float r = at[2];
+        Playing now = Playing.now(getContext());
+        if (now != null && now.length > 0) {
+            arc(canvas, at, Math.min(1f, now.position / (float) now.length), accent, 5f, 3.5f);
+        }
+        boolean playing = now != null && now.playing;
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(INK);
+        float s = r * 0.22f;
+        float cy = y - r * 0.08f;
+        if (playing) {
+            canvas.drawRoundRect(x - s * 0.9f, cy - s, x - s * 0.25f, cy + s, s * 0.15f, s * 0.15f, paint);
+            canvas.drawRoundRect(x + s * 0.25f, cy - s, x + s * 0.9f, cy + s, s * 0.15f, s * 0.15f, paint);
+        } else {
+            android.graphics.Path play = new android.graphics.Path();
+            play.moveTo(x - s * 0.7f, cy - s);
+            play.lineTo(x + s, cy);
+            play.lineTo(x - s * 0.7f, cy + s);
+            play.close();
+            canvas.drawPath(play, paint);
+        }
+        String title = now == null || now.title == null ? "" : now.title;
+        if (!title.isEmpty()) {
+            text(canvas, title, x, y + r * 0.46f, r * 0.17f, QUIET, r * 1.4f);
         }
     }
 
