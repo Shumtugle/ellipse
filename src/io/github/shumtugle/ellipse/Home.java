@@ -679,8 +679,10 @@ public final class Home extends Activity {
 
     private void build() {
         boolean wasLying = lying;
-        lying = getResources().getConfiguration().orientation
-            == android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+        /* The window's own shape, not the resources': with the owner's size of words the resources are
+           made once, upright, and never learn that the phone has turned. */
+        int[] shape = windowShape();
+        lying = shape[0] > shape[1];
         Keep.lying = lying;
         if (screens != null && !pages.isEmpty() && wasLying == lying) {
             restore = screens.page();
@@ -690,8 +692,8 @@ public final class Home extends Activity {
         }
         density = getResources().getDisplayMetrics().density;
         scaled = getResources().getDisplayMetrics().scaledDensity;
-        int wide = getResources().getDisplayMetrics().widthPixels;
-        int tall = getResources().getDisplayMetrics().heightPixels;
+        int wide = shape[0];
+        int tall = shape[1];
         /* The icon is sized from the short side of the screen, so a turn of
            the phone does not make it grow; the platform's own range holds it. */
         int grid = Keep.number(this, Keep.DESK_GRID, 45);
@@ -1487,6 +1489,17 @@ public final class Home extends Activity {
      */
     private int lyingCount;
 
+    /** The window's width and height as it stands now, whichever way the phone is turned. */
+    private int[] windowShape() {
+        if (android.os.Build.VERSION.SDK_INT >= 30) {
+            android.graphics.Rect bounds = getWindowManager().getCurrentWindowMetrics().getBounds();
+            return new int[] {bounds.width(), bounds.height()};
+        }
+        android.util.DisplayMetrics real = new android.util.DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(real);
+        return new int[] {real.widthPixels, real.heightPixels};
+    }
+
     static final int TURNED_UPRIGHT = 1;
     static final int TURNED_LYING = 2;
 
@@ -1810,7 +1823,7 @@ public final class Home extends Activity {
         int across = Math.min(columns - column, span[0]);
         int down = Math.min(rows - row, span[1]);
         if (across * down > fine * fine && into.fits(column, row, across, down)) {
-            float cell = (getResources().getDisplayMetrics().widthPixels - 2 * side()) / (float) columns;
+            float cell = (windowShape()[0] - 2 * side()) / (float) columns;
             float small = Math.min(iconSize * 0.62f, (cell / 2f - dp(8)) * 0.86f);
             final Nest nest = new Nest(this, name, doors, across, down, small, new Nest.Hand() {
                 public void open(View from, Apps.Door door, int[] icon) {
@@ -2019,8 +2032,10 @@ public final class Home extends Activity {
 
     private static final String[] ASKS = {
         "Add screen", "Add shortcut", "Add widget", "Add folder", "Make home screen", "Settings",
-        "Remove screen", "Picture of the home screen", "Night clock", "Show the wallpaper", "Lie down", "Stand up"
+        "Remove screen", "Picture of the home screen", "Night clock", "Show the wallpaper", "Lie down", "Stand up",
+        "Turn as the phone turns"
     };
+    private static final int AS_PHONE = 12;
     private static final int BARE = 9;
     private static final int LIE_DOWN = 10;
     private static final int STAND_UP = 11;
@@ -2057,8 +2072,11 @@ public final class Home extends Activity {
         /* The night clock and the bare wallpaper, last before the settings. */
         offered.add(NIGHT);
         offered.add(BARE);
-        /* The home screen turned by hand, and held so until turned back. */
+        /* The home screen turned by hand, and held so until turned back; held, it may follow the phone again. */
         offered.add(lying ? STAND_UP : LIE_DOWN);
+        if (Keep.number(this, Keep.TURNED, 0) != 0) {
+            offered.add(AS_PHONE);
+        }
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
         askY = root.fingerY();
@@ -2083,6 +2101,10 @@ public final class Home extends Activity {
                 break;
             case BARE:
                 bare();
+                break;
+            case AS_PHONE:
+                Keep.saveNumber(this, Keep.TURNED, 0);
+                turnAsKept();
                 break;
             case LIE_DOWN:
             case STAND_UP:
@@ -4553,7 +4575,7 @@ public final class Home extends Activity {
     private int[] widgetSpan(android.appwidget.AppWidgetProviderInfo info) {
         Grid page = pages.isEmpty() ? null : pages.get(Math.min(screens.page(), pages.size() - 1));
         float wide = page == null || page.cellWidth() <= 0
-            ? (getResources().getDisplayMetrics().widthPixels - 2 * side()) / (float) columns : page.cellWidth();
+            ? (windowShape()[0] - 2 * side()) / (float) columns : page.cellWidth();
         float tall = page == null || page.cellHeight() <= 0 ? wide * 1.2f : page.cellHeight();
         /* Its least size is in pixels of this phone; counted in places of
            this grid, not of any other. */

@@ -653,8 +653,6 @@ Half a minute untouched, the clock goes down into full black; a touch brings it 
 Show the wallpaper = Näytä taustakuva
 Step aside = Siirto palamista vastaan
 Every three minutes, and each time it comes back, the home screen moves a few points, too slowly to see, so the screen keeps no line burnt in = Kolmen minuutin välein ja aina palatessa kotinäyttö siirtyy huomaamatta muutaman pisteen, jotta näyttöön ei pala jälkiä
-Lie down = Vaihda vaakasuuntaan
-Stand up = Vaihda pystysuuntaan
 Lying down = Vaakanäkymä
 The home screen on its side: a set-out and a grid of its own = Kotinäyttö kyljellään: oma asettelu ja ruudukko
 Which way = Suunta
@@ -668,3 +666,6 @@ As many as fit = Niin monta kuin mahtuu
 Lay it out again from upright = Aseta uudelleen pystystä
 The next time it lies down, it begins again from the upright set-out = Seuraavalla kerralla vaakanäkymä alkaa uudelleen pystyasettelusta
 Lying down is a set-out of its own: moved, added or taken away there, nothing changes upright. It began as the upright one laid in its grid. Nothing lying down goes to the screen's edges. = Vaakanäkymä on oma asettelunsa: siellä siirretty, lisätty tai poistettu ei muuta pystynäkymää. Se alkoi pystyasettelusta omaan ruudukkoonsa asetettuna. Vaakana mikään ei ulotu näytön reunoihin.
+Lie down = Vaakaan
+Stand up = Pystyyn
+Turn as the phone turns = Puhelimen mukaan

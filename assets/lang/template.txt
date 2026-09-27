@@ -160,6 +160,7 @@ Night clock = Night clock
 Show the wallpaper = Show the wallpaper
 Lie down = Lie down
 Stand up = Stand up
+Turn as the phone turns = Turn as the phone turns
 Runs = Runs
 This app has no other ways in = This app has no other ways in
 Door = Door
