@@ -1124,6 +1124,8 @@ public final class Home extends Activity {
         rowShare = lying ? 1f : shapeRows();
         for (int i = 0; i < count; i++) {
             Grid page = new Grid(this, columns, rows);
+            /* Everything to the edges: the icons of the outer columns against the screen's own edges. */
+            page.justify(Keep.edgeless(this) && !lying);
             page.unit(fine);
             page.overlap(Keep.flag(this, Keep.OVERLAP, false));
             page.setPadding(side(), dp(16), side(), 0);

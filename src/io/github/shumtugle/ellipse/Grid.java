@@ -89,7 +89,25 @@ final class Grid extends ViewGroup {
         put(child, column, row, unit, unit);
     }
 
+    /**
+     * With everything to the edges, the icons are set out as a justified line
+     * of type is: the first column's against the screen's left edge, the last
+     * column's against its right, and the space between them shared evenly.
+     */
+    private boolean justified;
+
+    void justify(boolean on) {
+        justified = on;
+    }
+
     void put(View child, int column, int row, int across, int down) {
+        if (child instanceof Cell) {
+            float lean = 0.5f;
+            if (justified && across <= unit() && columns > unit()) {
+                lean = column / (float) (columns - unit());
+            }
+            ((Cell) child).lean(Math.max(0f, Math.min(1f, lean)));
+        }
         child.setTag(new int[] {column, row, across, down});
         addView(child);
     }

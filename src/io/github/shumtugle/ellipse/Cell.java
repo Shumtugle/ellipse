@@ -42,6 +42,14 @@ final class Cell extends View {
     }
 
     /** A place that is not one application: a folder, or a door of our own. */
+    /** Where the icon stands across its place: nought against the left, one against the right. */
+    private float lean = 0.5f;
+
+    void lean(float at) {
+        lean = at;
+        invalidate();
+    }
+
     /** Another picture in its place, as a die shows another face. */
     void picture(Drawable face) {
         icon = face;
@@ -243,7 +251,7 @@ final class Cell extends View {
             float size = iconSize;
             if (icon instanceof Shape.Cut) {
                 float need = iconSize * ((Shape.Cut) icon).wideness();
-                float room = getWidth() * 0.96f;
+                float room = getWidth() * (lean == 0.5f ? 0.96f : 1f);
                 if (need > room && need > 0f) {
                     size = iconSize * room / need;
                 }
@@ -254,7 +262,7 @@ final class Cell extends View {
             if (size > tallRoom && tallRoom > 0f) {
                 size = tallRoom;
             }
-            float ix = (getWidth() - size) / 2f;
+            float ix = (getWidth() - size) * lean;
             float iy = y + (iconSize - size) / 2f;
             icon.setBounds(Math.round(ix), Math.round(iy), Math.round(ix + size), Math.round(iy + size));
             icon.draw(canvas);
