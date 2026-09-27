@@ -165,7 +165,7 @@ final class Looks {
     }
 
     /** The ready presets, by their names; the first is the home screen as it first comes. */
-    static final String[] READY = {"Material 3", "Wood", "Steel", "Meno", "Rings", "Paper", "Walnut", "Gold"};
+    static final String[] READY = {"Material 3", "Wood", "Steel", "Meno", "Rings", "Paper", "Walnut", "Gold", "Noir"};
     static final String[] READY_ABOUT = {
         "The home screen as it first comes: icons in the phone's own shape and colours, the first clock, "
             + "no rims or frames",
@@ -177,7 +177,9 @@ final class Looks {
         "Wide tiles rimmed in wood and glazed, each app drawn as a light symbol in a round window; the plate "
             + "clock in wood with a black dial, frames of wood, names in sand",
         "Tiles rimmed in gold and glazed, symbols in round windows, a gold accent; the plate clock in gold "
-            + "with a black embossed dial, frames of gold"};
+            + "with a black embossed dial, frames of gold",
+        "Black embossing inside every tile, symbols in round windows under glass; the plate clock in black with "
+            + "an embossed dial; frames of dark nylon; a silver hint of colour"};
 
     /** The pack of masks the paper preset wears, if the phone has it. */
     private static final String PAPER_PACK = "Stylisha.superellipsy.icon.mask";
@@ -229,6 +231,15 @@ final class Looks {
                     Keep.CLOCK_FIELDS, Watch.DARK, Keep.WIDGET_FRAME, Rim.GOLD, Keep.WIDGET_FRAME_WIDTH, 14,
                     Keep.WIDGET_FRAME_ROUND, 40, Keep.WIDGET_GLAZE, true});
                 break;
+            case 8:
+                dress(context, new Object[] {"icon_shape", Shape.ROUNDED, Keep.TILE_ASPECT, 118,
+                    Keep.WINDOW, Shape.WINDOW_ROUND, Keep.ICON_TINT, 1, Keep.RIM_KIND, Rim.STAMPED, Keep.RIM_WIDTH, 12,
+                    Keep.GLAZE, true, "face.#all", "-1,1,0,3,0,",
+                    "look_from", Keep.FROM_OWN, "hue", 220f, "sat", 0.06f, "val", 0.84f,
+                    Keep.CLOCK_FACE, Home.FACE_PLATE, Keep.CLOCK_PLATE, Rim.BLACK, Keep.CLOCK_DIAL, Watch.EMBOSSED,
+                    Keep.CLOCK_FIELDS, Watch.DARK, Keep.WIDGET_FRAME, Rim.NYLON_DARK, Keep.WIDGET_FRAME_WIDTH, 12,
+                    Keep.WIDGET_FRAME_ROUND, 36, Keep.WIDGET_GLAZE, true});
+                break;
             default:
                 dress(context, new Object[0]);
                 break;
@@ -247,11 +258,27 @@ final class Looks {
      * others the plate in their own material.
      */
     static void dice(Context context, java.util.Random r) {
-        int[] materials = {Rim.WOOD, Rim.STEEL, Rim.GOLD, Rim.GLASS, Rim.BLACK, Rim.METAL, Rim.STAMPED, Rim.SEQUINS};
+        /* Every material a frame may be: embossing belongs inside shapes, sequins have left the stage. */
+        int[] materials = {Rim.WOOD, Rim.STEEL, Rim.GOLD, Rim.GLASS, Rim.BLACK, Rim.METAL, Rim.SILK_PINK, Rim.SILK_NUDE,
+            Rim.SILK_GOLD, Rim.SILK_SILVER, Rim.NYLON_DARK, Rim.NYLON_LIGHT};
         int m = materials[r.nextInt(materials.length)];
         float hue;
         float sat;
         switch (m) {
+            case Rim.SILK_PINK:
+                hue = 340f + r.nextFloat() * 14f;
+                sat = 0.12f + r.nextFloat() * 0.1f;
+                break;
+            case Rim.SILK_NUDE:
+                hue = 18f + r.nextFloat() * 12f;
+                sat = 0.12f + r.nextFloat() * 0.1f;
+                break;
+            case Rim.SILK_SILVER:
+            case Rim.NYLON_DARK:
+            case Rim.NYLON_LIGHT:
+                hue = r.nextFloat() * 360f;
+                sat = 0.05f + r.nextFloat() * 0.08f;
+                break;
             case Rim.WOOD:
             case Rim.STAMPED:
                 hue = 20f + r.nextFloat() * 25f;
@@ -259,6 +286,7 @@ final class Looks {
                 break;
             case Rim.GOLD:
             case Rim.SEQUINS:
+            case Rim.SILK_GOLD:
                 hue = 38f + r.nextFloat() * 12f;
                 sat = 0.24f + r.nextFloat() * 0.12f;
                 break;
@@ -278,8 +306,10 @@ final class Looks {
         boolean windows = heavy && r.nextBoolean();
         boolean glaze = glass || r.nextBoolean();
         java.util.List<Object> sets = new java.util.ArrayList<>();
+        /* Every outline in the game, the later ones too: chrome, the sticker, the drops. */
         int[] shapes = glass ? new int[] {Shape.CIRCLE, Shape.SQUIRCLE}
-            : windows ? new int[] {Shape.ROUNDED} : new int[] {Shape.PAPER, Shape.ROUNDED, Shape.SQUIRCLE, Shape.CIRCLE};
+            : windows ? new int[] {Shape.ROUNDED} : new int[] {Shape.PAPER, Shape.ROUNDED, Shape.SQUIRCLE, Shape.CIRCLE,
+                Shape.CHROME, Shape.STICKER, Shape.TEAR_UPPER_LEFT, Shape.TEAR_UPPER_RIGHT};
         java.util.Collections.addAll(sets, "icon_shape", shapes[r.nextInt(shapes.length)],
             Keep.RIM_KIND, m, Keep.RIM_WIDTH, glass ? 2 + r.nextInt(3) : 6 + r.nextInt(9), Keep.GLAZE, glaze,
             "look_from", Keep.FROM_OWN, "hue", hue, "sat", sat, "val", val);

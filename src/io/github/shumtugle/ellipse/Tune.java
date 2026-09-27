@@ -1824,13 +1824,14 @@ public final class Tune extends Activity {
         }));
         slider("Proportion", "Wider than tall, square, or taller than wide", Keep.TILE_ASPECT, 70, 135);
         caption("RIM");
-        String[] rimNames = new String[Rim.NAMES.length + 1];
-        int[] rimValues = new int[Rim.NAMES.length + 1];
+        int[] rimOffered = Rim.offered(false);
+        String[] rimNames = new String[rimOffered.length + 1];
+        int[] rimValues = new int[rimOffered.length + 1];
         rimNames[0] = "None";
         rimValues[0] = Rim.NONE;
-        for (int i = 0; i < Rim.NAMES.length; i++) {
-            rimNames[i + 1] = Rim.NAMES[i];
-            rimValues[i + 1] = i;
+        for (int i = 0; i < rimOffered.length; i++) {
+            rimNames[i + 1] = Rim.NAMES[rimOffered[i]];
+            rimValues[i + 1] = rimOffered[i];
         }
         rows.addView(swatches(Keep.RIM_KIND, Rim.kind, rimValues, rimNames, new Painter() {
             public void paint(android.graphics.Canvas c, float w, float h, int value) {
@@ -1896,7 +1897,17 @@ public final class Tune extends Activity {
         LinearLayout.LayoutParams sampleAt = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(120));
         sampleAt.setMargins(dp(24), dp(4), dp(24), dp(8));
         rows.addView(framed, sampleAt);
-        rows.addView(swatches(Keep.WIDGET_FRAME, Keep.number(this, Keep.WIDGET_FRAME, Rim.NONE), rimValues, rimNames,
+        /* Frames in every material but embossing, which belongs inside shapes. */
+        int[] frameOffered = Rim.offered(true);
+        int[] frameValues = new int[frameOffered.length + 1];
+        String[] frameNames = new String[frameOffered.length + 1];
+        frameValues[0] = Rim.NONE;
+        frameNames[0] = "None";
+        for (int i = 0; i < frameOffered.length; i++) {
+            frameValues[i + 1] = frameOffered[i];
+            frameNames[i + 1] = Rim.NAMES[frameOffered[i]];
+        }
+        rows.addView(swatches(Keep.WIDGET_FRAME, Keep.number(this, Keep.WIDGET_FRAME, Rim.NONE), frameValues, frameNames,
             new Painter() {
                 public void paint(android.graphics.Canvas c, float w, float h, int value) {
                     paintMaterial(c, w, h, value);
@@ -2141,31 +2152,30 @@ public final class Tune extends Activity {
         }
         if (face == Home.FACE_PLATE) {
             caption("PLATE");
-            int[] kinds = new int[Rim.NAMES.length];
-            for (int i = 0; i < kinds.length; i++) {
-                kinds[i] = i;
-            }
-            rows.addView(swatches(Keep.CLOCK_PLATE, Keep.number(this, Keep.CLOCK_PLATE, Rim.STEEL), kinds, Rim.NAMES,
+            int[] kinds = Rim.offered(true);
+            rows.addView(swatches(Keep.CLOCK_PLATE, Keep.number(this, Keep.CLOCK_PLATE, Rim.STEEL), kinds,
+                Rim.names(kinds),
                 new Painter() {
                     public void paint(android.graphics.Canvas c, float w, float h, int value) {
                         paintMaterial(c, w, h, value);
                     }
                 }));
             /* Dark, black stamped, the rims' materials, and the palette's colours. */
-            int count = 2 + Rim.NAMES.length + Watch.COLOUR_NAMES.length;
+            int[] dialKinds = Rim.offered(false);
+            int count = 2 + dialKinds.length + Watch.COLOUR_NAMES.length;
             int[] made = new int[count];
             String[] madeNames = new String[count];
             made[0] = Watch.DARK;
             madeNames[0] = "Dark";
             made[1] = Watch.EMBOSSED;
             madeNames[1] = "Black, embossed";
-            for (int i = 0; i < Rim.NAMES.length; i++) {
-                made[i + 2] = i;
-                madeNames[i + 2] = Rim.NAMES[i];
+            for (int i = 0; i < dialKinds.length; i++) {
+                made[i + 2] = dialKinds[i];
+                madeNames[i + 2] = Rim.NAMES[dialKinds[i]];
             }
             for (int i = 0; i < Watch.COLOUR_NAMES.length; i++) {
-                made[2 + Rim.NAMES.length + i] = Watch.COLOUR + i;
-                madeNames[2 + Rim.NAMES.length + i] = Watch.COLOUR_NAMES[i];
+                made[2 + dialKinds.length + i] = Watch.COLOUR + i;
+                madeNames[2 + dialKinds.length + i] = Watch.COLOUR_NAMES[i];
             }
             caption("DIAL");
             rows.addView(swatches(Keep.CLOCK_DIAL, Keep.number(this, Keep.CLOCK_DIAL, Watch.DARK), made, madeNames,
@@ -2539,7 +2549,7 @@ public final class Tune extends Activity {
 
     /** The presets as they are shown: the random one in the second place, in the wood's. */
     private static final int RANDOM = -2;
-    private static final int[] PRESET_ORDER = {0, RANDOM, 2, 3, 4, 5, 6, 7};
+    private static final int[] PRESET_ORDER = {0, RANDOM, 2, 3, 4, 5, 6, 7, 8};
 
     /**
      * The presets as small pictures of themselves, each in its material,
@@ -2641,6 +2651,9 @@ public final class Tune extends Activity {
                 break;
             case 6:
                 paintMaterial(c, w, h, Rim.WOOD);
+                break;
+            case 8:
+                paintMaterial(c, w, h, Rim.STAMPED);
                 break;
             default:
                 paintMaterial(c, w, h, Rim.GOLD);

@@ -43,10 +43,46 @@ final class Rim {
      * it, and the curve of light lies across its top whether asked for or not.
      */
     static final int GLASS = 8;
+    /** Silk, in four colours: a soft sheen running across it, a weave too fine to see but felt. */
+    static final int SILK_PINK = 9;
+    static final int SILK_NUDE = 10;
+    static final int SILK_GOLD = 11;
+    static final int SILK_SILVER = 12;
+    /** Nylon, dense as a stocking's: a lattice of the finest cells over a dark or a light tone. */
+    static final int NYLON_DARK = 13;
+    static final int NYLON_LIGHT = 14;
     /** A plate of the surface's own raised tone, for a window with no material chosen. */
     static final int GROUND = 99;
     static final String[] NAMES = {"Metal", "Gold", "Accent", "Wood", "Sequins", "Black", "Steel", "Stamped",
-        "Glass"};
+        "Glass", "Pink silk", "Nude silk", "Gold silk", "Silver silk", "Dark nylon", "Light nylon"};
+
+    /**
+     * The materials offered, in order. Sequins have left the stage: a rim
+     * once made of them is drawn in gold silk. Embossing is for the inside
+     * of shapes — icons, a dial — not for frames or the clock's case.
+     */
+    static int[] offered(boolean frames) {
+        java.util.List<Integer> all = new java.util.ArrayList<>();
+        for (int i = 0; i < NAMES.length; i++) {
+            if (i == SEQUINS || (frames && i == STAMPED)) {
+                continue;
+            }
+            all.add(i);
+        }
+        int[] out = new int[all.size()];
+        for (int i = 0; i < out.length; i++) {
+            out[i] = all.get(i);
+        }
+        return out;
+    }
+
+    static String[] names(int[] kinds) {
+        String[] out = new String[kinds.length];
+        for (int i = 0; i < kinds.length; i++) {
+            out[i] = NAMES[kinds[i]];
+        }
+        return out;
+    }
 
     /** What the icons' rim is made of, how wide it is as a share of the icon, and whether glass lies over it. */
     static int kind = NONE;
@@ -157,21 +193,29 @@ final class Rim {
                 paint.setColor(0xFF6A4630);
                 return;
             case SEQUINS:
-                if (sequins != null) {
-                    paint.setShader(repeated(sequins, across * 0.55f));
-                    return;
-                }
-                paint.setShader(gold());
+            case SILK_GOLD:
+                paint.setShader(silk(0xFFD6B46A, width, height));
+                return;
+            case SILK_PINK:
+                paint.setShader(silk(0xFFE3AFBB, width, height));
+                return;
+            case SILK_NUDE:
+                paint.setShader(silk(0xFFD8B7A0, width, height));
+                return;
+            case SILK_SILVER:
+                paint.setShader(silk(0xFFC6CAD1, width, height));
+                return;
+            case NYLON_DARK:
+                paint.setShader(nylon(0xFF22201F, width, height));
+                return;
+            case NYLON_LIGHT:
+                paint.setShader(nylon(0xFFC9B3A3, width, height));
                 return;
             case STAMPED:
                 paint.setShader(stamped(across * 0.055f));
                 return;
             case STEEL:
-                if (steel != null) {
-                    paint.setShader(repeated(steel, across * 0.6f));
-                    return;
-                }
-                paint.setColor(0xFFD4D4D4);
+                paint.setShader(brushed(width, height));
                 return;
             default:
                 paint.setShader(metal());
@@ -221,10 +265,80 @@ final class Rim {
         float scale = Math.max(2f, across) / pressed.getWidth();
         size.setScale(scale, scale);
         grain.setLocalMatrix(size);
-        int deep = Color.HSVToColor(new float[] {Tone.hue(), 0.45f, 0.36f});
-        int high = Color.HSVToColor(new float[] {Tone.hue(), 0.35f, 0.62f});
+        /* Dark, as embossing looks best: near black, the accent's hue only a breath in it. */
+        int deep = Color.HSVToColor(new float[] {Tone.hue(), 0.16f, 0.12f});
+        int high = Color.HSVToColor(new float[] {Tone.hue(), 0.12f, 0.34f});
         Shader ground = new LinearGradient(0f, 0f, 0f, Math.max(4f, across * 6f), high, deep, Shader.TileMode.CLAMP);
         return new android.graphics.ComposeShader(ground, grain, android.graphics.PorterDuff.Mode.OVERLAY);
+    }
+
+    private static Bitmap brushedSheet;
+    private static Bitmap nylonCell;
+
+    /**
+     * Brushed steel in the finest grain: long streaks, one pixel high, side
+     * by side, never scaled up — steel, not a moon's craters — under a soft
+     * light across it.
+     */
+    private static Shader brushed(float width, float height) {
+        if (brushedSheet == null) {
+            int wide = 256;
+            int tall = 128;
+            int[] pixels = new int[wide * tall];
+            Random random = new Random(11L);
+            for (int y = 0; y < tall; y++) {
+                double row = random.nextGaussian() * 10.0;
+                double drift = 0;
+                for (int x = 0; x < wide; x++) {
+                    drift = drift * 0.92 + random.nextGaussian() * 2.2;
+                    int v = clamp(196 + row + drift);
+                    pixels[y * wide + x] = 0xFF000000 | (v << 16) | (v << 8) | clamp(v + 4);
+                }
+            }
+            brushedSheet = Bitmap.createBitmap(pixels, wide, tall, Bitmap.Config.ARGB_8888);
+        }
+        Shader grain = new BitmapShader(brushedSheet, Shader.TileMode.MIRROR, Shader.TileMode.MIRROR);
+        Shader light = new LinearGradient(0f, 0f, width, height,
+            new int[] {0xFF8C8C8C, 0xFFFFFFFF, 0xFF9A9A9A, 0xFFE6E6E6}, new float[] {0f, 0.35f, 0.62f, 1f},
+            Shader.TileMode.CLAMP);
+        return new android.graphics.ComposeShader(grain, light, android.graphics.PorterDuff.Mode.MULTIPLY);
+    }
+
+    /** Silk of one colour: the sheen in broad soft bands across it, light and shadow as the cloth falls. */
+    private static Shader silk(int colour, float width, float height) {
+        float[] hsv = new float[3];
+        Color.colorToHSV(colour, hsv);
+        int shadow = Color.HSVToColor(new float[] {hsv[0], Math.min(1f, hsv[1] * 1.15f), hsv[2] * 0.62f});
+        int lit = Color.HSVToColor(new float[] {hsv[0], hsv[1] * 0.55f, Math.min(1f, hsv[2] * 1.18f)});
+        Shader sheen = new LinearGradient(0f, 0f, width * 0.9f, height,
+            new int[] {shadow, colour, lit, colour, shadow, colour, lit},
+            new float[] {0f, 0.18f, 0.32f, 0.5f, 0.66f, 0.84f, 1f}, Shader.TileMode.MIRROR);
+        return sheen;
+    }
+
+    /**
+     * Nylon, dense as a stocking's: the finest lattice of cells, three
+     * pixels across, over its tone, the sheen of the stretch across it.
+     */
+    private static Shader nylon(int tone, float width, float height) {
+        if (nylonCell == null) {
+            int side = 6;
+            nylonCell = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+            for (int y = 0; y < side; y++) {
+                for (int x = 0; x < side; x++) {
+                    boolean thread = (x + y) % 3 == 0 || (x - y + side) % 3 == 0;
+                    nylonCell.setPixel(x, y, thread ? 0xFFFFFFFF : 0xFF9A9A9A);
+                }
+            }
+        }
+        Shader mesh = new BitmapShader(nylonCell, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
+        float[] hsv = new float[3];
+        Color.colorToHSV(tone, hsv);
+        int dark = Color.HSVToColor(new float[] {hsv[0], hsv[1], hsv[2] * 0.7f});
+        int light = Color.HSVToColor(new float[] {hsv[0], hsv[1] * 0.8f, Math.min(1f, hsv[2] * 1.25f + 0.06f)});
+        Shader stretch = new LinearGradient(0f, 0f, width, height * 0.6f, new int[] {dark, light, tone, dark},
+            new float[] {0f, 0.4f, 0.7f, 1f}, Shader.TileMode.CLAMP);
+        return new android.graphics.ComposeShader(stretch, mesh, android.graphics.PorterDuff.Mode.MULTIPLY);
     }
 
     private static synchronized Shader metal() {

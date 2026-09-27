@@ -365,6 +365,11 @@ final class Watch extends View implements Timepiece {
             case Rim.GOLD:
             case Rim.SEQUINS:
             case Rim.STEEL:
+            case Rim.SILK_PINK:
+            case Rim.SILK_NUDE:
+            case Rim.SILK_GOLD:
+            case Rim.SILK_SILVER:
+            case Rim.NYLON_LIGHT:
                 return true;
             case Rim.ACCENT:
                 return android.graphics.Color.luminance(Tone.primary()) > 0.4f;
