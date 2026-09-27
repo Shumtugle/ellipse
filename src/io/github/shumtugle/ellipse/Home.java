@@ -2190,6 +2190,11 @@ public final class Home extends Activity {
             }, 300);
             return;
         }
+        if (Almanac.CHARGE.equals(window)) {
+            /* The charge, the memory: the phone's own state, on a page as the weather's. */
+            startActivity(new Intent(this, Folio.class).putExtra(Folio.PAGE, Folio.STATE));
+            return;
+        }
         if (Almanac.WEATHER.equals(window)) {
             /* The weather, whole, on its own page; the first time, its place. */
             startActivity(new Intent(this, Folio.class).putExtra(Folio.PAGE, Folio.WEATHER));

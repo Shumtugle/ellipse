@@ -166,7 +166,7 @@ final class Rings extends View implements Timepiece {
         earsRing = count - 1;
         kinds = new int[count];
         for (int i = 0; i < ids.length; i++) {
-            kinds[i + 1] = Math.max(CITY, Math.min(TIME, Keep.number(context, Keep.RING_KIND + ids[i], CITY)));
+            kinds[i + 1] = Math.max(CITY, Math.min(PLAYER, Keep.number(context, Keep.RING_KIND + ids[i], CITY)));
         }
         placed = new float[count][];
         stands = new float[count][];

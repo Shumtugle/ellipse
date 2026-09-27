@@ -260,6 +260,100 @@ private static String round(double value) {
      * A capsule takes the accent only when its number asks something of you,
      * so colour on this card is news, and a quiet day is a quiet card.
      */
+    /**
+     * The phone's state, a page in the weather's own words: a card at the
+     * head with the battery as a ring, how full, whether charging, and its
+     * health; then the measures as capsules; then the rows of what the
+     * system is and how safe.
+     */
+    static String state(Phone p) {
+        StringBuilder b = new StringBuilder();
+        b.append(head(Words.t("State"), sections()));
+        int rank = 0;
+        b.append(rise(rank++)).append("<div class=hero style='background:")
+            .append("linear-gradient(155deg,").append(Tone.hex(Tone.lit(0.22f, 0.9f)))
+            .append(" 0%,").append(Tone.hex(Tone.container())).append(" 58%)'>");
+        float part = p.level < 0 ? 0f : p.level / 100f;
+        double round = 2 * Math.PI * 52;
+        b.append("<div class=top><a href='ellipse:battery' style='text-decoration:none'>")
+            .append("<svg width=132 height=132 viewBox='0 0 132 132'>")
+            .append("<circle cx=66 cy=66 r=52 fill=none stroke='").append(Tone.hex(Tone.containerHigh()))
+            .append("' stroke-width=11/>")
+            .append("<circle cx=66 cy=66 r=52 fill=none stroke='").append(Tone.hex(Tone.primary()))
+            .append("' stroke-width=11 stroke-linecap=round transform='rotate(-90 66 66)' stroke-dasharray='")
+            .append(String.format(java.util.Locale.ROOT, "%.1f %.1f", round * part, round)).append("'/>")
+            .append("<text x=66 y=70 text-anchor=middle font-size=30 fill='").append(Tone.hex(Tone.onSurface()))
+            .append("'>").append(p.level < 0 ? "\u2026" : p.level + "%").append("</text>")
+            .append("<text x=66 y=94 text-anchor=middle font-size=12 fill='").append(Tone.hex(Tone.faint()))
+            .append("'>").append(safe(Words.t(p.charging ? "charging" : "on battery"))).append("</text></svg></a>")
+            .append("<span class=where><span style='font-size:22px;color:")
+            .append(Tone.hex(p.health == Phone.GOOD ? 0xFF8FBF8A : p.health == Phone.UNKNOWN ? Tone.onSurface()
+                : 0xFFE0A060)).append("'>").append(safe(Words.t(HEALTH[Math.max(0, Math.min(4, p.health))])))
+            .append("</span><span class=feel>").append(safe(Words.t("battery health"))).append("</span>");
+        if (p.cycles >= 0) {
+            b.append("<span class=feel>").append(safe(Words.n("%1 cycle | %1 cycles", p.cycles))).append("</span>");
+        }
+        b.append("</span></div>");
+        b.append("<div class=caps>");
+        int[] beat = {rank * 60 + 120};
+        if (!Float.isNaN(p.warmth)) {
+            b.append(capsule(Math.round(p.warmth) + "&#176;", Words.t("warm"), p.warmth >= 40f, beat));
+        }
+        if (!Float.isNaN(p.volts)) {
+            b.append(capsule(String.format(java.util.Locale.getDefault(), "%.2f", p.volts), Words.t("volts"), false,
+                beat));
+        }
+        if (p.memoryAll > 0) {
+            b.append(capsule(Math.round(100f * p.memoryFree / p.memoryAll) + "%", Words.f("free of %1 memory",
+                gigabytes(p.memoryAll)), p.memoryFree * 10 < p.memoryAll, beat));
+        }
+        if (p.storageAll > 0) {
+            b.append(capsule(gigabytes(p.storageFree), Words.f("free of %1", gigabytes(p.storageAll)),
+                p.storageFree * 20 < p.storageAll, beat));
+        }
+        b.append("</div></div></div>");
+        b.append(rise(rank++));
+        row(b, Words.t("Security update"), day(p.safe));
+        if (p.update != null && !p.update.isEmpty()) {
+            row(b, Words.t("System update"), day(p.update));
+        }
+        row(b, "Android", p.version);
+        row(b, Words.t("Running for"), since(p.awake));
+        row(b, safe(p.model), safe(p.build));
+        b.append("</div>");
+        b.append("</body></html>");
+        return b.toString();
+    }
+
+    private static final String[] HEALTH = {"good", "too warm", "worn", "too cold", "not told"};
+
+    private static void row(StringBuilder b, String name, String value) {
+        b.append("<div class=day2><span class=when>").append(name).append("</span><span class=hot>")
+            .append(value == null || value.isEmpty() ? "\u2014" : value).append("</span></div>");
+    }
+
+    private static String gigabytes(long bytes) {
+        double g = bytes / 1e9;
+        return String.format(java.util.Locale.getDefault(), g >= 100 ? "%.0f" : "%.1f", g) + " " + Words.t("GB");
+    }
+
+    /** A date as the system writes it, year-month-day, told as the phone's language tells dates. */
+    private static String day(String iso) {
+        try {
+            java.util.Date d = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).parse(iso);
+            return java.text.DateFormat.getDateInstance(java.text.DateFormat.LONG).format(d);
+        } catch (Exception other) {
+            return safe(iso == null ? "" : iso);
+        }
+    }
+
+    private static String since(long millis) {
+        long hours = millis / 3600000L;
+        long days = hours / 24;
+        return days > 0 ? Words.n("%1 day | %1 days", (int) days) + " " + Words.n("%1 hour | %1 hours", (int) (hours % 24))
+            : Words.n("%1 hour | %1 hours", (int) hours);
+    }
+
     private static String now(int rank) {
         StringBuilder b = new StringBuilder();
         b.append(rise(rank)).append("<div class=hero style='background:")

@@ -31,6 +31,8 @@ public final class Folio extends Activity {
     static final String PAGE = "page";
     static final String LOOK = "look";
     static final String WEATHER = "weather";
+    /** The phone's own state, a page as the weather's. */
+    static final String STATE = "state";
     static final String PLACE = "place";
     static final String ABOUT = "about";
     static final String HELP = "help";
@@ -187,12 +189,14 @@ public final class Folio extends Activity {
         if (foot != null) {
             foot.named(LOOK.equals(which) ? Words.s("colour_text")
                 : PLACE.equals(which) ? Words.s("weather_place") : ABOUT.equals(which) ? "About"
-                : HELP.equals(which) ? "Help" : Words.s("weather"));
+                : HELP.equals(which) ? "Help" : STATE.equals(which) ? Words.t("State") : Words.s("weather"));
         }
         String html;
         if (ABOUT.equals(which) || HELP.equals(which)) {
             /* Kept in English: a page too long for a module, and the same for everyone. */
             html = Paper.text(asset(this, which + ".html").replace("{version}", Copy.version(this)));
+        } else if (STATE.equals(which)) {
+            html = Paper.state(Phone.read(this));
         } else if (LOOK.equals(which)) {
             float[] look = Keep.look(this);
             Tone.read(this);
@@ -266,6 +270,15 @@ public final class Folio extends Activity {
 
     /** What a link on one of the pages asks for. */
     private void command(String what) {
+        if (what.equals("battery")) {
+            /* The battery's own page of the phone: what used it. */
+            try {
+                startActivity(new Intent(Intent.ACTION_POWER_USAGE_SUMMARY));
+            } catch (RuntimeException none) {
+                // Nowhere to go.
+            }
+            return;
+        }
         if (what.startsWith("from")) {
             Keep.saveFrom(this, number(what, "v", Keep.FROM_OWN));
             Tone.read(this);

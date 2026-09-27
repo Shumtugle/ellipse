@@ -100,7 +100,11 @@ def page_words(folder):
     return [w.encode().decode('unicode_escape') for w in re.findall(r'"((?:[^"\\]|\\.)*)"', body)]
 
 
-EXTRA = ['feels like', 'humidity', 'rain', 'm/s', 'h', 'min', 'widgets', 'Category']
+EXTRA = ['feels like', 'humidity', 'rain', 'm/s', 'h', 'min', 'widgets', 'Category',
+         # The phone's state page, written in a file the gatherer passes by.
+         'State', 'charging', 'on battery', 'good', 'too warm', 'worn', 'too cold', 'not told',
+         'battery health', '%1 cycle | %1 cycles', 'warm', 'volts', 'free of %1 memory', 'free of %1',
+         'Security update', 'System update', 'Running for', 'GB', '%1 day | %1 days', '%1 hour | %1 hours']
 
 
 def gather(folder):
