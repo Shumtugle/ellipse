@@ -179,7 +179,7 @@ final class Looks {
         "Tiles rimmed in gold and glazed, symbols in round windows, a gold accent; the plate clock in gold "
             + "with a black embossed dial, frames of gold",
         "Black embossing inside every tile, symbols in round windows under glass; the plate clock in black with "
-            + "an embossed dial; frames of dark nylon; a silver hint of colour"};
+            + "an embossed dial; frames of dark mesh; a silver hint of colour"};
 
     /** The pack of masks the paper preset wears, if the phone has it. */
     private static final String PAPER_PACK = "Stylisha.superellipsy.icon.mask";
@@ -237,7 +237,7 @@ final class Looks {
                     Keep.GLAZE, true, "face.#all", "-1,1,0,3,0,",
                     "look_from", Keep.FROM_OWN, "hue", 220f, "sat", 0.06f, "val", 0.84f,
                     Keep.CLOCK_FACE, Home.FACE_PLATE, Keep.CLOCK_PLATE, Rim.BLACK, Keep.CLOCK_DIAL, Watch.EMBOSSED,
-                    Keep.CLOCK_FIELDS, Watch.DARK, Keep.WIDGET_FRAME, Rim.NYLON_DARK, Keep.WIDGET_FRAME_WIDTH, 12,
+                    Keep.CLOCK_FIELDS, Watch.DARK, Keep.WIDGET_FRAME, Rim.MESH_DARK, Keep.WIDGET_FRAME_WIDTH, 12,
                     Keep.WIDGET_FRAME_ROUND, 36, Keep.WIDGET_GLAZE, true});
                 break;
             default:
@@ -260,7 +260,7 @@ final class Looks {
     static void dice(Context context, java.util.Random r) {
         /* Every material a frame may be: embossing belongs inside shapes, sequins have left the stage. */
         int[] materials = {Rim.WOOD, Rim.STEEL, Rim.GOLD, Rim.GLASS, Rim.BLACK, Rim.METAL, Rim.SILK_PINK, Rim.SILK_NUDE,
-            Rim.SILK_GOLD, Rim.SILK_SILVER, Rim.NYLON_DARK, Rim.NYLON_LIGHT};
+            Rim.SILK_GOLD, Rim.SILK_SILVER, Rim.MESH_DARK, Rim.MESH_LIGHT};
         int m = materials[r.nextInt(materials.length)];
         float hue;
         float sat;
@@ -274,8 +274,8 @@ final class Looks {
                 sat = 0.12f + r.nextFloat() * 0.1f;
                 break;
             case Rim.SILK_SILVER:
-            case Rim.NYLON_DARK:
-            case Rim.NYLON_LIGHT:
+            case Rim.MESH_DARK:
+            case Rim.MESH_LIGHT:
                 hue = r.nextFloat() * 360f;
                 sat = 0.05f + r.nextFloat() * 0.08f;
                 break;

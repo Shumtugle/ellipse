@@ -726,10 +726,10 @@ Only looked at until accepted: going back, or leaving the settings, takes it off
 A preset dresses the home screen: icons, colours, the clock, the frames. What you set out stays as it is: grids, apps and their places, the size of the words, the names under the icons. = Преднастройка одевает лаунчер: значки, цвета, часы, рамки. Всё, что вы разложили сами, остаётся: сетки, приложения на местах, размер шрифта, подписи под значками.
 Random = Случайный
 Noir = Нуар
-Black embossing inside every tile, symbols in round windows under glass; the plate clock in black with an embossed dial; frames of dark nylon; a silver hint of colour = Чёрное тиснение внутри каждой плитки, знаки в круглых окошках под стеклом; часы-пластина в чёрном с тиснёным циферблатом; рамки из тёмного нейлона; серебристый намёк цвета
 Pink silk = Розовый шёлк
 Nude silk = Телесный шёлк
 Gold silk = Золотой шёлк
 Silver silk = Серебряный шёлк
-Dark nylon = Тёмный нейлон
-Light nylon = Светлый нейлон
+Dark mesh = Тёмная сетка
+Light mesh = Светлая сетка
+Black embossing inside every tile, symbols in round windows under glass; the plate clock in black with an embossed dial; frames of dark mesh; a silver hint of colour = Чёрное тиснение внутри каждой плитки, знаки в круглых окошках под стеклом; часы-пластина в чёрном с тиснёным циферблатом; рамки из тёмной сетки; серебристый намёк цвета

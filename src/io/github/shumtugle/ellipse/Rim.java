@@ -48,13 +48,13 @@ final class Rim {
     static final int SILK_NUDE = 10;
     static final int SILK_GOLD = 11;
     static final int SILK_SILVER = 12;
-    /** Nylon, dense as a stocking's: a lattice of the finest cells over a dark or a light tone. */
-    static final int NYLON_DARK = 13;
-    static final int NYLON_LIGHT = 14;
+    /** Mesh, dense as a stocking's: a lattice of the finest cells over a dark or a light tone. */
+    static final int MESH_DARK = 13;
+    static final int MESH_LIGHT = 14;
     /** A plate of the surface's own raised tone, for a window with no material chosen. */
     static final int GROUND = 99;
     static final String[] NAMES = {"Metal", "Gold", "Accent", "Wood", "Sequins", "Black", "Steel", "Stamped",
-        "Glass", "Pink silk", "Nude silk", "Gold silk", "Silver silk", "Dark nylon", "Light nylon"};
+        "Glass", "Pink silk", "Nude silk", "Gold silk", "Silver silk", "Dark mesh", "Light mesh"};
 
     /**
      * The materials offered, in order. Sequins have left the stage: a rim
@@ -205,11 +205,11 @@ final class Rim {
             case SILK_SILVER:
                 paint.setShader(silk(0xFFC6CAD1, width, height));
                 return;
-            case NYLON_DARK:
-                paint.setShader(nylon(0xFF22201F, width, height));
+            case MESH_DARK:
+                paint.setShader(mesh(0xFF22201F, width, height));
                 return;
-            case NYLON_LIGHT:
-                paint.setShader(nylon(0xFFC9B3A3, width, height));
+            case MESH_LIGHT:
+                paint.setShader(mesh(0xFFC9B3A3, width, height));
                 return;
             case STAMPED:
                 paint.setShader(stamped(across * 0.055f));
@@ -273,7 +273,7 @@ final class Rim {
     }
 
     private static Bitmap brushedSheet;
-    private static Bitmap nylonCell;
+    private static Bitmap meshCell;
 
     /**
      * Brushed steel in the finest grain: long streaks, one pixel high, side
@@ -317,21 +317,21 @@ final class Rim {
     }
 
     /**
-     * Nylon, dense as a stocking's: the finest lattice of cells, three
+     * Mesh, dense as a stocking's: the finest lattice of cells, three
      * pixels across, over its tone, the sheen of the stretch across it.
      */
-    private static Shader nylon(int tone, float width, float height) {
-        if (nylonCell == null) {
+    private static Shader mesh(int tone, float width, float height) {
+        if (meshCell == null) {
             int side = 6;
-            nylonCell = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
+            meshCell = Bitmap.createBitmap(side, side, Bitmap.Config.ARGB_8888);
             for (int y = 0; y < side; y++) {
                 for (int x = 0; x < side; x++) {
                     boolean thread = (x + y) % 3 == 0 || (x - y + side) % 3 == 0;
-                    nylonCell.setPixel(x, y, thread ? 0xFFFFFFFF : 0xFF9A9A9A);
+                    meshCell.setPixel(x, y, thread ? 0xFFFFFFFF : 0xFF9A9A9A);
                 }
             }
         }
-        Shader mesh = new BitmapShader(nylonCell, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
+        Shader mesh = new BitmapShader(meshCell, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT);
         float[] hsv = new float[3];
         Color.colorToHSV(tone, hsv);
         int dark = Color.HSVToColor(new float[] {hsv[0], hsv[1], hsv[2] * 0.7f});
