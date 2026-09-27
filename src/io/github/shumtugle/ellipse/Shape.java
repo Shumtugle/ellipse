@@ -614,6 +614,17 @@ final class Shape {
         }
 
         /** How wide the tile is drawn against the square it is given. */
+        /** How tall the tile is drawn against the side of its square. */
+        float tallness() {
+            if (shape == PAPER) {
+                return 0.86f;
+            }
+            if (shape == CHROME || shape == STICKER) {
+                return 1f;
+            }
+            return weight(shape) / (float) Math.sqrt(aspect);
+        }
+
         float wideness() {
             if (shape == PAPER) {
                 return 0.86f * PAPER_WIDE;

@@ -255,11 +255,14 @@ final class Cell extends View {
                     size = iconSize * room / need;
                 }
             }
-            /* In a short cell, as where the dock takes height, the icon keeps inside it too. */
+            /* In a short cell, as where the dock takes height, the icon keeps inside it too — measured
+               by the tile as it is seen, not by the square it is drawn in: a low tile in a low row need
+               not be made smaller for height it does not take. */
             float below = getHeight() - iconSize - 2f * y;
-            float tallRoom = (getHeight() - Math.max(0f, below)) * 0.92f;
-            if (size > tallRoom && tallRoom > 0f) {
-                size = tallRoom;
+            float tallRoom = (getHeight() - Math.max(0f, below)) * (whole ? 1f : 0.92f);
+            float seenTall = icon instanceof Shape.Cut ? Math.max(0.1f, ((Shape.Cut) icon).tallness()) : 1f;
+            if (size * seenTall > tallRoom && tallRoom > 0f) {
+                size = tallRoom / seenTall;
             }
             float ix = (getWidth() - size) / 2f;
             float iy = y + (iconSize - size) / 2f;
