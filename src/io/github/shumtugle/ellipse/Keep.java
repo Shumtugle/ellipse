@@ -118,6 +118,18 @@ final class Keep {
     static final int DO_SETTINGS = 8;
     /** An app of the owner's choosing, kept under the gesture's own word after "app.". */
     static final int DO_APP = 9;
+    static final int DO_NIGHT = 10;
+
+    /** The night clock: its face, how dark, what a touch does, whether quiet, and its hours. */
+    static final String NIGHT_FACE = "night_face";
+    static final String NIGHT_DIM = "night_dim";
+    static final String NIGHT_TOUCH = "night_touch";
+    static final String NIGHT_QUIET = "night_quiet";
+    static final String NIGHT_AUTO = "night_auto";
+    static final String NIGHT_FROM = "night_from";
+    static final String NIGHT_UNTIL = "night_until";
+    static final String NIGHT_CHARGING = "night_charging";
+    static final String NIGHT_OPENED = "night_opened";
     static final String ON_PINCH = "on_pinch";
     static final String ON_TWO_UP = "on_two_up";
     static final String ON_TWO_DOWN = "on_two_down";

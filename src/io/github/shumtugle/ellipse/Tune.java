@@ -116,14 +116,16 @@ public final class Tune extends Activity {
     private static final int LAPSE = 8;
     /** What any gesture may be given, by its name. */
     private static final String[] DEED_NAMES = {"Nothing", "All apps", "Search apps", "Notifications",
-        "Quick settings", "Recent and new", "Home screen", "Lock the phone", "Ellipse settings", "Open an app\u2026"};
+        "Quick settings", "Recent and new", "Home screen", "Lock the phone", "Ellipse settings", "Night clock",
+        "Open an app\u2026"};
     private static final int[] DEEDS = {Keep.DO_NOTHING, Keep.DO_LIST, Keep.DO_SEARCH, Keep.DO_NOTICES, Keep.DO_QUICK,
-        Keep.DO_FRESH, Keep.DO_HOME, Keep.DO_LOCK, Keep.DO_SETTINGS, Keep.DO_APP};
+        Keep.DO_FRESH, Keep.DO_HOME, Keep.DO_LOCK, Keep.DO_SETTINGS, Keep.DO_NIGHT, Keep.DO_APP};
     /** The room where an app is chosen for a gesture, and the gesture it is chosen for. */
     private static final int APPS = 14;
     /** The ground factory's room, the recipe on it, and the throws of the dice in this sitting. */
     private static final int GROUNDS = 16;
     private static final int GROUND_FINE = 17;
+    private static final int NIGHT = 18;
     private Ground ground;
     private android.widget.ImageView groundView;
     private int groundDrawn;
@@ -148,6 +150,7 @@ public final class Tune extends Activity {
         door(Glyph.LIST, "All apps", "Grid, lines or pages, hidden apps", LIST),
         door(Glyph.LOOK, "Look", "Colour, icons, the clock, notification dots", LOOK),
         door(Glyph.HANDS, "Gestures", "Up, down, Back and Home on the home screen", HANDS),
+        door(Glyph.CLOCK, "Night clock", "The clock across a dark screen on its side, by the bed", NIGHT),
         door(Glyph.BACKUP, "Backup and restore", "Keep the set-out, bring it back, bring one in", BACKUP),
         door(Glyph.LANGUAGE, "Languages", "Language modules for the words of the home screen", LANGUAGE),
         door(Glyph.OTHER, "Other", "Start the home screen afresh, or set it back as it was", OTHER)
@@ -582,6 +585,10 @@ public final class Tune extends Activity {
             fillClock();
             return;
         }
+        if (room() == NIGHT) {
+            fillNight();
+            return;
+        }
         List<Line> lines = new ArrayList<>();
         if (room() != ROOT) {
             for (Line line : inside(room())) {
@@ -674,6 +681,14 @@ public final class Tune extends Activity {
                     if (sample != null && room() == ICONS) {
                         Style.read(Tune.this);
                         sample.show();
+                    }
+                    /* Quiet needs the phone's leave to keep it from disturbing. */
+                    if (Keep.NIGHT_QUIET.equals(line.key) && toggle.on()) {
+                        android.app.NotificationManager notes = (android.app.NotificationManager)
+                            getSystemService(NOTIFICATION_SERVICE);
+                        if (notes != null && !notes.isNotificationPolicyAccessGranted()) {
+                            openSafely(new Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
+                        }
                     }
                     /* Dots need the phone's leave to know of notifications. */
                     if (Keep.DOTS_ON.equals(line.key) && toggle.on() && !Notices.on()) {
@@ -973,6 +988,36 @@ public final class Tune extends Activity {
         }
         rows.addView(row(door(Glyph.BRUSH, "Fine tuning", "Each layer's kind, colour, strength and scale",
             GROUND_FINE)));
+    }
+
+    /** The night clock: open it now, and how it is to be. */
+    private void fillNight() {
+        rows.addView(deed("Open the night clock", new Runnable() {
+            public void run() {
+                Night.open(Tune.this, false);
+            }
+        }));
+        rows.addView(row(choice("Face", "Which clock lies across the screen", Keep.NIGHT_FACE, -1,
+            new String[] {"As on the home screen", "The first clock", "Plate", "Meno", "Rings"},
+            new int[] {-1, Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO, Home.FACE_RINGS})));
+        rows.addView(row(choice("Darker", "How much darker than the screen by day", Keep.NIGHT_DIM, 1,
+            new String[] {"As the screen is", "A little", "Noticeably", "Almost dark"}, new int[] {0, 1, 2, 3})));
+        rows.addView(row(choice("Touches", "What closes it", Keep.NIGHT_TOUCH, Night.TOUCH_TWICE,
+            new String[] {"A touch", "A double touch", "Only the phone's buttons"},
+            new int[] {Night.TOUCH_ONCE, Night.TOUCH_TWICE, Night.TOUCH_NONE})));
+        rows.addView(row(toggle("Quiet", "While it is open, the phone does not disturb; alarms still ring",
+            Keep.NIGHT_QUIET, false)));
+        caption("BY THE CLOCK");
+        rows.addView(row(toggle("Its hours", "Within them, the home screen opens the night clock instead, "
+            + "once a night; closed, it stays closed till the next", Keep.NIGHT_AUTO, false)));
+        rows.addView(row(choice("Begins", "When its hours begin", Keep.NIGHT_FROM, 23 * 60,
+            new String[] {"21:00", "22:00", "23:00", "00:00", "01:00"},
+            new int[] {21 * 60, 22 * 60, 23 * 60, 0, 60})));
+        rows.addView(row(choice("Ends", "When they are over, and it closes by itself", Keep.NIGHT_UNTIL, 7 * 60,
+            new String[] {"05:00", "06:00", "07:00", "08:00", "09:00"},
+            new int[] {5 * 60, 6 * 60, 7 * 60, 8 * 60, 9 * 60})));
+        rows.addView(row(toggle("Only while charging", "Its hours open it only with the phone on the charger",
+            Keep.NIGHT_CHARGING, true)));
     }
 
     /** What the last night did: when the wake was set, whether it came, and whether a ground was set. */

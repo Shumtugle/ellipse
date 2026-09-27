@@ -299,6 +299,10 @@ public final class Home extends Activity {
         /* The day's copy, if the home screen has stayed open since before the day began. */
         Copy.onUpdate(this);
         super.onResume();
+        /* By its hours, the night clock opens instead of the home screen, once a night. */
+        if (Night.due(this)) {
+            Night.open(this, true);
+        }
         if (Keep.zoom(this) != sizedAt) {
             recreate();
             return;
@@ -450,6 +454,9 @@ public final class Home extends Activity {
                 break;
             case Keep.DO_SETTINGS:
                 startActivity(new Intent(this, Tune.class));
+                break;
+            case Keep.DO_NIGHT:
+                Night.open(this, false);
                 break;
             case Keep.DO_APP:
                 Apps.Door door = new Apps(this).door(Keep.word(this, "app." + gesture) == null ? ""
@@ -1490,13 +1497,18 @@ public final class Home extends Activity {
     static final String[] FACE_NAMES = {"First", "Plate", "Meno", "Rings"};
 
     static View timepiece(Context context, Almanac.Hand hand) {
-        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_RINGS) {
+        return timepiece(context, hand, Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST));
+    }
+
+    /** A face of the kind asked for, whatever the home screen wears. */
+    static View timepiece(Context context, Almanac.Hand hand, int kind) {
+        if (kind == FACE_RINGS) {
             return new Rings(context, hand);
         }
-        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_MENO) {
+        if (kind == FACE_MENO) {
             return new Meno(context, hand);
         }
-        if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_PLATE) {
+        if (kind == FACE_PLATE) {
             return new Watch(context, Keep.number(context, Keep.CLOCK_PLATE, Rim.STEEL),
                 Keep.number(context, Keep.CLOCK_DIAL, Watch.DARK), Keep.number(context, Keep.CLOCK_FIELDS, Watch.DARK),
                 hand);
@@ -1749,10 +1761,11 @@ public final class Home extends Activity {
 
     private static final String[] ASKS = {
         "Add screen", "Add shortcut", "Add widget", "Add folder", "Make home screen", "Settings",
-        "Remove screen", "Picture of the home screen"
+        "Remove screen", "Picture of the home screen", "Night clock"
     };
     private static final int REMOVE_SCREEN = 6;
     private static final int PORTRAIT = 7;
+    private static final int NIGHT = 8;
     /** Where the screen's menu was asked for. */
     private float askX;
     private float askY;
@@ -1780,6 +1793,8 @@ public final class Home extends Activity {
             offered.add(REMOVE_SCREEN);
         }
         offered.add(PORTRAIT);
+        /* The night clock, last before the settings. */
+        offered.add(NIGHT);
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
         askY = root.fingerY();
@@ -1799,6 +1814,9 @@ public final class Home extends Activity {
     private void act(int key) {
         menu.hide(true);
         switch (key) {
+            case NIGHT:
+                Night.open(this, false);
+                break;
             case ADD_SCREEN:
                 /* A new screen is added at the end, and the screens slide
                    over to it: an empty page is shown, not announced. */

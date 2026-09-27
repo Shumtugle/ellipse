@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="19702"
-    android:versionName="1.97.2">
+    android:versionCode="19800"
+    android:versionName="1.98.0">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -107,6 +107,8 @@
         </intent>
     </queries>
 
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+
     <application
         android:label="@string/app_name"
         android:icon="@mipmap/ic_launcher"
@@ -162,6 +164,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- The night clock: the clock across the screen lying on its side, kept on. -->
+        <activity
+            android:name=".Night"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden" />
         <!-- Locks the phone on a double tap of the empty home screen, once the
              owner turns it on among the phone's accessibility services. -->
         <service
