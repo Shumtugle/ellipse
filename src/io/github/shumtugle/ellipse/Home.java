@@ -1712,6 +1712,36 @@ public final class Home extends Activity {
         return new int[] {real.widthPixels, real.heightPixels};
     }
 
+    /** A screen taken away, and what stood on it: the widgets there let go of. */
+    private void dropScreen(int gone) {
+        if (!Keep.laid(this)) {
+            Keep.lay(this, standing);
+        }
+        for (Keep.Spot spot : Keep.placed(this)) {
+            if (spot.screen != gone) {
+                continue;
+            }
+            if (spot.token.startsWith(WIDGET)) {
+                try {
+                    drop(Integer.parseInt(spot.token.substring(WIDGET.length()).split(":")[0]));
+                } catch (NumberFormatException broken) {
+                    // Nothing to let go.
+                }
+            } else if (spot.token.startsWith(Keep.PILE_THING)) {
+                int pile = pileId(spot.token);
+                for (int id : Keep.pileItems(this, pile)) {
+                    drop(id);
+                }
+                Keep.forgetPile(this, pile);
+            } else if (spot.token.startsWith(Keep.SHORTCUT_THING)) {
+                unpin(spot.token);
+            }
+        }
+        Keep.dropScreen(this, gone);
+        fill();
+        screens.show(Math.max(0, gone - 1), true);
+    }
+
     /** A veil over nothing, while the desk is away: the first touch brings it back. */
     private View bareVeil;
 
@@ -2329,7 +2359,8 @@ public final class Home extends Activity {
             if (!home) {
                 offered.add(MAKE_HOME);
             }
-            if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
+            /* A screen can be taken away with what stands on it too; it asks first, then. */
+            if (pages.size() > 1) {
                 offered.add(REMOVE_SCREEN);
             }
         }
@@ -2400,13 +2431,23 @@ public final class Home extends Activity {
                 newFolder();
                 break;
             case REMOVE_SCREEN:
-                if (!Keep.laid(this)) {
-                    Keep.lay(this, standing);
+                final int gone = screens.page();
+                int held = 0;
+                for (Keep.Spot spot : Keep.placed(this)) {
+                    if (spot.screen == gone) {
+                        held++;
+                    }
                 }
-                int gone = screens.page();
-                Keep.dropScreen(this, gone);
-                fill();
-                screens.show(Math.max(0, gone - 1), true);
+                if (held == 0) {
+                    dropScreen(gone);
+                } else {
+                    Ask.tell(root, "Remove this screen?", Words.n("It holds %1 thing; it goes with it. | It holds %1 "
+                        + "things; they go with it.", held), "Remove", new Runnable() {
+                            public void run() {
+                                dropScreen(gone);
+                            }
+                        });
+                }
                 break;
             case PORTRAIT:
                 /* After the menu has gone, so it is not in the picture. */

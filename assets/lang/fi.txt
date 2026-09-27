@@ -671,3 +671,5 @@ Player = Soitin
 hPa = hPa
 RAM = RAM
 UV = UV
+Remove this screen? = Poistetaanko tämä näyttö?
+It holds %1 thing; it goes with it. | It holds %1 things; they go with it. = Siinä on %1 asia; se lähtee mukana. | Siinä on %1 asiaa; ne lähtevät mukana.
