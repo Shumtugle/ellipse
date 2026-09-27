@@ -653,3 +653,5 @@ Half a minute untouched, the clock goes down into full black; a touch brings it 
 Show the wallpaper = Näytä taustakuva
 Step aside = Siirto palamista vastaan
 Every three minutes, and each time it comes back, the home screen moves a few points, too slowly to see, so the screen keeps no line burnt in = Kolmen minuutin välein ja aina palatessa kotinäyttö siirtyy huomaamatta muutaman pisteen, jotta näyttöön ei pala jälkiä
+Lie down = Vaihda vaakasuuntaan
+Stand up = Vaihda pystysuuntaan

@@ -264,6 +264,7 @@ public final class Home extends Activity {
         registerReceiver(sleep, night);
         Lapse.watch(this);
         super.onCreate(saved);
+        turnAsKept();
         /* A new version's first start: the old set-out is copied aside
            before anything here reads or changes it. */
         Copy.onUpdate(this);
@@ -667,6 +668,8 @@ public final class Home extends Activity {
     private int restore = -1;
     /** Whether the phone lies on its side: the screens laid again in a grid of their own, nothing written. */
     private boolean lying;
+    /** The grid's width upright, in places: lying down, the clock keeps it rather than the whole long side. */
+    private int uprightColumns;
     /** The phone just turned: the screens open on the home one, in the grid of the way it now lies. */
     private boolean turned;
     /** Lying down, the screen each upright screen begins on. */
@@ -694,6 +697,7 @@ public final class Home extends Activity {
         Keep.settleFine(this);
         columns = Keep.columns(grid) * fine;
         rows = Keep.rows(grid) * fine;
+        uprightColumns = columns;
         stamp = Keep.stamp(this);
         float column = (Math.min(wide, tall) - dp(16)) / (float) Keep.columns(grid);
         if (lying) {
@@ -1470,6 +1474,17 @@ public final class Home extends Activity {
      */
     private int lyingCount;
 
+    static final int TURNED_UPRIGHT = 1;
+    static final int TURNED_LYING = 2;
+
+    /** The home screen held the way the owner last turned it by hand; as the phone turns, if never. */
+    private void turnAsKept() {
+        int way = Keep.number(this, Keep.TURNED, 0);
+        setRequestedOrientation(way == TURNED_LYING ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            : way == TURNED_UPRIGHT ? android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            : android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+    }
+
     /** A veil over nothing, while the desk is away: the first touch brings it back. */
     private View bareVeil;
 
@@ -1564,7 +1579,7 @@ public final class Home extends Activity {
                     }
                 } else if (Keep.CLOCK_THING.equals(base(token))) {
                     int[] least = clockLeast(place());
-                    span = token.indexOf(':') > 0 ? folderSpan(token) : new int[] {columns, least[1]};
+                    span = token.indexOf(':') > 0 ? folderSpan(token) : new int[] {uprightColumns, least[1]};
                     span[1] = Math.max(span[1], least[1]);
                 }
             } catch (NumberFormatException broken) {
@@ -1676,7 +1691,7 @@ public final class Home extends Activity {
         }
         int[] least = clockLeast(place());
         boolean given = token.indexOf(':') > 0;
-        int[] span = given ? folderSpan(token) : new int[] {columns, least[1]};
+        int[] span = given ? folderSpan(token) : new int[] {lying ? uprightColumns : columns, least[1]};
         int across = Math.min(columns - column, Math.max(span[0], least[0]));
         int down = -1;
         for (int d = Math.max(span[1], least[1]); d >= 1; d--) {
@@ -1991,9 +2006,11 @@ public final class Home extends Activity {
 
     private static final String[] ASKS = {
         "Add screen", "Add shortcut", "Add widget", "Add folder", "Make home screen", "Settings",
-        "Remove screen", "Picture of the home screen", "Night clock", "Show the wallpaper"
+        "Remove screen", "Picture of the home screen", "Night clock", "Show the wallpaper", "Lie down", "Stand up"
     };
     private static final int BARE = 9;
+    private static final int LIE_DOWN = 10;
+    private static final int STAND_UP = 11;
     private static final int REMOVE_SCREEN = 6;
     private static final int PORTRAIT = 7;
     private static final int NIGHT = 8;
@@ -2030,6 +2047,8 @@ public final class Home extends Activity {
         /* The night clock and the bare wallpaper, last before the settings. */
         offered.add(NIGHT);
         offered.add(BARE);
+        /* The home screen turned by hand, whatever the phone's own turning is set to. */
+        offered.add(lying ? STAND_UP : LIE_DOWN);
         menuFor = MENU_SCREEN;
         askX = root.fingerX();
         askY = root.fingerY();
@@ -2054,6 +2073,11 @@ public final class Home extends Activity {
                 break;
             case BARE:
                 bare();
+                break;
+            case LIE_DOWN:
+            case STAND_UP:
+                Keep.saveNumber(this, Keep.TURNED, key == LIE_DOWN ? TURNED_LYING : TURNED_UPRIGHT);
+                turnAsKept();
                 break;
             case ADD_SCREEN:
                 /* A new screen is added at the end, and the screens slide

@@ -133,6 +133,8 @@ final class Keep {
     static final String NIGHT_LASTS = "night_lasts";
     /** Whether the whole home screen steps a few points aside now and then, against burning in. */
     static final String DRIFT = "drift";
+    /** How the home screen was last turned by hand: nought, as the phone turns; one, upright; two, lying. */
+    static final String TURNED = "turned";
     static final String NIGHT_HIDE = "night_hide";
     static final String NIGHT_QUIET = "night_quiet";
     static final String NIGHT_AUTO = "night_auto";

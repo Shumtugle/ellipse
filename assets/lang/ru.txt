@@ -653,3 +653,5 @@ Half a minute untouched, the clock goes down into full black; a touch brings it 
 Show the wallpaper = Показать фон
 Step aside = Сдвиг против выгорания
 Every three minutes, and each time it comes back, the home screen moves a few points, too slowly to see, so the screen keeps no line burnt in = Раз в три минуты и при каждом возвращении рабочий стол незаметно сдвигается на несколько точек, чтобы на экране ничего не выгорало
+Lie down = Переключить на горизонтальный
+Stand up = Переключить на вертикальный
