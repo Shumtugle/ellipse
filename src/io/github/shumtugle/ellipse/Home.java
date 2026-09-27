@@ -2085,8 +2085,25 @@ public final class Home extends Activity {
 
     /** The dice's face: a die on the plate every icon of the home screen's own wears. */
     private android.graphics.drawable.Drawable diceFace() {
-        return Style.dress(this, Keep.DICE_THING, Shape.faceMark(getDrawable(R.mipmap.door), -1,
-            new Die(Die.roll())), null);
+        return Style.dress(this, Keep.DICE_THING, diceRaw(Die.roll()), null);
+    }
+
+    /**
+     * The die as an app's own icon is made: a plate, the die on it, and the die
+     * again as the one-colour layer a look inks icons from — so under any look,
+     * inked or not, the die stands out as clearly as an app's own sign.
+     */
+    private android.graphics.drawable.Drawable diceRaw(int shown) {
+        Die front = new Die(shown);
+        front.setTint(Tone.primary());
+        android.graphics.drawable.Drawable plate = new android.graphics.drawable.ColorDrawable(Tone.primaryContainer());
+        android.graphics.drawable.Drawable sign = new android.graphics.drawable.InsetDrawable(front, 0.26f);
+        if (android.os.Build.VERSION.SDK_INT >= 33) {
+            Die mono = new Die(shown);
+            return new android.graphics.drawable.AdaptiveIconDrawable(plate, sign,
+                new android.graphics.drawable.InsetDrawable(mono, 0.26f));
+        }
+        return new android.graphics.drawable.AdaptiveIconDrawable(plate, sign);
     }
 
     /**
