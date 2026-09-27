@@ -273,22 +273,25 @@ private static String round(double value) {
         b.append(rise(rank++)).append("<div class=hero style='background:")
             .append("linear-gradient(155deg,").append(Tone.hex(Tone.lit(0.22f, 0.9f)))
             .append(" 0%,").append(Tone.hex(Tone.container())).append(" 58%)'>");
-        float part = p.level < 0 ? 0f : p.level / 100f;
-        double round = 2 * Math.PI * 52;
-        b.append("<div class=top><a href='ellipse:battery' style='text-decoration:none'>")
-            .append("<svg width=132 height=132 viewBox='0 0 132 132'>")
-            .append("<circle cx=66 cy=66 r=52 fill=none stroke='").append(Tone.hex(Tone.containerHigh()))
-            .append("' stroke-width=11/>")
-            .append("<circle cx=66 cy=66 r=52 fill=none stroke='").append(Tone.hex(Tone.primary()))
-            .append("' stroke-width=11 stroke-linecap=round transform='rotate(-90 66 66)' stroke-dasharray='")
-            .append(String.format(java.util.Locale.ROOT, "%.1f %.1f", round * part, round)).append("'/>")
-            .append("<text x=66 y=70 text-anchor=middle font-size=30 fill='").append(Tone.hex(Tone.onSurface()))
-            .append("'>").append(p.level < 0 ? "\u2026" : p.level + "%").append("</text>")
-            .append("<text x=66 y=94 text-anchor=middle font-size=12 fill='").append(Tone.hex(Tone.faint()))
-            .append("'>").append(safe(Words.t(p.charging ? "charging" : "on battery"))).append("</text></svg></a>")
+        /* The rings of the state, as the clock's rings are drawn: the charge outside, the free memory
+           inside it, the free storage innermost; each a quiet track and its part in its own colour. */
+        float charge = p.level < 0 ? 0f : p.level / 100f;
+        float memory = p.memoryAll <= 0 ? 0f : p.memoryFree / (float) p.memoryAll;
+        float storage = p.storageAll <= 0 ? 0f : p.storageFree / (float) p.storageAll;
+        b.append("<div class=top><a href='ellipse:battery' style='text-decoration:none;flex:none'>")
+            .append("<svg width=176 height=176 viewBox='0 0 176 176'>");
+        ring(b, 76, charge, Tone.hex(Tone.primary()));
+        ring(b, 60, memory, CHARGE_MEMORY);
+        ring(b, 44, storage, CHARGE_STORAGE);
+        b.append("<text x='88' y='92' text-anchor='middle' style='font-size:26px;fill:")
+            .append(Tone.hex(Tone.onSurface())).append("'>").append(p.level < 0 ? "\u2026" : p.level + "%")
+            .append("</text><text x='88' y='110' text-anchor='middle' style='font-size:10px;fill:")
+            .append(Tone.hex(Tone.faint())).append("'>").append(safe(Words.t(p.charging ? "charging" : "on battery")))
+            .append("</text></svg></a>")
             .append("<span class=where><span style='font-size:22px;color:")
             .append(Tone.hex(p.health == Phone.GOOD ? 0xFF8FBF8A : p.health == Phone.UNKNOWN ? Tone.onSurface()
-                : 0xFFE0A060)).append("'>").append(safe(Words.t(HEALTH[Math.max(0, Math.min(4, p.health))])))
+                : 0xFFE0A060)).append("'>").append(p.strength > 0 ? p.strength + "%"
+                : safe(Words.t(HEALTH[Math.max(0, Math.min(4, p.health))])))
             .append("</span><span class=feel>").append(safe(Words.t("battery health"))).append("</span>");
         if (p.cycles >= 0) {
             b.append("<span class=feel>").append(safe(Words.n("%1 cycle | %1 cycles", p.cycles))).append("</span>");
@@ -304,12 +307,12 @@ private static String round(double value) {
                 beat));
         }
         if (p.memoryAll > 0) {
-            b.append(capsule(Math.round(100f * p.memoryFree / p.memoryAll) + "%", Words.f("free of %1 memory",
-                gigabytes(p.memoryAll)), p.memoryFree * 10 < p.memoryAll, beat));
+            b.append(capsule(dot(CHARGE_MEMORY) + Math.round(100f * p.memoryFree / p.memoryAll) + "%",
+                Words.f("free of %1 memory", gigabytes(p.memoryAll)), p.memoryFree * 10 < p.memoryAll, beat));
         }
         if (p.storageAll > 0) {
-            b.append(capsule(gigabytes(p.storageFree), Words.f("free of %1", gigabytes(p.storageAll)),
-                p.storageFree * 20 < p.storageAll, beat));
+            b.append(capsule(dot(CHARGE_STORAGE) + gigabytes(p.storageFree), Words.f("free of %1",
+                gigabytes(p.storageAll)), p.storageFree * 20 < p.storageAll, beat));
         }
         b.append("</div></div></div>");
         b.append(rise(rank++));
@@ -326,6 +329,27 @@ private static String round(double value) {
     }
 
     private static final String[] HEALTH = {"good", "too warm", "worn", "too cold", "not told"};
+
+    /** The colours of the memory's and the storage's rings: the clock's own lilac and blue. */
+    private static final String CHARGE_MEMORY = "#C3A2D6";
+    private static final String CHARGE_STORAGE = "#7AA7F0";
+
+    /** One ring of the state: a quiet whole track, and over it the part, from the top, clockwise. */
+    private static void ring(StringBuilder b, int radius, float part, String colour) {
+        double round = 2 * Math.PI * radius;
+        b.append("<circle cx='88' cy='88' r='").append(radius).append("' style='fill:none;stroke:")
+            .append(Tone.hex(Tone.containerHigh())).append(";stroke-width:11px'/>")
+            .append("<circle cx='88' cy='88' r='").append(radius).append("' transform='rotate(-90 88 88)' ")
+            .append("style='fill:none;stroke:").append(colour).append(";stroke-width:11px;stroke-linecap:round;")
+            .append("stroke-dasharray:").append(String.format(java.util.Locale.ROOT, "%.1f %.1f",
+                round * Math.max(0.01f, Math.min(1f, part)), round)).append("'/>");
+    }
+
+    /** A small dot in a ring's colour, before the figure its ring shows. */
+    private static String dot(String colour) {
+        return "<span style='display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;"
+            + "vertical-align:2px;background:" + colour + "'></span>";
+    }
 
     private static void row(StringBuilder b, String name, String value) {
         b.append("<div class=day2><span class=when>").append(name).append("</span><span class=hot>")

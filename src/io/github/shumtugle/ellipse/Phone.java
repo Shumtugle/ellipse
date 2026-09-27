@@ -25,6 +25,8 @@ final class Phone {
     float warmth = Float.NaN;
     float volts = Float.NaN;
     int cycles = -1;
+    /** How much of its first strength the battery keeps, in hundredths, where the phone tells it. */
+    int strength = -1;
     long memoryFree;
     long memoryAll;
     long storageFree;
@@ -76,6 +78,15 @@ final class Phone {
             /* How many times it has been filled, told from the fourteenth version on. */
             p.cycles = battery.getIntExtra("android.os.extra.CYCLE_COUNT", -1);
         }
+        if (Build.VERSION.SDK_INT >= 34) {
+            try {
+                BatteryManager manager = (BatteryManager) context.getSystemService(Context.BATTERY_SERVICE);
+                int kept = manager == null ? -1 : manager.getIntProperty(STATE_OF_HEALTH);
+                p.strength = kept > 0 && kept <= 100 ? kept : -1;
+            } catch (RuntimeException withheld) {
+                p.strength = -1;
+            }
+        }
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         if (manager != null) {
             ActivityManager.MemoryInfo memory = new ActivityManager.MemoryInfo();
@@ -103,6 +114,9 @@ final class Phone {
         p.awake = SystemClock.elapsedRealtime();
         return p;
     }
+
+    /** The battery's kept strength, asked of the battery by its number. */
+    private static final int STATE_OF_HEALTH = 10;
 
     private static final String SYSTEM_MODULES = "com.google.android.modulemetadata";
 }
