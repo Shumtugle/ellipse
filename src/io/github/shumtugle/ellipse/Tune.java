@@ -663,6 +663,14 @@ public final class Tune extends Activity {
                 public void onClick(View v) {
                     toggle.set(!toggle.on());
                     Keep.saveFlag(Tune.this, line.key, toggle.on());
+                    /* A new ground every night replaces a wallpaper not set here: asked once, before. */
+                    if (Keep.TURN.equals(line.key) && toggle.on() && !Picture.replaceable(Tune.this)) {
+                        Ask.tell(host, "Replace the wallpaper?", WARN_REPLACE, "Replace", new Runnable() {
+                            public void run() {
+                                Keep.saveFlag(Tune.this, Keep.WALL_WARNED, true);
+                            }
+                        });
+                    }
                     if (sample != null && room() == ICONS) {
                         Style.read(Tune.this);
                         sample.show();
@@ -960,8 +968,28 @@ public final class Tune extends Activity {
             new int[] {15, 30, 60, 180, 480})));
         rows.addView(row(choice("From", "Where the new ground comes from", Keep.TURN_FROM, Turn.DICE,
             new String[] {"The dice", "The ready ones", "My own"}, new int[] {Turn.DICE, Turn.READY, Turn.MINE})));
+        if (Keep.flag(this, Keep.TURN, false)) {
+            note(nightWitness());
+        }
         rows.addView(row(door(Glyph.BRUSH, "Fine tuning", "Each layer's kind, colour, strength and scale",
             GROUND_FINE)));
+    }
+
+    /** What the last night did: when the wake was set, whether it came, and whether a ground was set. */
+    private String nightWitness() {
+        long asked = Keep.clock(this, Turn.ASKED);
+        long came = Keep.clock(this, Turn.CAME);
+        java.text.DateFormat at = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT,
+            java.text.DateFormat.SHORT);
+        if (came > 0 && came >= asked) {
+            return Words.f(Keep.flag(this, Turn.DONE, false) ? "The last new ground came %1."
+                : "The last wake came %1, but no ground could be set.", at.format(new java.util.Date(came)));
+        }
+        if (asked > 0) {
+            return Words.f("A wake was set %1 and has not come yet: the screen came on first, or the phone "
+                + "held it back.", at.format(new java.util.Date(asked)));
+        }
+        return Words.t("No night has asked for a new ground yet.");
     }
 
     /** The ground's layers one by one, for whoever wants more than the dice. */
@@ -1320,14 +1348,16 @@ public final class Tune extends Activity {
     }
 
     /** The ground drawn at the screen's own size and set as the wallpaper where asked. */
+    private static final String WARN_REPLACE = "The wallpaper the phone has now is replaced, and Ellipse "
+        + "cannot keep it for you, for the phone does not let it be read. If it is a picture of your "
+        + "own, bring it in first with Wallpaper from a picture: Ellipse keeps it, sets it again at a "
+        + "touch and carries it in copies.";
+
     private void setGround(final int where) {
         if (!Picture.replaceable(this)) {
             /* The wallpaper the phone has may be the owner's own picture, and the phone does not let it
                be read to be kept: before it is replaced the first time, the owner is asked. */
-            Ask.tell(host, "Replace the wallpaper?", "The wallpaper the phone has now is replaced, and Ellipse "
-                + "cannot keep it for you, for the phone does not let it be read. If it is a picture of your "
-                + "own, bring it in first with Wallpaper from a picture: Ellipse keeps it, sets it again at a "
-                + "touch and carries it in copies.", "Replace", new Runnable() {
+            Ask.tell(host, "Replace the wallpaper?", WARN_REPLACE, "Replace", new Runnable() {
                     public void run() {
                         Keep.saveFlag(Tune.this, Keep.WALL_WARNED, true);
                         setGround(where);

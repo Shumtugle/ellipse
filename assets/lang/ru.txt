@@ -613,3 +613,7 @@ Thrown = Выпало
 Throw again = Бросить ещё
 My mark = Мой знак
 More marks like this one, or forget it? Where it is on an icon, it stays. = Ещё таких знаков — или забыть этот? Там, где он уже стоит на значке, он останется.
+The last new ground came %1. = Последний новый фон пришёл %1.
+The last wake came %1, but no ground could be set. = Последнее пробуждение пришло %1, но фон поставить не удалось.
+A wake was set %1 and has not come yet: the screen came on first, or the phone held it back. = Пробуждение заведено %1 и ещё не приходило: экран включился раньше, или телефон его придержал.
+No night has asked for a new ground yet. = Ни одна ночь ещё не просила новый фон.

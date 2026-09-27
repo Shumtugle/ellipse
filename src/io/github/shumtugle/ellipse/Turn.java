@@ -44,6 +44,7 @@ public final class Turn extends BroadcastReceiver {
         long after = Keep.number(context, Keep.TURN_AFTER, 60) * 60000L;
         alarms.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + after,
             wake(context));
+        Keep.saveClock(context, ASKED, System.currentTimeMillis());
     }
 
     /** The screen on again before the time: the wake taken back. */
@@ -54,19 +55,27 @@ public final class Turn extends BroadcastReceiver {
         }
     }
 
+    /** When the last wake was set, when it came, and whether a new ground was set then: the night's witness. */
+    static final String ASKED = "turn_asked";
+    static final String CAME = "turn_came";
+    static final String DONE = "turn_done";
+
     @Override
     public void onReceive(final Context context, Intent intent) {
-        /* A wallpaper the owner has not let go of is never replaced in their sleep. */
-        if (!Keep.flag(context, Keep.TURN, false) || !Picture.replaceable(context)) {
+        /* Turned on by the owner, it may replace the wallpaper: the owner was asked when turning it on. */
+        if (!Keep.flag(context, Keep.TURN, false)) {
             return;
         }
+        Keep.saveClock(context, CAME, System.currentTimeMillis());
+        Keep.saveFlag(context, DONE, false);
         final PendingResult later = goAsync();
         new Thread(new Runnable() {
             public void run() {
                 try {
                     turn(context.getApplicationContext());
+                    Keep.saveFlag(context, DONE, true);
                 } catch (Exception | OutOfMemoryError failed) {
-                    // The ground stays as it was until the next sleep.
+                    // The ground stays as it was until the next sleep; the witness says it did not come.
                 } finally {
                     later.finish();
                 }

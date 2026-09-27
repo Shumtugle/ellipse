@@ -205,13 +205,12 @@ final class Watch extends View implements Timepiece {
         float w = getWidth();
         float h = getHeight();
         float edge = px(4);
-        /* Reaching the screen's edge, the plate runs to it, square where it meets it. */
-        RectF slab = new RectF(edgeLeft ? 0f : edge, edge, w - (edgeRight ? 0f : edge), h - edge);
+        /* Reaching the screen's edge, the plate comes to touch it: its rim whole, its corners round. */
+        float touch = px(1);
+        RectF slab = new RectF(edgeLeft ? touch : edge, edge, w - (edgeRight ? touch : edge), h - edge);
         float round = Math.min(slab.height() * 0.16f, px(28));
-        float l = edgeLeft ? 0f : round;
-        float r = edgeRight ? 0f : round;
         Path body = new Path();
-        body.addRoundRect(slab, new float[] {l, l, r, r, r, r, l, l}, Path.Direction.CW);
+        body.addRoundRect(slab, round, round, Path.Direction.CW);
         canvas.save();
         canvas.translate(slab.left, slab.top);
         body.offset(-slab.left, -slab.top);

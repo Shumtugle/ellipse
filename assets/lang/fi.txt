@@ -613,3 +613,7 @@ Thrown = Heitetty
 Throw again = Heitä uudelleen
 My mark = Oma merkki
 More marks like this one, or forget it? Where it is on an icon, it stays. = Lisää tällaisia merkkejä vai unohdetaanko tämä? Kuvakkeissa, joissa se jo on, se pysyy.
+The last new ground came %1. = Viimeisin uusi tausta tuli %1.
+The last wake came %1, but no ground could be set. = Viimeisin herätys tuli %1, mutta taustaa ei voitu asettaa.
+A wake was set %1 and has not come yet: the screen came on first, or the phone held it back. = Herätys asetettiin %1 eikä se ole vielä tullut: näyttö syttyi ensin, tai puhelin pidätti sen.
+No night has asked for a new ground yet. = Yksikään yö ei ole vielä pyytänyt uutta taustaa.
