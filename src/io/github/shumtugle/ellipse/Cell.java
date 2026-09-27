@@ -262,7 +262,10 @@ final class Cell extends View {
             if (size > tallRoom && tallRoom > 0f) {
                 size = tallRoom;
             }
-            float ix = (getWidth() - size) * lean;
+            /* A tile wider than its square is drawn past its bounds on both sides: leaning against an
+               edge, it is the tile as seen that meets the edge, not the square inside it. */
+            float seen = icon instanceof Shape.Cut ? size * Math.max(1f, ((Shape.Cut) icon).wideness()) : size;
+            float ix = (getWidth() - seen) * lean + (seen - size) / 2f;
             float iy = y + (iconSize - size) / 2f;
             icon.setBounds(Math.round(ix), Math.round(iy), Math.round(ix + size), Math.round(iy + size));
             icon.draw(canvas);
