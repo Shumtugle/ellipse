@@ -280,6 +280,45 @@ final class Looks {
         edit.commit();
     }
 
+    private static final String PREVIEW = "look_preview_from";
+
+    /** A preset looked at before it is worn: the look till now kept aside, once, to go back to. */
+    static void previewFrom(Context context) {
+        if (store(context).contains(PREVIEW)) {
+            return;
+        }
+        try {
+            store(context).edit().putString(PREVIEW, now(context).toString()).apply();
+        } catch (JSONException unsaved) {
+            // Looked at all the same.
+        }
+    }
+
+    static boolean previewing(Context context) {
+        return store(context).contains(PREVIEW);
+    }
+
+    /**
+     * Looking over: worn, the look before the looking is what "back to the
+     * look before" brings back; not worn, it is put on again as it was.
+     */
+    static void previewEnd(Context context, boolean wear) {
+        String from = store(context).getString(PREVIEW, null);
+        store(context).edit().remove(PREVIEW).apply();
+        if (from == null) {
+            return;
+        }
+        if (wear) {
+            store(context).edit().putString(BEFORE, from).apply();
+            return;
+        }
+        try {
+            put(context, new JSONObject(from));
+        } catch (JSONException broken) {
+            // What is on stays on.
+        }
+    }
+
     /** Whether the look worn before the last one put on is kept. */
     static boolean undoable(Context context) {
         return store(context).contains(BEFORE);

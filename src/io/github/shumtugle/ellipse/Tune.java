@@ -532,10 +532,23 @@ public final class Tune extends Activity {
 
     private int lastRoom = -1;
 
+    /** The one height of every room's sample: sixteen by nine of the width it has. */
+    private int sampleTall() {
+        int wide = getResources().getDisplayMetrics().widthPixels - dp(32);
+        return Math.round(wide * 9f / 16f);
+    }
+
     private void fillRoom() {
         rows.removeAllViews();
         window.setVisibility(room() == ICONS || room() == CLOCK || room() == LISTGROUND || room() == FONTS
-            || room() == GROUNDS || room() == GROUND_FINE ? View.VISIBLE : View.GONE);
+            || room() == GROUNDS || room() == GROUND_FINE || room() == LOOKS ? View.VISIBLE : View.GONE);
+        /* Leaving the presets while looking at one: the look before is put on again. */
+        if (room() != LOOKS && Looks.previewing(this)) {
+            Looks.previewEnd(this, false);
+            looking = -1;
+            worn();
+            return;
+        }
         window.setPadding(dp(16), dp(4), dp(16), dp(10));
         /* The wallpaper's rooms end with Done: the ground set on both screens. */
         foot.done(room() == GROUNDS || room() == GROUND_FINE ? new Runnable() {
@@ -1118,7 +1131,7 @@ public final class Tune extends Activity {
         window.removeAllViews();
         window.setPadding(dp(12), dp(4), dp(12), dp(4));
         FrameLayout stage = new FrameLayout(this);
-        int tall = dp(dice ? 300 : 250);
+        int tall = sampleTall();
         FrameLayout card = new FrameLayout(this);
         card.setClipToOutline(true);
         card.setOutlineProvider(new android.view.ViewOutlineProvider() {
@@ -1676,6 +1689,18 @@ public final class Tune extends Activity {
     }
 
     @Override
+    protected void onStop() {
+        super.onStop();
+        /* Leaving the settings while looking at a preset: the look before is put on again. */
+        if (!isChangingConfigurations() && Looks.previewing(this)) {
+            Looks.previewEnd(this, false);
+            looking = -1;
+            Tone.read(this);
+            Style.read(this);
+        }
+    }
+
+    @Override
     protected void onResume() {
         glow.start(host);
         super.onResume();
@@ -1700,7 +1725,7 @@ public final class Tune extends Activity {
     private void fillIcons() {
         window.removeAllViews();
         sample = new Sample(this);
-        window.addView(sample);
+        window.addView(sample, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, sampleTall()));
         throughTo = sample;
         sample.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
@@ -2458,34 +2483,50 @@ public final class Tune extends Activity {
      * at a touch, kept again as it is now, or forgotten; and the look worn
      * before the last put on, back at a touch.
      */
+    /** Which ready preset is being looked at, across the room made again to show it. */
+    private static int looking = -1;
+
     private void fillLooks() {
-        note("A preset dresses the home screen: icons, colours, the clock, the frames. What you set out stays "
-            + "as it is: grids, apps and their places, the names under the icons, the theme.");
+        window.removeAllViews();
+        sample = new Sample(this);
+        window.addView(sample, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, sampleTall()));
+        if (!Looks.previewing(this)) {
+            looking = -1;
+        }
+        /* The round button wears what is looked at; until then nothing is changed for good. */
+        foot.done(looking >= 0 ? new Runnable() {
+            public void run() {
+                Looks.previewEnd(Tune.this, true);
+                looking = -1;
+                worn();
+            }
+        } : null);
         caption("READY");
-        for (int i = 0; i < Looks.READY.length; i++) {
-            final int which = i;
-            LinearLayout one = new LinearLayout(this);
-            one.setOrientation(LinearLayout.VERTICAL);
-            one.setPadding(dp(24), dp(12), dp(24), dp(12));
-            one.setBackground(Tone.touch(null, dp(16)));
-            TextView ready = new TextView(this);
-            ready.setText(Words.t(Looks.READY[i]));
-            ready.setTextSize(TypedValue.COMPLEX_UNIT_PX, 22f * scaled);
-            ready.setTextColor(Tone.onSurface());
-            one.addView(ready);
+        /* The same chips the grounds are chosen by: one language for choosing things by name. */
+        rows.addView(flow(Looks.READY, looking, new Chosen() {
+            public void chosen(int which) {
+                /* Shown first: the look till now kept aside, this preset put on to be seen. */
+                Looks.previewFrom(Tune.this);
+                Looks.ready(Tune.this, which);
+                looking = which;
+                worn();
+            }
+        }));
+        if (looking >= 0) {
             TextView about = new TextView(this);
-            about.setText(Words.t(Looks.READY_ABOUT[i]));
-            about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 17f * scaled);
+            about.setText(Words.t(Looks.READY_ABOUT[looking]));
+            about.setTextSize(TypedValue.COMPLEX_UNIT_PX, 16f * scaled);
             about.setTextColor(Tone.faint());
-            one.addView(about);
-            one.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) {
-                    v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-                    Looks.ready(Tune.this, which);
-                    worn();
-                }
-            });
-            rows.addView(one);
+            about.setPadding(dp(20), dp(16), dp(20), dp(16));
+            about.setBackground(Tone.box(Tone.container(), dp(22), 0f));
+            LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+            at.setMargins(dp(20), dp(4), dp(20), dp(8));
+            rows.addView(about, at);
+            note("Seen here and on the home screen; the round button wears it, going back takes it off.");
+        } else {
+            note("A preset dresses the home screen: icons, colours, the clock, the frames. What you set out stays "
+                + "as it is: grids, apps and their places, the names under the icons, the theme.");
         }
         caption("MINE");
         rows.addView(deed("Keep the look as it is now", new Runnable() {
@@ -2592,7 +2633,7 @@ public final class Tune extends Activity {
         };
         window.removeAllViews();
         window.setVisibility(View.VISIBLE);
-        window.addView(piece, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(150)));
+        window.addView(piece, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, sampleTall()));
         rows.addView(row(toggle("A colour of my own", "Off, the list stands on the theme's own ground",
             Keep.LIST_OWN, false)));
         groundSlider("Hue", Keep.LIST_HUE, 0, 360, 38, "\u00B0", piece);
@@ -2645,7 +2686,7 @@ public final class Tune extends Activity {
     private void fillFonts() {
         window.removeAllViews();
         sample = new Sample(this);
-        window.addView(sample);
+        window.addView(sample, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, sampleTall()));
         throughTo = sample;
         sample.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
             public void onLayoutChange(View v, int l, int t, int r, int b, int ol, int ot, int or, int ob) {
@@ -3110,9 +3151,12 @@ public final class Tune extends Activity {
             wide = m.widthPixels / m.density - 16f;
             tall = 132f;
         }
-        window.addView(new Proof(this, clock, Math.round(wide * density()), Math.round(tall * density()), dp(220)),
+        /* In a window of the one height, the clock at the middle of it. */
+        FrameLayout held = new FrameLayout(this);
+        held.addView(new Proof(this, clock, Math.round(wide * density()), Math.round(tall * density()), sampleTall()),
             new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT));
+                FrameLayout.LayoutParams.WRAP_CONTENT, android.view.Gravity.CENTER_VERTICAL));
+        window.addView(held, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, sampleTall()));
     }
 
     private float density() {
