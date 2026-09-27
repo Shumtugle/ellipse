@@ -63,6 +63,19 @@ final class Stack extends Drawable {
         float size = Math.min(b.width(), b.height());
         float cx = b.exactCenterX();
         float cy = b.exactCenterY();
+        /* The face's own area: the outline every icon is cut to, as wide and as tall as an icon is drawn. */
+        float faceW;
+        float faceH;
+        if (Shape.current == Shape.SYSTEM) {
+            faceW = size;
+            faceH = size;
+        } else {
+            float side0 = Shape.current == Shape.PAPER ? size * 0.86f * Shape.PAPER_WIDE
+                : size * Shape.weight(Shape.current);
+            float root0 = Shape.current == Shape.PAPER ? 1f : (float) Math.sqrt(Shape.aspect);
+            faceW = side0 * root0;
+            faceH = Shape.current == Shape.PAPER ? size * 0.86f : side0 / root0;
+        }
         if (ground) {
             paint.setColor(Tone.containerHigh());
             /* The folder's face takes the outline every icon is cut to. */
@@ -92,10 +105,7 @@ final class Stack extends Drawable {
         float room = ground ? 1f : 1.18f;
         switch (own >= 0 ? own : layout) {
             case NINE:
-                for (int i = 0; i < Math.min(9, count()); i++) {
-                    one(canvas, i, cx + (i % 3 - 1) * size * 0.25f * room, cy + (i / 3 - 1) * size * 0.25f * room,
-                        size * 0.21f * room);
-                }
+                even(canvas, 3, cx, cy, faceW, faceH);
                 break;
             case RING:
                 for (int i = 0; i < Math.min(5, count()); i++) {
@@ -132,11 +142,31 @@ final class Stack extends Drawable {
                 }
                 break;
             default:
-                for (int i = 0; i < Math.min(4, count()); i++) {
-                    one(canvas, i, cx + (i % 2 == 0 ? -1 : 1) * size * 0.17f * room,
-                        cy + (i < 2 ? -1 : 1) * size * 0.17f * room, size * 0.3f * room);
-                }
+                even(canvas, 2, cx, cy, faceW, faceH);
                 break;
+        }
+    }
+
+    /**
+     * The small icons in an even grid over the whole face: as many across as
+     * down, the same gap between them all; with no container, no margin
+     * either, so they reach the face's own edges; with one, the gap again
+     * inside its edge. Each as large as its cell lets it be seen.
+     */
+    private void even(Canvas canvas, int n, float cx, float cy, float w, float h) {
+        float gap = Math.min(w, h) * 0.05f;
+        float edge = ground ? gap : 0f;
+        float cellW = (w - 2 * edge - (n - 1) * gap) / n;
+        float cellH = (h - 2 * edge - (n - 1) * gap) / n;
+        float left = cx - w / 2f + edge;
+        float top = cy - h / 2f + edge;
+        for (int i = 0; i < Math.min(n * n, count()); i++) {
+            Drawable icon = i < doors.size() ? doors.get(i).icon() : more.get(i - doors.size());
+            float wide = icon instanceof Shape.Cut ? Math.max(0.1f, ((Shape.Cut) icon).wideness()) : 1f;
+            float tall = icon instanceof Shape.Cut ? Math.max(0.1f, ((Shape.Cut) icon).tallness()) : 1f;
+            float small = Math.min(cellW / wide, cellH / tall);
+            one(canvas, i, left + (i % n + 0.5f) * (cellW + gap) - gap / 2f,
+                top + (i / n + 0.5f) * (cellH + gap) - gap / 2f, small);
         }
     }
 

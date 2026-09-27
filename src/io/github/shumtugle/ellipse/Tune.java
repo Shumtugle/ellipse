@@ -2671,6 +2671,15 @@ public final class Tune extends Activity {
      * the list above; its words turn dark or light as the colour asks.
      */
     private void fillListGround() {
+        /* The list as it will stand: real icons with their names on the list's ground, and over it an open
+           folder's card, as it opens over the list — and the folder's face, as it stands among the apps. */
+        final java.util.List<Apps.Door> some = new java.util.ArrayList<>();
+        Apps found = new Apps(this);
+        for (Apps.Door door : found.all(Keep.BY_NAME)) {
+            if (door.serial == 0L && some.size() < 8) {
+                some.add(door);
+            }
+        }
         final View piece = new View(this) {
             private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
 
@@ -2685,16 +2694,46 @@ public final class Tune extends Activity {
                 paint.setShader(null);
                 paint.setColor(Tone.listGround());
                 c.drawRoundRect(0f, 0f, w, h, r, r, paint);
-                String[] names = {"Calendar", "Camera", "Maps"};
-                int[] dots = {0xFF4A7BE0, 0xFFE0703A, 0xFF4CAF6A};
-                paint.setTextSize(19f * scaled);
-                for (int i = 0; i < names.length; i++) {
-                    float y = dp(34) + i * dp(46);
-                    paint.setColor(dots[i]);
-                    c.drawCircle(dp(40), y, dp(15), paint);
+                /* Two rows of four, as the list lays its apps. */
+                float cell = w / 4f;
+                float icon = Math.min(cell * 0.5f, h * 0.24f);
+                paint.setTextSize(12f * scaled);
+                paint.setTextAlign(android.graphics.Paint.Align.CENTER);
+                for (int i = 0; i < some.size(); i++) {
+                    float cx = cell * (i % 4 + 0.5f);
+                    float cy = h * (i < 4 ? 0.26f : 0.66f);
+                    android.graphics.drawable.Drawable d = some.get(i).icon();
+                    if (d != null) {
+                        d.setBounds(Math.round(cx - icon / 2f), Math.round(cy - icon / 2f), Math.round(cx + icon / 2f),
+                            Math.round(cy + icon / 2f));
+                        d.draw(c);
+                    }
                     paint.setColor(Tone.listInk());
-                    c.drawText(names[i], dp(72), y + dp(7), paint);
+                    String name = String.valueOf(some.get(i).label);
+                    if (name.length() > 9) {
+                        name = name.substring(0, 8) + "\u2026";
+                    }
+                    c.drawText(name, cx, cy + icon / 2f + dp(16), paint);
                 }
+                /* An open folder over the list, at its lower right. */
+                float fw = w * 0.42f;
+                float fh = h * 0.5f;
+                float fx = w - fw - dp(12);
+                float fy = h - fh - dp(12);
+                paint.setColor(Tone.containerHigh());
+                c.drawRoundRect(fx, fy, fx + fw, fy + fh, dp(18), dp(18), paint);
+                float small = Math.min(fw / 4.2f, fh / 2.6f);
+                for (int i = 0; i < Math.min(6, some.size()); i++) {
+                    float x = fx + fw * ((i % 3) + 0.5f) / 3f;
+                    float y = fy + fh * ((i / 3) + 0.5f) / 2f;
+                    android.graphics.drawable.Drawable d = some.get(i).icon();
+                    if (d != null) {
+                        d.setBounds(Math.round(x - small / 2f), Math.round(y - small / 2f), Math.round(x + small / 2f),
+                            Math.round(y + small / 2f));
+                        d.draw(c);
+                    }
+                }
+                paint.setTextAlign(android.graphics.Paint.Align.LEFT);
             }
         };
         window.removeAllViews();
