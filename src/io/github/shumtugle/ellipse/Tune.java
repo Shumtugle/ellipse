@@ -645,14 +645,6 @@ public final class Tune extends Activity {
             rows.addView(row);
             arrive(row, i);
         }
-        /* At the foot of the first room, in plain sight, the home screen started afresh: just in case. */
-        if (room() == ROOT && field.getText().length() == 0) {
-            rows.addView(deed(RESTART_LINE, new Runnable() {
-                public void run() {
-                    restart();
-                }
-            }));
-        }
     }
 
     private void arrive(View row, int i) {
