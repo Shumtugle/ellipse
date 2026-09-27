@@ -321,7 +321,11 @@ final class Looks {
             java.util.Collections.addAll(sets, Keep.CLOCK_FACE, r.nextBoolean() ? Home.FACE_MENO : Home.FACE_RINGS,
                 Keep.WIDGET_FRAME, Rim.GLASS, Keep.WIDGET_FRAME_WIDTH, 3);
         } else {
-            java.util.Collections.addAll(sets, Keep.CLOCK_FACE, Home.FACE_PLATE, Keep.CLOCK_PLATE, m,
+            /* Half the throws the plate clock; the other half one of the six of other shapes. */
+            int[] others = {Home.FACE_ECLIPSE, Home.FACE_HORIZON, Home.FACE_RESERVOIR, Home.FACE_FLIP,
+                Home.FACE_MONOGRAM, Home.FACE_STONES};
+            int clockFace = r.nextBoolean() ? Home.FACE_PLATE : others[r.nextInt(others.length)];
+            java.util.Collections.addAll(sets, Keep.CLOCK_FACE, clockFace, Keep.CLOCK_PLATE, m,
                 Keep.CLOCK_DIAL, r.nextBoolean() ? Rim.BLACK : Watch.EMBOSSED,
                 Keep.WIDGET_FRAME, m, Keep.WIDGET_FRAME_WIDTH, 6 + r.nextInt(15),
                 Keep.WIDGET_FRAME_ROUND, 24 + r.nextInt(25), Keep.WIDGET_GLAZE, glaze);

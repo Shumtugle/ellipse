@@ -1021,8 +1021,10 @@ public final class Tune extends Activity {
             }
         }));
         rows.addView(row(choice("Face", "Which clock lies across the screen", Keep.NIGHT_FACE, -1,
-            new String[] {"As on the home screen", "The first clock", "Plate", "Meno", "Rings"},
-            new int[] {-1, Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO, Home.FACE_RINGS})));
+            new String[] {"As on the home screen", "The first clock", "Plate", "Meno", "Rings", "Eclipse", "Horizon",
+                "Reservoir", "Flip", "Monogram", "Three stones"},
+            new int[] {-1, Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO, Home.FACE_RINGS, Home.FACE_ECLIPSE,
+                Home.FACE_HORIZON, Home.FACE_RESERVOIR, Home.FACE_FLIP, Home.FACE_MONOGRAM, Home.FACE_STONES})));
         rows.addView(row(choice("Darker", "How much darker than the screen by day", Keep.NIGHT_DIM, 1,
             new String[] {"As the screen is", "A little", "Noticeably", "Almost dark"}, new int[] {0, 1, 2, 3})));
         rows.addView(row(choice("Kept on", "How long the screen stays on; after, the phone sleeps as always",
@@ -2052,7 +2054,7 @@ public final class Tune extends Activity {
         caption("FACE");
         int face = Keep.number(this, Keep.CLOCK_FACE, Home.FACE_FIRST);
         rows.addView(swatches(Keep.CLOCK_FACE, face,
-            new int[] {Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO, Home.FACE_RINGS}, Home.FACE_NAMES,
+            Home.FACES, Home.FACE_NAMES,
             new Painter() {
                 public void paint(android.graphics.Canvas c, float w, float h, int value) {
                     paintFace(c, w, h, value);
@@ -2150,8 +2152,9 @@ public final class Tune extends Activity {
             caption("SECOND HAND");
             rows.addView(seconds());
         }
-        if (face == Home.FACE_PLATE) {
-            caption("PLATE");
+        if (face == Home.FACE_PLATE || face == Home.FACE_STONES) {
+            /* The plate's material; the three stones are cut from it too. */
+            caption(face == Home.FACE_STONES ? "STONES" : "PLATE");
             int[] kinds = Rim.offered(true);
             rows.addView(swatches(Keep.CLOCK_PLATE, Keep.number(this, Keep.CLOCK_PLATE, Rim.STEEL), kinds,
                 Rim.names(kinds),
@@ -2160,6 +2163,8 @@ public final class Tune extends Activity {
                         paintMaterial(c, w, h, value);
                     }
                 }));
+        }
+        if (face == Home.FACE_PLATE) {
             /* Dark, black stamped, the rims' materials, and the palette's colours. */
             int[] dialKinds = Rim.offered(false);
             int count = 2 + dialKinds.length + Watch.COLOUR_NAMES.length;
@@ -3623,9 +3628,80 @@ public final class Tune extends Activity {
         c.drawArc(new android.graphics.RectF(w / 2f - r, h / 2f - r, w / 2f + r, h / 2f + r), -90f, 250f, false, p);
     }
 
+    /** The six of other shapes in small: each its silhouette, the accent where its charge is. */
+    private void paintNewFace(android.graphics.Canvas c, float w, float h, int value, android.graphics.Paint p) {
+        int ink = Tone.onSurface();
+        p.setStyle(android.graphics.Paint.Style.FILL);
+        switch (value) {
+            case Home.FACE_ECLIPSE: {
+                p.setColor(Tone.containerHigh());
+                c.drawCircle(w * 0.36f, h * 0.5f, h * 0.3f, p);
+                c.drawCircle(w * 0.64f, h * 0.5f, h * 0.3f, p);
+                android.graphics.Path a = new android.graphics.Path();
+                a.addCircle(w * 0.36f, h * 0.5f, h * 0.3f, android.graphics.Path.Direction.CW);
+                android.graphics.Path b = new android.graphics.Path();
+                b.addCircle(w * 0.64f, h * 0.5f, h * 0.3f, android.graphics.Path.Direction.CW);
+                android.graphics.Path lens = new android.graphics.Path();
+                lens.op(a, b, android.graphics.Path.Op.INTERSECT);
+                p.setColor(Tone.primary());
+                c.drawPath(lens, p);
+                break;
+            }
+            case Home.FACE_HORIZON:
+                p.setColor(0xFF3E5A86);
+                c.drawRoundRect(new android.graphics.RectF(1, h * 0.18f, w - 1, h * 0.46f), h * 0.1f, h * 0.1f, p);
+                p.setColor(Tone.containerHigh());
+                c.drawRect(1, h * 0.46f, w - 1, h * 0.82f, p);
+                p.setColor(Tone.primary());
+                c.drawRect(1, h * 0.45f, w * 0.7f, h * 0.49f, p);
+                p.setColor(ink);
+                c.drawRect(w * 0.12f, h * 0.58f, w * 0.52f, h * 0.72f, p);
+                break;
+            case Home.FACE_RESERVOIR:
+                p.setColor(Tone.containerHigh());
+                c.drawRoundRect(new android.graphics.RectF(1, h * 0.3f, w - 1, h * 0.7f), h * 0.2f, h * 0.2f, p);
+                c.save();
+                c.clipRect(w * 0.66f, h * 0.38f, w, h);
+                p.setColor(Tone.primary());
+                c.drawRoundRect(new android.graphics.RectF(1, h * 0.3f, w - 1, h * 0.7f), h * 0.2f, h * 0.2f, p);
+                c.restore();
+                break;
+            case Home.FACE_FLIP:
+                p.setColor(0xFF2A2724);
+                c.drawRoundRect(new android.graphics.RectF(w * 0.06f, h * 0.2f, w * 0.47f, h * 0.66f), h * 0.06f,
+                    h * 0.06f, p);
+                c.drawRoundRect(new android.graphics.RectF(w * 0.53f, h * 0.2f, w * 0.94f, h * 0.66f), h * 0.06f,
+                    h * 0.06f, p);
+                p.setColor(0xFF0A0908);
+                c.drawRect(w * 0.06f, h * 0.425f, w * 0.94f, h * 0.435f, p);
+                p.setColor(Tone.primary());
+                c.drawCircle(w * 0.14f, h * 0.8f, h * 0.06f, p);
+                break;
+            case Home.FACE_MONOGRAM:
+                p.setTextSize(h * 0.5f);
+                p.setFakeBoldText(true);
+                p.setColor(ink);
+                c.drawText("07", w * 0.04f, h * 0.66f, p);
+                p.setColor(Tone.primary());
+                c.drawText("48", w * 0.52f, h * 0.66f, p);
+                break;
+            default:
+                p.setColor(Tone.containerHigh());
+                c.drawOval(new android.graphics.RectF(w * 0.04f, h * 0.24f, w * 0.64f, h * 0.78f), p);
+                c.drawOval(new android.graphics.RectF(w * 0.66f, h * 0.18f, w * 0.94f, h * 0.46f), p);
+                p.setColor(Tone.primary());
+                c.drawOval(new android.graphics.RectF(w * 0.74f, h * 0.58f, w * 0.94f, h * 0.76f), p);
+                break;
+        }
+    }
+
     private void paintFace(android.graphics.Canvas c, float w, float h, int value) {
         android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
         float r = h * 0.28f;
+        if (value >= Home.FACE_ECLIPSE && value <= Home.FACE_STONES) {
+            paintNewFace(c, w, h, value, p);
+            return;
+        }
         if (value == Home.FACE_RINGS) {
             p.setStyle(android.graphics.Paint.Style.STROKE);
             p.setStrokeWidth(Math.max(1f, h * 0.02f));

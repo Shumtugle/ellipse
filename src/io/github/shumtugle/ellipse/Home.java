@@ -1969,6 +1969,10 @@ public final class Home extends Activity {
 
     /** The least box of the chosen face, in dp. */
     static float[] leastBox(Context context) {
+        int face = Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST);
+        if (face >= FACE_ECLIPSE && face <= FACE_STONES) {
+            return Faces.least(face - FACE_ECLIPSE);
+        }
         if (Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST) == FACE_MENO) {
             return Meno.least();
         }
@@ -2039,7 +2043,17 @@ public final class Home extends Activity {
     static final int FACE_PLATE = 1;
     static final int FACE_MENO = 2;
     static final int FACE_RINGS = 3;
-    static final String[] FACE_NAMES = {"First", "Plate", "Meno", "Rings"};
+    /** The six of other shapes, in the order Faces keeps them. */
+    static final int FACE_ECLIPSE = 4;
+    static final int FACE_HORIZON = 5;
+    static final int FACE_RESERVOIR = 6;
+    static final int FACE_FLIP = 7;
+    static final int FACE_MONOGRAM = 8;
+    static final int FACE_STONES = 9;
+    static final int[] FACES = {FACE_FIRST, FACE_PLATE, FACE_MENO, FACE_RINGS, FACE_ECLIPSE, FACE_HORIZON,
+        FACE_RESERVOIR, FACE_FLIP, FACE_MONOGRAM, FACE_STONES};
+    static final String[] FACE_NAMES = {"First", "Plate", "Meno", "Rings", "Eclipse", "Horizon", "Reservoir", "Flip",
+        "Monogram", "Three stones"};
 
     static View timepiece(Context context, Almanac.Hand hand) {
         return timepiece(context, hand, Keep.number(context, Keep.CLOCK_FACE, FACE_FIRST));
@@ -2047,6 +2061,9 @@ public final class Home extends Activity {
 
     /** A face of the kind asked for, whatever the home screen wears. */
     static View timepiece(Context context, Almanac.Hand hand, int kind) {
+        if (kind >= FACE_ECLIPSE && kind <= FACE_STONES) {
+            return Faces.make(context, hand, kind - FACE_ECLIPSE);
+        }
         if (kind == FACE_RINGS) {
             return new Rings(context, hand);
         }
