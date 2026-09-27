@@ -42,13 +42,12 @@ final class Cell extends View {
     }
 
     /** A place that is not one application: a folder, or a door of our own. */
-    /** Where the icon stands across its place: nought against the left, one against the right. */
-    private float lean = 0.5f;
-
-    void lean(float at) {
-        lean = at;
-        invalidate();
-    }
+    /**
+     * With everything to the edges, an icon may fill its place whole: at its
+     * largest it meets its neighbours and, in the outer columns, the screen's
+     * own edge — every icon still at the middle of its place.
+     */
+    static boolean whole;
 
     /** Another picture in its place, as a die shows another face. */
     void picture(Drawable face) {
@@ -251,7 +250,7 @@ final class Cell extends View {
             float size = iconSize;
             if (icon instanceof Shape.Cut) {
                 float need = iconSize * ((Shape.Cut) icon).wideness();
-                float room = getWidth() * (lean == 0.5f ? 0.96f : 1f);
+                float room = getWidth() * (whole ? 1f : 0.96f);
                 if (need > room && need > 0f) {
                     size = iconSize * room / need;
                 }
@@ -262,10 +261,7 @@ final class Cell extends View {
             if (size > tallRoom && tallRoom > 0f) {
                 size = tallRoom;
             }
-            /* A tile wider than its square is drawn past its bounds on both sides: leaning against an
-               edge, it is the tile as seen that meets the edge, not the square inside it. */
-            float seen = icon instanceof Shape.Cut ? size * Math.max(1f, ((Shape.Cut) icon).wideness()) : size;
-            float ix = (getWidth() - seen) * lean + (seen - size) / 2f;
+            float ix = (getWidth() - size) / 2f;
             float iy = y + (iconSize - size) / 2f;
             icon.setBounds(Math.round(ix), Math.round(iy), Math.round(ix + size), Math.round(iy + size));
             icon.draw(canvas);

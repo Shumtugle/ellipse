@@ -725,7 +725,8 @@ public final class Home extends Activity {
         rows = Keep.rows(grid) * fine;
         uprightColumns = columns;
         stamp = Keep.stamp(this);
-        float column = (Math.min(wide, tall) - dp(16)) / (float) Keep.columns(grid);
+        /* A place as wide as the screen gives it: with no margins, the whole width shared. */
+        float column = (Math.min(wide, tall) - (Keep.edgeless(this) ? 0 : dp(16))) / (float) Keep.columns(grid);
         if (lying) {
             /* Lying down, three parts across, one, one and a half: the upright screen's width twice and
                half of it again. Places keep their upright size where the screen is wide enough for that;
@@ -748,8 +749,9 @@ public final class Home extends Activity {
         }
         iconSize = Math.max(dp(48), Math.min(dp(64), column * 0.58f));
         /* The owner's own size, within the cell. */
-        /* With everything to the edges, an icon may fill its place nearly whole. */
-        iconSize = Math.min(column * (Keep.edgeless(this) ? 0.98f : 0.86f), iconSize * Style.iconScale);
+        /* With everything to the edges, an icon may fill its place whole, centred in it as always. */
+        Cell.whole = Keep.edgeless(this) && !lying;
+        iconSize = Math.min(column * (Cell.whole ? 1f : 0.86f), iconSize * Style.iconScale);
 
         boolean was = drawer != null && drawer.shown();
         root = new Floor(this);
@@ -1124,8 +1126,6 @@ public final class Home extends Activity {
         rowShare = lying ? 1f : shapeRows();
         for (int i = 0; i < count; i++) {
             Grid page = new Grid(this, columns, rows);
-            /* Everything to the edges: the icons of the outer columns against the screen's own edges. */
-            page.justify(Keep.edgeless(this) && !lying);
             page.unit(fine);
             page.overlap(Keep.flag(this, Keep.OVERLAP, false));
             page.setPadding(side(), dp(16), side(), 0);
