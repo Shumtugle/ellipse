@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="21400"
-    android:versionName="2.14.0">
+    android:versionCode="21401"
+    android:versionName="2.14.1">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -203,6 +203,7 @@
              the home screen. -->
         <activity
             android:name=".Pin"
+            android:screenOrientation="portrait"
             android:exported="true"
             android:theme="@style/Glass"
             android:excludeFromRecents="true"
@@ -216,9 +217,11 @@
             </intent-filter>
         </activity>
         <!-- The settings: reached from the home screen's own door on its
-             screens, and left for it by Back or Home. -->
+             screens, and left for it by Back or Home. Upright always, as
+             the pages and the pinning card are: the home screen alone turns. -->
         <activity
             android:name=".Tune"
+            android:screenOrientation="portrait"
             android:exported="false"
             android:theme="@style/Room"
             android:windowSoftInputMode="adjustResize|stateAlwaysHidden"
@@ -250,6 +253,7 @@
         <!-- The pages drawn as pages: the colour page and the weather. -->
         <activity
             android:name=".Folio"
+            android:screenOrientation="portrait"
             android:exported="false"
             android:theme="@style/Folio"
             android:windowSoftInputMode="adjustResize"
