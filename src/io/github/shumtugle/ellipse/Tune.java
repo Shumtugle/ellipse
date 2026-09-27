@@ -1789,8 +1789,8 @@ public final class Tune extends Activity {
 
         caption("SIZE");
         /* As large as the places allow: with everything to the edges, nearly the whole place. */
-        slider("Icons", "How large the icons stand", Keep.ICON_SIZE, 80, 170);
-        slider("Fill", "How much of its outline the picture fills", Keep.ICON_FILL, 85, 175);
+        slider("Icons", "How large the icons stand", Keep.ICON_SIZE, 80, 250);
+        slider("Fill", "How much of its outline the picture fills", Keep.ICON_FILL, 85, 250);
         caption("NAMES");
         rows.addView(row(toggle("On the screens", "Names under the icons of the home screen",
             Keep.NAMES_SCREENS, true)));
