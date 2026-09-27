@@ -123,7 +123,8 @@ final class Keep {
     /** The night clock: its face, how dark, what a touch does, whether quiet, and its hours. */
     static final String NIGHT_FACE = "night_face";
     static final String NIGHT_DIM = "night_dim";
-    static final String NIGHT_TOUCH = "night_touch";
+    static final String NIGHT_LASTS = "night_lasts";
+    static final String NIGHT_HIDE = "night_hide";
     static final String NIGHT_QUIET = "night_quiet";
     static final String NIGHT_AUTO = "night_auto";
     static final String NIGHT_FROM = "night_from";

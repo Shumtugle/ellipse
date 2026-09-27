@@ -1002,9 +1002,10 @@ public final class Tune extends Activity {
             new int[] {-1, Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO, Home.FACE_RINGS})));
         rows.addView(row(choice("Darker", "How much darker than the screen by day", Keep.NIGHT_DIM, 1,
             new String[] {"As the screen is", "A little", "Noticeably", "Almost dark"}, new int[] {0, 1, 2, 3})));
-        rows.addView(row(choice("Touches", "What closes it", Keep.NIGHT_TOUCH, Night.TOUCH_TWICE,
-            new String[] {"A touch", "A double touch", "Only the phone's buttons"},
-            new int[] {Night.TOUCH_ONCE, Night.TOUCH_TWICE, Night.TOUCH_NONE})));
+        rows.addView(row(choice("Kept on", "How long the screen stays on; after, the phone sleeps as always",
+            Keep.NIGHT_LASTS, 30, new String[] {"15 minutes", "30 minutes", "An hour"}, new int[] {15, 30, 60})));
+        rows.addView(row(toggle("Into the dark", "Half a minute untouched, the clock goes down into full black; "
+            + "a touch brings it back. A double touch or two fingers close it", Keep.NIGHT_HIDE, true)));
         rows.addView(row(toggle("Quiet", "While it is open, the phone does not disturb; alarms still ring",
             Keep.NIGHT_QUIET, false)));
         caption("BY THE CLOCK");

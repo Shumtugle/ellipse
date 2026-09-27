@@ -646,3 +646,7 @@ Only while charging = Только на зарядке
 Its hours open it only with the phone on the charger = По часам открываются, только если телефон заряжается
 Begins = Начало
 Ends = Конец
+Kept on = Не гаснет
+How long the screen stays on; after, the phone sleeps as always = Сколько экран не гаснет; потом телефон засыпает как обычно
+Into the dark = Уходить в темноту
+Half a minute untouched, the clock goes down into full black; a touch brings it back. A double touch or two fingers close it = Полминуты без касаний — часы уходят в полную черноту; касание возвращает их. Двойное касание или два пальца закрывают

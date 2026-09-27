@@ -646,3 +646,7 @@ Only while charging = Vain latauksen aikana
 Its hours open it only with the phone on the charger = Tunnit avaavat sen vain, kun puhelin latautuu
 Begins = Alkaa
 Ends = Päättyy
+Kept on = Päällä
+How long the screen stays on; after, the phone sleeps as always = Kuinka kauan näyttö pysyy päällä; sen jälkeen puhelin nukkuu tavalliseen tapaan
+Into the dark = Pimeään
+Half a minute untouched, the clock goes down into full black; a touch brings it back. A double touch or two fingers close it = Puoli minuuttia koskematta kello painuu täyteen mustaan; kosketus tuo sen takaisin. Kaksoiskosketus tai kaksi sormea sulkee sen

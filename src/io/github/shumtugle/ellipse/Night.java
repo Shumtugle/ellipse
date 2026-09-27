@@ -24,18 +24,19 @@ import java.util.Random;
 
 /**
  * The night clock: the home screen's clock across the whole screen lying on
- * its side, nothing else, the screen a little darker than by day and kept
- * on. The face drifts a few points now and then, so the screen does not
- * keep its lines. It may keep the phone quiet while it is open, alarms
- * still ringing; it closes as the owner chose — at a touch, at a double
- * touch, or only by the phone's own buttons — and by itself when its hours
- * are over, if it came by them.
+ * its side, nothing else, the screen a little darker than by day. Half a
+ * minute untouched, the face goes down into full black; a touch brings it
+ * back for another half minute. A double touch, or anything done with two
+ * fingers, closes it. It keeps the screen on only for the time chosen;
+ * after that the phone sleeps as it always does. The face drifts a few
+ * points now and then, so the screen does not keep its lines. It may keep
+ * the phone quiet while it is open, alarms still ringing, and it closes by
+ * itself when its hours are over, if it came by them.
  */
 public final class Night extends Activity {
 
-    static final int TOUCH_ONCE = 0;
-    static final int TOUCH_TWICE = 1;
-    static final int TOUCH_NONE = 2;
+    /** How long the face shows after a touch before it goes down into black. */
+    private static final long SHOWN = 30000L;
 
     /** As dark as asked: the screen's light, and a veil over the face. */
     private static final float[] LIGHT = {-1f, 0.25f, 0.08f, 0.02f};
@@ -98,17 +99,13 @@ public final class Night extends Activity {
 
             @Override
             public boolean onSingleTapConfirmed(MotionEvent e) {
-                if (Keep.number(Night.this, Keep.NIGHT_TOUCH, TOUCH_TWICE) == TOUCH_ONCE) {
-                    finish();
-                }
+                wake();
                 return true;
             }
 
             @Override
             public boolean onDoubleTap(MotionEvent e) {
-                if (Keep.number(Night.this, Keep.NIGHT_TOUCH, TOUCH_TWICE) != TOUCH_NONE) {
-                    finish();
-                }
+                finish();
                 return true;
             }
         });
@@ -119,9 +116,39 @@ public final class Night extends Activity {
     /** Touches reach the whole screen first, the face's own windows included: none of them opens anything. */
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
+        /* Anything with two fingers closes it, as a double touch does. */
+        if (event.getActionMasked() == MotionEvent.ACTION_POINTER_DOWN && event.getPointerCount() >= 2) {
+            finish();
+            return true;
+        }
         twice.onTouchEvent(event);
         return true;
     }
+
+    /** The face back from the black, for another half minute. */
+    private void wake() {
+        later.removeCallbacks(sink);
+        face.animate().cancel();
+        face.animate().alpha(1f).setDuration(600).start();
+        if (Keep.flag(this, Keep.NIGHT_HIDE, true)) {
+            later.postDelayed(sink, SHOWN);
+        }
+    }
+
+    /** The face down into full black, slowly: on this screen, black is the light put out. */
+    private final Runnable sink = new Runnable() {
+        public void run() {
+            face.animate().cancel();
+            face.animate().alpha(0f).setDuration(2500).start();
+        }
+    };
+
+    /** Its time over: the screen is no longer kept on, and the phone sleeps as it always does. */
+    private final Runnable spent = new Runnable() {
+        public void run() {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
+    };
 
     private final Almanac.Hand hand = new Almanac.Hand() {
         public void pressed(String window, View from, RectF box) {
@@ -169,11 +196,17 @@ public final class Night extends Activity {
         hideBars();
         quiet(true);
         later.postDelayed(move, 180000L);
+        wake();
+        later.removeCallbacks(spent);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        later.postDelayed(spent, Keep.number(this, Keep.NIGHT_LASTS, 30) * 60000L);
     }
 
     @Override
     protected void onPause() {
         later.removeCallbacks(move);
+        later.removeCallbacks(sink);
+        later.removeCallbacks(spent);
         quiet(false);
         super.onPause();
     }
