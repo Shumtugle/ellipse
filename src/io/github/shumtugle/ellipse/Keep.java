@@ -329,6 +329,20 @@ final class Keep {
     /** Whether the phone's bars are hidden over the home screen: the status bar, the navigation bar. */
     static final String HIDE_STATUS = "hide_status";
     static final String HIDE_NAVIGATION = "hide_navigation";
+    /** The home screen's own strips in the hidden bars' places, the signs each shows, and their colour. */
+    static final String STRIP_OWN = "strip_own";
+    static final String NAV_OWN = "nav_own";
+    static final String STRIP_SIGNAL = "strip_signal";
+    static final String STRIP_WIFI = "strip_wifi";
+    static final String STRIP_NOTES = "strip_notes";
+    static final String STRIP_DATE = "strip_date";
+    static final String STRIP_CHARGE = "strip_charge";
+    static final String NAV_BACK = "nav_back";
+    static final String NAV_HOME = "nav_home";
+    static final String NAV_RECENT = "nav_recent";
+    static final String NAV_MENU = "nav_menu";
+    static final String BARS_COLOUR = "bars_colour";
+    static final String BARS_OWN_COLOUR = "bars_own_colour";
     /** How dark the outline clock's ground is, in percent: nought is clear. */
     static final String CLOCK_GROUND = "clock_ground";
     /** Which of the widget clock's own seconds hands is drawn. */

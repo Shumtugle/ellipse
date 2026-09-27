@@ -322,6 +322,10 @@ public final class Home extends Activity {
         /* The day's copy, if the home screen has stayed open since before the day began. */
         Copy.onUpdate(this);
         super.onResume();
+        /* The own strips as the settings now say: shown or not, in their colour. */
+        if (root != null) {
+            root.requestApplyInsets();
+        }
         greyNow();
         /* Back on the home screen: a step aside at once, then one every three minutes. */
         step(false);
@@ -623,6 +627,78 @@ public final class Home extends Activity {
         }
     }
 
+    private Bars.Status statusStrip;
+    private Bars.Nav navStrip;
+
+    /**
+     * A strip's sign touched: the shade, the quick settings, Wi-Fi, the
+     * network, the calendar, the phone's state; or back, home, the recent
+     * ones, the menu.
+     */
+    private void strip(String what, View from, android.graphics.RectF box) {
+        Intent open = null;
+        if (Bars.SHADE.equals(what) || Bars.QUICK.equals(what)) {
+            shade(Bars.QUICK.equals(what));
+            return;
+        }
+        if (Bars.CHARGE.equals(what)) {
+            startActivity(new Intent(this, Folio.class).putExtra(Folio.PAGE, Folio.STATE));
+            return;
+        }
+        if (Bars.BACK.equals(what)) {
+            onBackPressed();
+            return;
+        }
+        if (Bars.HOME.equals(what)) {
+            onNewIntent(new Intent());
+            return;
+        }
+        if (Bars.MENU.equals(what)) {
+            ask(from);
+            return;
+        }
+        if (Bars.RECENT.equals(what)) {
+            /* The recent ones this home screen opened, in a folder's card: the phone's own recent screen is
+               the phone's to open. */
+            Apps found = new Apps(this);
+            List<Apps.Door> recent = new ArrayList<>();
+            for (String token : Keep.recent(this)) {
+                Apps.Door door = found.door(token);
+                if (door != null && recent.size() < 12) {
+                    recent.add(door);
+                }
+            }
+            if (recent.isEmpty()) {
+                refuse(from);
+                return;
+            }
+            int[] at = new int[2];
+            int[] floorAt = new int[2];
+            from.getLocationOnScreen(at);
+            root.getLocationOnScreen(floorAt);
+            trayFolder = 0;
+            tray.show(Words.t("Recent"), recent, at[0] - floorAt[0] + box.centerX(), at[1] - floorAt[1] + box.top);
+            return;
+        }
+        if (Bars.WIFI.equals(what)) {
+            open = new Intent(Build.VERSION.SDK_INT >= 29 ? Settings.Panel.ACTION_WIFI : Settings.ACTION_WIFI_SETTINGS);
+        } else if (Bars.SIGNAL.equals(what)) {
+            open = new Intent(Build.VERSION.SDK_INT >= 29 ? Settings.Panel.ACTION_INTERNET_CONNECTIVITY
+                : Settings.ACTION_WIRELESS_SETTINGS);
+        } else if (Bars.DATE.equals(what)) {
+            open = category(Intent.CATEGORY_APP_CALENDAR);
+        }
+        if (open == null) {
+            return;
+        }
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(open);
+        } catch (RuntimeException none) {
+            refuse(from);
+        }
+    }
+
     private void fitBars(View root) {
         root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             public WindowInsets onApplyWindowInsets(View view, WindowInsets insets) {
@@ -642,6 +718,36 @@ public final class Home extends Activity {
                     top = insets.getSystemWindowInsetTop();
                     right = insets.getSystemWindowInsetRight();
                     bottom = insets.getSystemWindowInsetBottom();
+                }
+                /* The home screen's own strips stand where the hidden bars would, as tall as they would be,
+                   and only while the phone's own are away; the screens keep clear of them as of the bars. */
+                if (Build.VERSION.SDK_INT >= 30 && statusStrip != null) {
+                    boolean statusSeen = insets.isVisible(WindowInsets.Type.statusBars());
+                    boolean navSeen = insets.isVisible(WindowInsets.Type.navigationBars());
+                    android.graphics.Insets was = insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars());
+                    android.graphics.Insets wasNav = insets.getInsetsIgnoringVisibility(
+                        WindowInsets.Type.navigationBars());
+                    boolean ownTop = Keep.flag(Home.this, Keep.HIDE_STATUS, false)
+                        && Keep.flag(Home.this, Keep.STRIP_OWN, false) && !statusSeen;
+                    boolean ownFoot = Keep.flag(Home.this, Keep.HIDE_NAVIGATION, false)
+                        && Keep.flag(Home.this, Keep.NAV_OWN, false) && !navSeen;
+                    int tall = Math.max(Math.max(was.top, top), Math.round(dp(24)));
+                    int foot = Math.max(wasNav.bottom, Math.round(dp(40)));
+                    statusStrip.setVisibility(ownTop ? View.VISIBLE : View.GONE);
+                    statusStrip.getLayoutParams().height = tall;
+                    statusStrip.setPadding(left, 0, right, 0);
+                    navStrip.setVisibility(ownFoot ? View.VISIBLE : View.GONE);
+                    navStrip.getLayoutParams().height = foot;
+                    statusStrip.read();
+                    navStrip.read();
+                    statusStrip.requestLayout();
+                    navStrip.requestLayout();
+                    if (ownTop) {
+                        top = Math.max(top, tall);
+                    }
+                    if (ownFoot) {
+                        bottom = Math.max(bottom, foot);
+                    }
                 }
                 /* The keyboard only ever rises over the list, so only the
                    list's bar makes room for it; the home screen stays put. */
@@ -939,6 +1045,20 @@ public final class Home extends Activity {
         });
         root.addView(drawer, new FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        /* The home screen's own strips, where the phone's bars stand while it hides them. */
+        Bars.Hand strips = new Bars.Hand() {
+            public void open(String what, View from, android.graphics.RectF box) {
+                strip(what, from, box);
+            }
+        };
+        statusStrip = new Bars.Status(this, strips);
+        statusStrip.setVisibility(View.GONE);
+        root.addView(statusStrip, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0,
+            android.view.Gravity.TOP));
+        navStrip = new Bars.Nav(this, strips);
+        navStrip.setVisibility(View.GONE);
+        root.addView(navStrip, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0,
+            android.view.Gravity.BOTTOM));
         drawer.order(Keep.order(this), Keep.view(this));
 
         fresh = new Fresh(this, iconSize, new Fresh.Hand() {

@@ -126,6 +126,8 @@ public final class Tune extends Activity {
     private static final int GROUNDS = 16;
     private static final int GROUND_FINE = 17;
     private static final int NIGHT = 18;
+    /** The home screen's own strips in the places of the phone's hidden bars. */
+    private static final int STRIPS = 19;
     private Ground ground;
     private android.widget.ImageView groundView;
     private int groundDrawn;
@@ -158,6 +160,27 @@ public final class Tune extends Activity {
 
     private static Line[] inside(int room) {
         switch (room) {
+            case STRIPS:
+                return new Line[] {
+                    toggle("Own status strip", "While the status bar is hidden, a thin strip of signs in its place",
+                        Keep.STRIP_OWN, false),
+                    toggle("Signal", "The mobile network's strength", Keep.STRIP_SIGNAL, true),
+                    toggle("Wi-Fi", "While Wi-Fi carries the phone, and how strongly", Keep.STRIP_WIFI, true),
+                    toggle("Unread", "A bell, and how many apps have something to say", Keep.STRIP_NOTES, true),
+                    toggle("Date", "The day in the middle", Keep.STRIP_DATE, true),
+                    toggle("Charge", "The battery and its percent", Keep.STRIP_CHARGE, true),
+                    toggle("Own navigation", "While the navigation bar is hidden, four keys on a hairline in its place",
+                        Keep.NAV_OWN, false),
+                    toggle("Back", "Closes what is open: the list, a folder, a menu", Keep.NAV_BACK, true),
+                    toggle("Home", "To the home screen, as the Home key does", Keep.NAV_HOME, true),
+                    toggle("Recent", "The apps this home screen opened last, in a card", Keep.NAV_RECENT, true),
+                    toggle("Menu", "The home screen's menu", Keep.NAV_MENU, true),
+                    choice("Colour", "The strips' signs: the theme's own ink, the accent, or a colour of your own",
+                        Keep.BARS_COLOUR, 0, new String[] {"System", "Accent", "Own"}, new int[] {0, 1, 2}),
+                    choice("Own colour", "When the strips wear a colour of your own", Keep.BARS_OWN_COLOUR, 7,
+                        new String[] {"Orange", "Red", "Lilac", "Blue", "Green", "Sand", "White"},
+                        new int[] {1, 2, 3, 4, 5, 6, 7})
+                };
             case DESK:
                 return new Line[] {
                     toggle("Dock", "The bar of four at the foot, with the way into every app",
@@ -191,6 +214,8 @@ public final class Tune extends Activity {
                         + "from the edge shows the bar for a moment", Keep.HIDE_STATUS, false),
                     toggle("Hide the navigation bar", "The home screen takes the foot of the screen; a swipe up "
                         + "from the edge shows the bar for a moment", Keep.HIDE_NAVIGATION, false),
+                    door(Glyph.RESIZE, "Own bars", "Strips of the home screen's own where the hidden bars stood: "
+                        + "signs at the top, four keys at the foot", STRIPS),
                     choice("Widget shelf", "How the widgets to add are laid out", Keep.SHELF_VIEW,
                         Keep.LINES, new String[] {"Lines", "Grid"}, new int[] {Keep.LINES, Keep.PAGES}),
                     choice("Shortcut makers", "How the shortcuts to add are laid out", Keep.MAKERS_VIEW,
@@ -286,7 +311,7 @@ public final class Tune extends Activity {
             }
         }
         return room == HIDDEN ? "Hidden apps" : room == ICONS ? "Icons" : room == CLOCK ? "Clock face"
-            : room == APPS ? "Open an app" : room == GROUNDS ? "Wallpaper" : room == GROUND_FINE ? "Fine tuning" : room == LOOKS ? "Presets" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : "";
+            : room == APPS ? "Open an app" : room == GROUNDS ? "Wallpaper" : room == GROUND_FINE ? "Fine tuning" : room == LOOKS ? "Presets" : room == FONTS ? "Typeface" : room == LISTGROUND ? "Background" : room == STRIPS ? "Own bars" : "";
     }
 
     private float density;
@@ -723,6 +748,10 @@ public final class Tune extends Activity {
                         if (notes != null && !notes.isNotificationPolicyAccessGranted()) {
                             openSafely(new Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));
                         }
+                    }
+                    /* The wallpaper in copies: the way to the leave it needs shows at once. */
+                    if (Keep.COPY_WALLPAPER.equals(line.key)) {
+                        fill();
                     }
                     /* Dots need the phone's leave to know of notifications. */
                     if (Keep.DOTS_ON.equals(line.key) && toggle.on() && !Notices.on()) {
