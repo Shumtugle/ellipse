@@ -116,10 +116,10 @@ public final class Tune extends Activity {
     private static final int LAPSE = 8;
     /** What any gesture may be given, by its name. */
     private static final String[] DEED_NAMES = {"Nothing", "All apps", "Search apps", "Notifications",
-        "Quick settings", "Recent and new", "Home screen", "Lock the phone", "Ellipse settings", "Night clock",
+        "Quick settings", "Recent and new", "Home screen", "Lock the phone", "Ellipse settings", "Night clock", "Grey",
         "Open an app\u2026"};
     private static final int[] DEEDS = {Keep.DO_NOTHING, Keep.DO_LIST, Keep.DO_SEARCH, Keep.DO_NOTICES, Keep.DO_QUICK,
-        Keep.DO_FRESH, Keep.DO_HOME, Keep.DO_LOCK, Keep.DO_SETTINGS, Keep.DO_NIGHT, Keep.DO_APP};
+        Keep.DO_FRESH, Keep.DO_HOME, Keep.DO_LOCK, Keep.DO_SETTINGS, Keep.DO_NIGHT, Keep.DO_GREY, Keep.DO_APP};
     /** The room where an app is chosen for a gesture, and the gesture it is chosen for. */
     private static final int APPS = 14;
     /** The ground factory's room, the recipe on it, and the throws of the dice in this sitting. */

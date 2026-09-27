@@ -210,6 +210,10 @@ final class Keep {
     /** An app of the owner's choosing, kept under the gesture's own word after "app.". */
     static final int DO_APP = 9;
     static final int DO_NIGHT = 10;
+    static final int DO_GREY = 11;
+    /** Whether the grey is on; whether the pinch was once given to it. */
+    static final String GREY = "grey";
+    static final String GREY_OFFERED = "grey_offered";
 
     /** The night clock: its face, how dark, what a touch does, whether quiet, and its hours. */
     static final String NIGHT_FACE = "night_face";

@@ -672,3 +672,6 @@ Turn as the phone turns = Puhelimen mukaan
 Lying down is a set-out of its own, as the phone turns: moved or added there, nothing changes upright; a widget taken away is gone from both. It began as the upright one laid in its grid. Nothing lying down goes to the screen's edges. = Vaakanäkymä on oma asettelunsa puhelimen kääntyessä: siellä siirretty tai lisätty ei muuta pystynäkymää; poistettu widget katoaa molemmista. Se alkoi pystyasettelusta omaan ruudukkoonsa asetettuna. Vaakana mikään ei ulotu näytön reunoihin.
 A new ground = Uusi tausta
 One place; a touch sets a new wallpaper = Yksi paikka; kosketus vaihtaa taustakuvan
+OK = Selvä
+Grey = Harmaa tila
+The home screen is grey now; the apps keep their colours. For the whole phone to go grey, give Ellipse, once, from a computer, the leave to change the phone's own settings: adb shell pm grant io.github.shumtugle.ellipse android.permission.WRITE_SECURE_SETTINGS = Kotinäyttö on nyt harmaa; sovellukset pitävät värinsä. Jotta koko puhelin harmaantuu, anna Ellipselle kerran tietokoneelta oikeus muuttaa järjestelmäasetuksia: adb shell pm grant io.github.shumtugle.ellipse android.permission.WRITE_SECURE_SETTINGS

@@ -267,6 +267,13 @@ public final class Home extends Activity {
         Lapse.watch(this);
         super.onCreate(saved);
         turnAsKept();
+        /* The pinch, left to nothing, goes to the grey once; chosen otherwise, it stays as chosen. */
+        if (!Keep.flag(this, Keep.GREY_OFFERED, false)) {
+            Keep.saveFlag(this, Keep.GREY_OFFERED, true);
+            if (Keep.number(this, Keep.ON_PINCH, Keep.DO_NOTHING) == Keep.DO_NOTHING) {
+                Keep.saveNumber(this, Keep.ON_PINCH, Keep.DO_GREY);
+            }
+        }
         /* A new version's first start: the old set-out is copied aside
            before anything here reads or changes it. */
         Copy.onUpdate(this);
@@ -304,6 +311,7 @@ public final class Home extends Activity {
         super.onResume();
         /* Held the way it was last turned, in the settings or its menu. */
         turnAsKept();
+        greyNow();
         /* Back on the home screen: a step aside at once, then one every three minutes. */
         step(false);
         drifting.removeCallbacks(driftOn);
@@ -468,6 +476,9 @@ public final class Home extends Activity {
                 break;
             case Keep.DO_NIGHT:
                 Night.open(this, false);
+                break;
+            case Keep.DO_GREY:
+                grey(!Keep.flag(this, Keep.GREY, false));
                 break;
             case Keep.DO_APP:
                 Apps.Door door = new Apps(this).door(Keep.word(this, "app." + gesture) == null ? ""
@@ -2017,6 +2028,60 @@ public final class Home extends Activity {
         });
         return own;
     }
+
+    // ------------------------------------------------------------- grey
+
+    /**
+     * The grey, on or off. Given once the phone's leave to change its own
+     * settings, the whole phone goes grey, every app with it; without it,
+     * the home screen alone does — and says, the first time, how the whole
+     * phone may be let go grey too.
+     */
+    private void grey(boolean on) {
+        Keep.saveFlag(this, Keep.GREY, on);
+        if (wholePhone()) {
+            try {
+                android.content.ContentResolver settings = getContentResolver();
+                android.provider.Settings.Secure.putInt(settings, "accessibility_display_daltonizer", 0);
+                android.provider.Settings.Secure.putInt(settings, "accessibility_display_daltonizer_enabled", on ? 1 : 0);
+            } catch (RuntimeException refused) {
+                // The home screen alone, then.
+            }
+        } else if (on && !Keep.flag(this, "grey_told", false)) {
+            Keep.saveFlag(this, "grey_told", true);
+            Ask.tell(root, GREY_CAPTION, GREY_TOLD, "OK", new Runnable() {
+                public void run() {
+                }
+            });
+        }
+        greyNow();
+    }
+
+    private boolean wholePhone() {
+        return checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS")
+            == android.content.pm.PackageManager.PERMISSION_GRANTED;
+    }
+
+    /** The home screen drawn without colour while the grey is on and the phone itself is not grey. */
+    private void greyNow() {
+        if (root == null) {
+            return;
+        }
+        if (Keep.flag(this, Keep.GREY, false) && !wholePhone()) {
+            android.graphics.ColorMatrix none = new android.graphics.ColorMatrix();
+            none.setSaturation(0f);
+            android.graphics.Paint grey = new android.graphics.Paint();
+            grey.setColorFilter(new android.graphics.ColorMatrixColorFilter(none));
+            root.setLayerType(View.LAYER_TYPE_HARDWARE, grey);
+        } else {
+            root.setLayerType(View.LAYER_TYPE_NONE, null);
+        }
+    }
+
+    private static final String GREY_CAPTION = "Grey";
+    private static final String GREY_TOLD = "The home screen is grey now; the apps keep their colours. For the whole "
+        + "phone to go grey, give Ellipse, once, from a computer, the leave to change the phone's own settings: "
+        + "adb shell pm grant io.github.shumtugle.ellipse android.permission.WRITE_SECURE_SETTINGS";
 
     /** The dice's face: a die on the plate every icon of the home screen's own wears. */
     private android.graphics.drawable.Drawable diceFace() {

@@ -152,6 +152,9 @@ To lock the phone, Ellipse is to be allowed to lock it, and nothing more, as a k
 First = First
 Plate = Plate
 Rings = Rings
+OK = OK
+Grey = Grey
+The home screen is grey now; the apps keep their colours. For the whole phone to go grey, give Ellipse, once, from a computer, the leave to change the phone's own settings: adb shell pm grant io.github.shumtugle.ellipse android.permission.WRITE_SECURE_SETTINGS = The home screen is grey now; the apps keep their colours. For the whole phone to go grey, give Ellipse, once, from a computer, the leave to change the phone's own settings: adb shell pm grant io.github.shumtugle.ellipse android.permission.WRITE_SECURE_SETTINGS
 Replace the wallpaper? = Replace the wallpaper?
 Replace = Replace
 The wallpaper the phone has now is replaced, and Ellipse cannot keep it for you, for the phone does not let it be read. If it is a picture of your own, bring it in first with Wallpaper from a picture: Ellipse keeps it, sets it again at a touch and carries it in copies. = The wallpaper the phone has now is replaced, and Ellipse cannot keep it for you, for the phone does not let it be read. If it is a picture of your own, bring it in first with Wallpaper from a picture: Ellipse keeps it, sets it again at a touch and carries it in copies.
