@@ -177,7 +177,7 @@ public final class Home extends Activity {
     private static final String FRAME_OFF = "No frame";
     private static final String FRONT = "Bring to front";
     private static final String BEHIND = "Send behind";
-    private static final String ARRANGE = "Arrange rings";
+    private static final String ARRANGE = "Arrange bubbles";
     private static final String FACE_LINE = "Change icon";
     /** What the whole screen of choices is choosing now: a shortcut's maker, or one icon's face. */
     private boolean choosingFace;
@@ -2052,7 +2052,7 @@ public final class Home extends Activity {
     static final int FACE_STONES = 9;
     static final int[] FACES = {FACE_FIRST, FACE_PLATE, FACE_MENO, FACE_RINGS, FACE_ECLIPSE, FACE_HORIZON,
         FACE_RESERVOIR, FACE_FLIP, FACE_MONOGRAM, FACE_STONES};
-    static final String[] FACE_NAMES = {"First", "Plate", "Meno", "Rings", "Eclipse", "Horizon", "Reservoir", "Flip",
+    static final String[] FACE_NAMES = {"First", "Plate", "Meno", "Bubbles", "Eclipse", "Horizon", "Reservoir", "Flip",
         "Monogram", "Three stones"};
 
     static View timepiece(Context context, Almanac.Hand hand) {
@@ -2299,9 +2299,10 @@ public final class Home extends Activity {
             return;
         }
         Intent open;
-        if (Almanac.DIAL.equals(window)) {
+        /* The time, digits or hands, opens the clock; the date, the calendar. */
+        if (Almanac.DIAL.equals(window) || Almanac.TIME.equals(window)) {
             open = new Intent(AlarmClock.ACTION_SHOW_ALARMS);
-        } else if (Almanac.TIME.equals(window)) {
+        } else if (Almanac.DATE.equals(window)) {
             open = category(Intent.CATEGORY_APP_CALENDAR);
         } else if (Almanac.EARS.equals(window)) {
             open = new Intent(Settings.ACTION_BLUETOOTH_SETTINGS);

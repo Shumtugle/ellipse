@@ -234,7 +234,7 @@ final class Meno extends View implements Timepiece {
             if (!boxes[i].isEmpty() && boxes[i].contains(cx, cy)) {
                 RectF out = new RectF(boxes[i].left * scale, boxes[i].top * scale, boxes[i].right * scale,
                     boxes[i].bottom * scale);
-                hand.pressed(names[i], this, out);
+                hand.pressed(Almanac.TIME.equals(names[i]) ? Almanac.timeOrDate(boxes[i], cy) : names[i], this, out);
                 return;
             }
         }

@@ -165,14 +165,14 @@ final class Looks {
     }
 
     /** The ready presets, by their names; the first is the home screen as it first comes. */
-    static final String[] READY = {"Material 3", "Wood", "Steel", "Meno", "Rings", "Paper", "Walnut", "Gold", "Noir"};
+    static final String[] READY = {"Material 3", "Wood", "Steel", "Meno", "Bubbles", "Paper", "Walnut", "Gold", "Noir"};
     static final String[] READY_ABOUT = {
         "The home screen as it first comes: icons in the phone's own shape and colours, the first clock, "
             + "no rims or frames",
         "Tiles with a rim of wood, the plate clock in a case of wood, widgets framed in wood, a warm sand accent",
         "Squircles with a rim of steel, the plate clock in steel, frames of steel, a cool grey-blue accent",
         "The glass card clock, round icons with a fine rim of glass, frames of glass, a dark ground",
-        "The rings, and round icons of glass with its gleam, like small rings; no frames, the rings hang free",
+        "The bubbles, and round icons of glass with its gleam, like small bubbles; no frames, the bubbles hang free",
         "The paper tile, no rim; with the owner's own pack of masks, if it is on the phone",
         "Wide tiles rimmed in wood and glazed, each app drawn as a light symbol in a round window; the plate "
             + "clock in wood with a black dial, frames of wood, names in sand",

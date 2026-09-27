@@ -41,6 +41,8 @@ final class Almanac extends View implements Timepiece {
 
     static final String DIAL = "dial";
     static final String TIME = "time";
+    /** The date: a touch opens the calendar, as a touch on the time opens the clock. */
+    static final String DATE = "date";
     static final String CHARGE = "charge";
     static final String WEATHER = "weather";
     static final String EARS = "ears";
@@ -180,6 +182,14 @@ final class Almanac extends View implements Timepiece {
         return true;
     }
 
+    /**
+     * A window of the time with the date under it: its upper part the time,
+     * which opens the clock; its lower part the date, which opens the calendar.
+     */
+    static String timeOrDate(RectF box, float y) {
+        return y > box.top + box.height() * 0.62f ? DATE : TIME;
+    }
+
     private void press(float x, float y) {
         RectF box = dialBox.contains(x, y) ? dialBox : timeBox.contains(x, y) ? timeBox
             : chargeBox.contains(x, y) ? chargeBox
@@ -188,7 +198,7 @@ final class Almanac extends View implements Timepiece {
         if (box == null) {
             return;
         }
-        String which = box == dialBox ? DIAL : box == timeBox ? TIME : box == chargeBox ? CHARGE
+        String which = box == dialBox ? DIAL : box == timeBox ? timeOrDate(timeBox, y) : box == chargeBox ? CHARGE
             : box == weatherBox ? WEATHER : EARS;
         hand.pressed(which, this, box);
     }

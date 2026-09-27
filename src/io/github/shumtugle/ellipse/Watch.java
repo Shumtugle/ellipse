@@ -188,14 +188,15 @@ final class Watch extends View implements Timepiece {
     }
 
     private void press(float x, float y) {
-        String which = dialBox.contains(x, y) ? Almanac.DIAL : timeBox.contains(x, y) ? Almanac.TIME
+        String which = dialBox.contains(x, y) ? Almanac.DIAL : timeBox.contains(x, y) ? Almanac.timeOrDate(timeBox, y)
             : !weatherBox.isEmpty() && weatherBox.contains(x, y) ? Almanac.WEATHER
             : !earsBox.isEmpty() && earsBox.contains(x, y) ? Almanac.EARS
             : chargeBox.contains(x, y) ? Almanac.CHARGE : null;
         if (which == null) {
             return;
         }
-        RectF box = Almanac.DIAL.equals(which) ? dialBox : Almanac.TIME.equals(which) ? timeBox
+        RectF box = Almanac.DIAL.equals(which) ? dialBox
+            : Almanac.TIME.equals(which) || Almanac.DATE.equals(which) ? timeBox
             : Almanac.WEATHER.equals(which) ? weatherBox : Almanac.EARS.equals(which) ? earsBox : chargeBox;
         hand.pressed(which, this, box);
     }

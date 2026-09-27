@@ -1021,7 +1021,7 @@ public final class Tune extends Activity {
             }
         }));
         rows.addView(row(choice("Face", "Which clock lies across the screen", Keep.NIGHT_FACE, -1,
-            new String[] {"As on the home screen", "The first clock", "Plate", "Meno", "Rings", "Eclipse", "Horizon",
+            new String[] {"As on the home screen", "The first clock", "Plate", "Meno", "Bubbles", "Eclipse", "Horizon",
                 "Reservoir", "Flip", "Monogram", "Three stones"},
             new int[] {-1, Home.FACE_FIRST, Home.FACE_PLATE, Home.FACE_MENO, Home.FACE_RINGS, Home.FACE_ECLIPSE,
                 Home.FACE_HORIZON, Home.FACE_RESERVOIR, Home.FACE_FLIP, Home.FACE_MONOGRAM, Home.FACE_STONES})));
@@ -2071,8 +2071,9 @@ public final class Tune extends Activity {
             touches(Hues.MENO, new String[] {Hues.HANDS, Hues.MARKS}, new String[] {"HANDS", "MARKS"});
         }
         if (face == Home.FACE_RINGS) {
-            note("To set the rings by hand, hold the clock on the home screen and choose Arrange rings.");
-            caption("BIG RING");
+            note("To set the bubbles by hand, hold the clock on the home screen and choose Arrange bubbles: "
+                + "drag a bubble to move it, drag the knob on its edge to size it.");
+            caption("BIG BUBBLE");
             rows.addView(swatches(Keep.RINGS_BIG, Keep.number(this, Keep.RINGS_BIG, Rings.FIGURES),
                 new int[] {Rings.FIGURES, Rings.HANDS}, Rings.BIG_NAMES, new Painter() {
                     public void paint(android.graphics.Canvas c, float w, float h, int value) {
@@ -2082,11 +2083,11 @@ public final class Tune extends Activity {
             caption("SMALL RINGS");
             final int[] ids = Keep.ringIds(this);
             for (int i = 0; i < ids.length; i++) {
-                rows.addView(row(choice(Words.f("Ring %1", i + 1), "What it holds", Keep.RING_KIND + ids[i], Rings.CITY,
+                rows.addView(row(choice(Words.f("Bubble %1", i + 1), "What it holds", Keep.RING_KIND + ids[i], Rings.CITY,
                     Rings.SMALL_NAMES, Rings.SMALL_KINDS)));
             }
             if (ids.length < Keep.RINGS_MOST) {
-                rows.addView(deed("Add a ring", new Runnable() {
+                rows.addView(deed("Add a bubble", new Runnable() {
                     public void run() {
                         int next = 1;
                         for (int id : ids) {

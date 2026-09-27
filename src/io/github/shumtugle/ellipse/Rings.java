@@ -484,6 +484,15 @@ final class Rings extends View implements Timepiece {
                 if (getParent() != null) {
                     getParent().requestDisallowInterceptTouchEvent(true);
                 }
+                /* The knob on a bubble's edge sizes it; anywhere else on it, it moves. */
+                sizing = false;
+                held = knobAt(x, y);
+                if (held >= 0) {
+                    sizing = true;
+                    performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+                    invalidate();
+                    return true;
+                }
                 held = ringAt(x, y);
                 if (held >= 0) {
                     heldDx = stands[held][0] - x;
@@ -507,7 +516,11 @@ final class Rings extends View implements Timepiece {
                     return true;
                 }
                 float[] at = stands[held].clone();
-                if (event.getPointerCount() >= 2 && pinchFrom > 0f) {
+                if (sizing && event.getPointerCount() == 1) {
+                    float least = held == BIG ? 56f : 28f;
+                    at[2] = Math.max(least, Math.min(Math.min(vw, vh) / 2f,
+                        (float) Math.hypot(x - at[0], y - at[1])));
+                } else if (event.getPointerCount() >= 2 && pinchFrom > 0f) {
                     float least = held == BIG ? 56f : 28f;
                     at[2] = Math.max(least, Math.min(Math.min(vw, vh) / 2f, pinchRadius * spread(event) / pinchFrom));
                 } else if (event.getPointerCount() == 1) {
@@ -531,12 +544,36 @@ final class Rings extends View implements Timepiece {
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 held = -1;
+                sizing = false;
                 pinchFrom = 0f;
                 invalidate();
                 return true;
             default:
                 return true;
         }
+    }
+
+    private boolean sizing;
+
+    /** Where a bubble's knob stands: on its edge, below and to the right. */
+    private float[] knob(float[] at) {
+        return new float[] {at[0] + at[2] * 0.7071f, at[1] + at[2] * 0.7071f};
+    }
+
+    /** The bubble whose knob is under the finger, the one drawn last first; or none. */
+    private int knobAt(float x, float y) {
+        int[] order = drawOrder();
+        for (int i = order.length - 1; i >= 0; i--) {
+            float[] at = stands[order[i]];
+            if (at == null) {
+                continue;
+            }
+            float[] k0 = knob(at);
+            if (Math.hypot(x - k0[0], y - k0[1]) < 14f) {
+                return order[i];
+            }
+        }
+        return -1;
     }
 
     private float spread(MotionEvent event) {
@@ -550,12 +587,19 @@ final class Rings extends View implements Timepiece {
             return;
         }
         String window;
+        float[] hit = stands[ring];
+        /* The time opens the clock; the date under it, the calendar. */
+        boolean lower = y / scale > hit[1] + hit[2] * 0.24f;
         if (ring == BIG) {
-            window = big == HANDS ? Almanac.DIAL : Almanac.TIME;
+            window = big == HANDS ? Almanac.DIAL : lower ? Almanac.DATE : Almanac.TIME;
         } else if (ring == earsRing) {
             window = Almanac.EARS;
-        } else if (kinds[ring] == CALENDAR || kinds[ring] == ALARM || kinds[ring] == TIME) {
-            window = Almanac.TIME;
+        } else if (kinds[ring] == CALENDAR) {
+            window = Almanac.DATE;
+        } else if (kinds[ring] == ALARM) {
+            window = Almanac.DIAL;
+        } else if (kinds[ring] == TIME) {
+            window = lower ? Almanac.DATE : Almanac.TIME;
         } else if (kinds[ring] == CHARGE || kinds[ring] == MEMORY) {
             window = Almanac.CHARGE;
         } else if (kinds[ring] == PLAYER) {
@@ -608,6 +652,18 @@ final class Rings extends View implements Timepiece {
                 text(canvas, ears + "%", at[0], at[1] + at[2] * 0.34f, at[2] * 0.32f, INK, at[2] * 1.5f);
             } else {
                 small(canvas, at, kinds[ring]);
+            }
+            if (arranging) {
+                /* The knob that sizes the bubble, on its edge. */
+                float[] k0 = knob(at);
+                paint.setShader(null);
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor(ring == held && sizing ? Tone.primary() : 0xF2FFFFFF);
+                canvas.drawCircle(k0[0], k0[1], 7f, paint);
+                paint.setStyle(Paint.Style.STROKE);
+                paint.setStrokeWidth(1.5f);
+                paint.setColor(0x99000000);
+                canvas.drawCircle(k0[0], k0[1], 7f, paint);
             }
         }
         canvas.restore();

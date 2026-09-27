@@ -408,7 +408,8 @@ final class Faces {
             c.drawPath(lens, paint);
             text(c, time(now), ax - 20f, cy - 6f, 32f, 92f, INK, true, Paint.Align.CENTER);
             text(c, day(now, "EE d"), ax - 20f, cy + 22f, 13f, 84f, FAINT, false, Paint.Align.CENTER);
-            window(Almanac.TIME, ax - r, cy - r, 150f - 22f, cy + r);
+            window(Almanac.TIME, ax - r, cy - r, 150f - 22f, cy + 10f);
+            window(Almanac.DATE, ax - r, cy + 10f, 150f - 22f, cy + r);
             if (known()) {
                 drawSky(c, bx + 20f, cy - 20f, 32f);
                 text(c, degrees(), bx + 20f, cy + 16f, 22f, 74f, INK, true, Paint.Align.CENTER);
@@ -472,7 +473,8 @@ final class Faces {
             drawEars(c, 234f, line + 12f, 11f, FAINT, Paint.Align.RIGHT);
             text(c, time(now), 22f, 108f, 50f, 190f, INK, true, Paint.Align.LEFT);
             text(c, day(now, "EEEE"), 298f, 116f, 14f, 100f, FAINT, false, Paint.Align.RIGHT);
-            window(Almanac.TIME, 4f, line + 20f, 316f, 146f);
+            window(Almanac.TIME, 4f, line + 20f, 200f, 146f);
+            window(Almanac.DATE, 200f, line + 20f, 316f, 146f);
         }
     }
 
@@ -508,7 +510,8 @@ final class Faces {
             drawEars(c, (tank + 316f) / 2f, 86f, 11f, light ? DARK_INK : INK, Paint.Align.CENTER);
             text(c, time(now), 34f, 50f, 40f, 170f, INK, true, Paint.Align.LEFT);
             text(c, day(now, "EE, d MMM"), 34f, 84f, 13f, 100f, FAINT, false, Paint.Align.LEFT);
-            window(Almanac.TIME, 4f, 6f, 150f, 114f);
+            window(Almanac.TIME, 4f, 6f, 150f, 70f);
+            window(Almanac.DATE, 4f, 70f, 146f, 114f);
             if (known()) {
                 drawSky(c, 158f, 84f, 18f);
                 text(c, degrees(), 170f, 84f, 13f, 40f, INK, false, Paint.Align.LEFT);
@@ -586,6 +589,7 @@ final class Faces {
             text(c, percent(), 284f, y + 14f, 12f, 60f, charging ? 0xFF8FBF8A : mark == 0 ? INK : accent(), false,
                 Paint.Align.RIGHT);
             window(Almanac.CHARGE, 244f, y + 2f, 290f, y + 26f);
+            window(Almanac.DATE, 214f, y - 20f, 290f, y + 2f);
             drawEars(c, 240f, y + 14f, 12f, FAINT, Paint.Align.RIGHT);
         }
 
@@ -689,10 +693,11 @@ final class Faces {
             String line = day(now, "EE d") + (known() ? "  \u00B7  " + degrees() : "") + "  \u00B7  " + percent()
                 + (ears >= 0 ? "  \u00B7  \u266B " + ears + "%" : "");
             text(c, line, 14f, 136f, 14f, 290f, FAINT, false, Paint.Align.LEFT);
+            window(Almanac.DATE, 4f, 124f, 70f, 148f);
             if (known()) {
-                window(Almanac.WEATHER, 70f, 124f, 190f, 148f);
+                window(Almanac.WEATHER, 70f, 124f, 150f, 148f);
             }
-            window(Almanac.CHARGE, 190f, 124f, 316f, 148f);
+            window(Almanac.CHARGE, 150f, 124f, 316f, 148f);
         }
     }
 
@@ -718,7 +723,8 @@ final class Faces {
             stone(c, 106f, 76f, 98f, 68f, 0.045f, 1.3f);
             text(c, time(now), 106f, 68f, 42f, 160f, ink, true, Paint.Align.CENTER);
             text(c, day(now, "EE d"), 106f, 104f, 14f, 120f, faint, false, Paint.Align.CENTER);
-            window(Almanac.TIME, 8f, 8f, 204f, 144f);
+            window(Almanac.TIME, 8f, 8f, 204f, 88f);
+            window(Almanac.DATE, 8f, 88f, 204f, 144f);
             stone(c, 252f, 54f, 50f, 44f, 0.06f, 2.1f);
             if (known()) {
                 drawSky(c, 252f, 42f, 26f);
