@@ -3838,7 +3838,8 @@ public final class Home extends Activity {
         Bundle grow = from == null ? null : ActivityOptions.makeClipRevealAnimation(from, 0, 0,
             from.getWidth(), from.getHeight()).toBundle();
         try {
-            if (key >= KEY_SHORTCUT) {
+            /* An app's own shortcut: only the numbers the shortcuts take, not those of the second menus. */
+            if (key >= KEY_SHORTCUT && key - KEY_SHORTCUT < offerShortcuts.size()) {
                 android.content.pm.ShortcutInfo info = offerShortcuts.get(key - KEY_SHORTCUT);
                 launcher.startShortcut(info, bounds, grow);
             } else if (key == KEY_INFO && offerDoor != null) {
