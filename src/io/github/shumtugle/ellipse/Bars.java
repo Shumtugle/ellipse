@@ -51,6 +51,11 @@ final class Bars {
      * dark text reads on them.
      */
     static boolean lightBehind(Context context) {
+        /* A wallpaper the home screen drew or keeps itself is measured where the strip stands: its top. */
+        float top = topLight(context);
+        if (!Float.isNaN(top)) {
+            return top > 0.42f;
+        }
         try {
             android.app.WallpaperManager walls = android.app.WallpaperManager.getInstance(context);
             android.app.WallpaperColors colours = walls.getWallpaperColors(android.app.WallpaperManager.FLAG_SYSTEM);
@@ -58,11 +63,48 @@ final class Bars {
                 return false;
             }
             if (android.os.Build.VERSION.SDK_INT >= 31) {
-                return (colours.getColorHints() & android.app.WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0;
+                if ((colours.getColorHints() & android.app.WallpaperColors.HINT_SUPPORTS_DARK_TEXT) != 0) {
+                    return true;
+                }
             }
-            return android.graphics.Color.luminance(colours.getPrimaryColor().toArgb()) > 0.6f;
+            /* The phone may judge a bright mid-tone as still dark; its main colour tells more. */
+            return android.graphics.Color.luminance(colours.getPrimaryColor().toArgb()) > 0.45f;
         } catch (RuntimeException unread) {
             return false;
+        }
+    }
+
+    /**
+     * How light the top of the wallpaper is, nought to one, where the home
+     * screen can know it: the factory's own ground drawn again small, or the
+     * owner's own picture read small; otherwise not known.
+     */
+    static float topLight(Context context) {
+        try {
+            android.graphics.Bitmap small = null;
+            if (Keep.flag(context, Keep.GROUND_WORN, false)) {
+                small = Ground.kept(context).draw(24, 52);
+            } else if (Keep.flag(context, Keep.PICTURE_WORN, false) && Picture.kept(context)) {
+                android.graphics.BitmapFactory.Options few = new android.graphics.BitmapFactory.Options();
+                few.inSampleSize = 16;
+                small = android.graphics.BitmapFactory.decodeFile(Picture.file(context).getPath(), few);
+            }
+            if (small == null) {
+                return Float.NaN;
+            }
+            int rows = Math.max(1, small.getHeight() / 12);
+            float sum = 0f;
+            int count = 0;
+            for (int y = 0; y < rows; y++) {
+                for (int x = 0; x < small.getWidth(); x++) {
+                    sum += android.graphics.Color.luminance(small.getPixel(x, y));
+                    count++;
+                }
+            }
+            small.recycle();
+            return count == 0 ? Float.NaN : sum / count;
+        } catch (RuntimeException | OutOfMemoryError unread) {
+            return Float.NaN;
         }
     }
 
@@ -130,6 +172,12 @@ final class Bars {
         /** The colours and the chosen signs, read again as the settings change. */
         void read() {
             ink = colour(getContext());
+            /* A soft shade under the signs, the other way from their ink, so a mid-tone never swallows them. */
+            boolean darkInk = android.graphics.Color.luminance(ink) < 0.4f;
+            int shade = darkInk ? 0x59FFFFFF : 0x80000000;
+            paint.setShadowLayer(dp(1.6f), 0f, dp(0.4f), shade);
+            words.setShadowLayer(dp(1.6f), 0f, dp(0.4f), shade);
+            setLayerType(View.LAYER_TYPE_SOFTWARE, null);
             accent = Keep.number(getContext(), Keep.BARS_COLOUR, 0) == 0 ? accentOn(getContext()) : ink;
             invalidate();
         }
@@ -314,12 +362,37 @@ final class Bars {
                 paint.setColor(charging ? accent : ink);
                 c.drawRoundRect(new RectF(body.left + in, body.top + in,
                     body.left + in + (body.width() - 2 * in) * charge / 100f, body.bottom - in), dp(1.5f), dp(1.5f), paint);
+                if (charging) {
+                    /* Charging: a bolt across the battery, cut out of the fill so it reads on any level. */
+                    android.graphics.Path bolt = new android.graphics.Path();
+                    float bx = body.centerX();
+                    float bt = body.top - dp(1.5f);
+                    float bb = body.bottom + dp(1.5f);
+                    float bw2 = bh * 0.42f;
+                    bolt.moveTo(bx + bw2 * 0.35f, bt);
+                    bolt.lineTo(bx - bw2 * 0.7f, cy + dp(0.5f));
+                    bolt.lineTo(bx - bw2 * 0.02f, cy + dp(0.5f));
+                    bolt.lineTo(bx - bw2 * 0.35f, bb);
+                    bolt.lineTo(bx + bw2 * 0.7f, cy - dp(0.5f));
+                    bolt.lineTo(bx + bw2 * 0.02f, cy - dp(0.5f));
+                    bolt.close();
+                    boolean darkInk = android.graphics.Color.luminance(ink) < 0.4f;
+                    paint.setStyle(Paint.Style.STROKE);
+                    paint.setStrokeWidth(dp(1.4f));
+                    paint.setStrokeJoin(Paint.Join.ROUND);
+                    paint.setColor(darkInk ? 0xFFF2EEE6 : 0xFF1C1A17);
+                    c.drawPath(bolt, paint);
+                    paint.setStyle(Paint.Style.FILL);
+                    paint.setColor(ink);
+                    c.drawPath(bolt, paint);
+                }
                 words.setColor(ink);
                 words.setTextSize(s * 0.9f);
                 words.setTypeface(Typeface.DEFAULT);
                 words.setTextAlign(Paint.Align.RIGHT);
                 Paint.FontMetrics f = words.getFontMetrics();
-                c.drawText(String.valueOf(charge), body.left - dp(5), cy - (f.ascent + f.descent) / 2f, words);
+                c.drawText(String.valueOf(charge), body.left - dp(5),
+                    cy - (f.ascent + f.descent) / 2f, words);
                 window(CHARGE, body.left - dp(34), 0, w, h);
             }
         }
