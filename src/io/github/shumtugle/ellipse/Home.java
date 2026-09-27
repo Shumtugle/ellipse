@@ -1789,6 +1789,7 @@ public final class Home extends Activity {
         final Ground ground = Ground.kept(this);
         final java.io.File into = new java.io.File(getFilesDir(), Copy.GLIMPSE);
         final java.io.File picture = own ? Picture.file(this) : null;
+        final Context app = getApplicationContext();
         new Thread(new Runnable() {
             public void run() {
                 try {
@@ -1801,6 +1802,19 @@ public final class Home extends Activity {
                         android.graphics.BitmapFactory.Options small = new android.graphics.BitmapFactory.Options();
                         small.inSampleSize = 8;
                         back = android.graphics.BitmapFactory.decodeFile(picture.getPath(), small);
+                    } else if (Copy.wallpaperReadable()) {
+                        /* Allowed to read it, the phone's own wallpaper stands under the picture too. */
+                        try (android.os.ParcelFileDescriptor file = android.app.WallpaperManager.getInstance(app)
+                            .getWallpaperFile(android.app.WallpaperManager.FLAG_SYSTEM)) {
+                            if (file != null) {
+                                android.graphics.BitmapFactory.Options small = new android.graphics.BitmapFactory.Options();
+                                small.inSampleSize = 8;
+                                back = android.graphics.BitmapFactory.decodeFileDescriptor(file.getFileDescriptor(),
+                                    null, small);
+                            }
+                        } catch (java.io.IOException | RuntimeException unread) {
+                            back = null;
+                        }
                     }
                     if (back != null) {
                         m.drawBitmap(back, null, new android.graphics.Rect(0, 0, w, h), null);
