@@ -81,6 +81,7 @@ final class Menu {
     private final Glyph buttonGlyph;
     /** What the card holds, in a scroll of its own for a menu taller than most of the screen. */
     private final android.widget.ScrollView scroll;
+    private LinearLayout foot;
     private final LinearLayout body;
     private final float density;
     private final float scaled;
@@ -166,6 +167,12 @@ final class Menu {
         scroll.addView(body);
         card.addView(scroll, new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        /* The last section — taking away, or the way to the settings — stands under the scroll,
+           always in sight however many lines there are above it. */
+        foot = new LinearLayout(context);
+        foot.setOrientation(LinearLayout.VERTICAL);
+        card.addView(foot, new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         host.addView(card, new FrameLayout.LayoutParams(dp(WIDTH),
             ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP | Gravity.START));
     }
@@ -202,6 +209,7 @@ final class Menu {
 
     private void build() {
         body.removeAllViews();
+        foot.removeAllViews();
         head.setVisibility(first != null ? View.VISIBLE : View.GONE);
         if (first != null) {
             title.setTextColor(Tone.faint());
@@ -215,6 +223,8 @@ final class Menu {
         }
         for (int s = 0; s < sections.length; s++) {
             Section section = sections[s];
+            boolean last = s > 0 && s == sections.length - 1 && section.caption == null;
+            LinearLayout into = last ? foot : body;
             if (s > 0 && section.caption == null) {
                 /* A section with no name of its own is set off from the one
                    before by a hairline: it is another kind of line. */
@@ -223,7 +233,7 @@ final class Menu {
                 LinearLayout.LayoutParams ruleParams = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, Math.max(1, dp(1)));
                 ruleParams.setMargins(dp(0), dp(8), dp(0), dp(6));
-                body.addView(rule, ruleParams);
+                into.addView(rule, ruleParams);
             }
             if (section.caption != null) {
                 TextView caption = new TextView(context);
@@ -235,7 +245,7 @@ final class Menu {
                 body.addView(caption);
             }
             for (int i = 0; i < section.lines.length; i++) {
-                body.addView(line(section, s, i), lineParams());
+                into.addView(line(section, s, i), lineParams());
             }
         }
         Style.apply(card);
@@ -356,7 +366,7 @@ final class Menu {
         float most = host.getHeight() * 0.7f;
         if (card.getMeasuredHeight() + nib > most) {
             fit.height = Math.round(most - nib) - card.getPaddingTop() - card.getPaddingBottom()
-                - (head.getVisibility() == View.VISIBLE ? head.getMeasuredHeight() : 0);
+                - (head.getVisibility() == View.VISIBLE ? head.getMeasuredHeight() : 0) - foot.getMeasuredHeight();
             scroll.setLayoutParams(fit);
             scroll.scrollTo(0, 0);
             card.measure(View.MeasureSpec.makeMeasureSpec(dp(WIDTH), View.MeasureSpec.EXACTLY),

@@ -1623,6 +1623,18 @@ public final class Home extends Activity {
      * everything is where it was.
      */
     private List<Keep.Spot> lieDown(List<Keep.Spot> upright, int screens) {
+        /* The clock stands where the home screen stands upright, kept or not: its place is held first,
+           so nothing is laid under it. */
+        boolean clocked = false;
+        for (Keep.Spot spot : upright) {
+            if (Keep.CLOCK_THING.equals(base(spot.token))) {
+                clocked = true;
+            }
+        }
+        if (!clocked && Keep.flag(this, Keep.CLOCK, true)) {
+            upright = new ArrayList<>(upright);
+            upright.add(0, new Keep.Spot(Keep.CLOCK_THING, Keep.homeUpright(this), 0, 0));
+        }
         List<Keep.Spot> laid = new ArrayList<>();
         lyingFirst = new int[Math.max(1, screens)];
         int page = -1;
