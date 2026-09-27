@@ -185,7 +185,6 @@ public final class Home extends Activity {
     private static final String OWN_SETTINGS = "Ellipse settings";
     private static final String CLOCK_NAME = "Clock";
     private static final int OWN_MAKER = 1000;
-    private static final int DICE_MAKER = 1001;
     private static final String NEW_GROUND = "A new ground";
     private float carryStartX;
     private float carryStartY;
@@ -978,7 +977,8 @@ public final class Home extends Activity {
             }
 
             public android.graphics.drawable.Drawable diceFace() {
-                return Home.this.diceFace();
+                /* On the shelf, as the shelf's icons are: the die in its plain look. */
+                return diceRaw(Die.roll());
             }
 
             public void dice() {
@@ -3937,8 +3937,9 @@ public final class Home extends Activity {
         /* One list: the door to these settings first, then every app's makers. */
         List<List<Chooser.Item>> groups = new ArrayList<>();
         List<Chooser.Item> all = new ArrayList<>();
-        all.add(new Chooser.Item(Shape.face(getDrawable(R.mipmap.door)), OWN_SETTINGS, OWN_MAKER));
-        all.add(new Chooser.Item(diceFace(), Words.t(NEW_GROUND), DICE_MAKER));
+        /* In the list, the door wears the list's own look, as every other maker's icon does; on a screen,
+           the look of the home screen's icons. */
+        all.add(new Chooser.Item(getDrawable(R.mipmap.door), Words.t(OWN_SETTINGS), OWN_MAKER));
         int dpi = getResources().getDisplayMetrics().densityDpi;
         for (int i = 0; i < makers.size(); i++) {
             all.add(new Chooser.Item(makers.get(i).getIcon(dpi), makers.get(i).getLabel(), i));
@@ -4063,10 +4064,6 @@ public final class Home extends Activity {
         }
         if (which == OWN_MAKER) {
             setAnywhere(Keep.OWN_THING, pendingPage);
-            return;
-        }
-        if (which == DICE_MAKER) {
-            setAnywhere(Keep.DICE_THING, pendingPage);
             return;
         }
         if (which < 0 || which >= makers.size()) {
