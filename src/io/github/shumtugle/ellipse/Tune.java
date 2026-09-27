@@ -148,7 +148,6 @@ public final class Tune extends Activity {
 
     private static final Line[] ROOMS = {
         door(Glyph.DESK, "Desktop", "Dock, grid, scrolling, page points, new apps", DESK),
-        door(Glyph.DESK, "Lying down", "The home screen on its side: a set-out and a grid of its own", LYING),
         door(Glyph.LIST, "All apps", "Grid, lines or pages, hidden apps", LIST),
         door(Glyph.LOOK, "Look", "Colour, icons, the clock, notification dots", LOOK),
         door(Glyph.HANDS, "Gestures", "Up, down, Back and Home on the home screen", HANDS),

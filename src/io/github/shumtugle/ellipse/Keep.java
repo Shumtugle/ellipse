@@ -26,6 +26,12 @@ final class Keep {
      * from then on.
      */
     static volatile boolean lying;
+    /**
+     * Lying down, the screens are a view worked out from the upright set-out:
+     * a whole set-out written from what stands there would be the view, not
+     * the set-out, so none is written while it is so.
+     */
+    static volatile boolean noLay;
     private static final String LYING = "_lying";
 
     private static String placedKey() {
@@ -1441,6 +1447,9 @@ final class Keep {
      * word given.
      */
     static void keepOnly(Context context, String kind, String token, int screen, int x, int y) {
+        if (noLay) {
+            return;
+        }
         List<Spot> kept = new ArrayList<>();
         for (Spot spot : placed(context)) {
             boolean same = spot.token.equals(kind) || spot.token.startsWith(kind + ":");
@@ -1532,6 +1541,9 @@ final class Keep {
 
     /** Keeps the whole set-out as it stands, and from now on only it. */
     static void lay(Context context, List<Spot> spots) {
+        if (noLay) {
+            return;
+        }
         write(context, spots);
         store(context).edit().putBoolean(LAID, true).apply();
     }

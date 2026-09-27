@@ -683,7 +683,9 @@ public final class Home extends Activity {
            made once, upright, and never learn that the phone has turned. */
         int[] shape = windowShape();
         lying = shape[0] > shape[1];
-        Keep.lying = lying;
+        /* Lying down is a view of the upright set-out, not a set-out of its own. */
+        Keep.lying = false;
+        Keep.noLay = lying;
         if (screens != null && !pages.isEmpty() && wasLying == lying) {
             restore = screens.page();
         } else {
@@ -705,18 +707,24 @@ public final class Home extends Activity {
         stamp = Keep.stamp(this);
         float column = (Math.min(wide, tall) - dp(16)) / (float) Keep.columns(grid);
         if (lying) {
-            /* Lying down, places keep their upright size, and as many as fit make a grid of their own:
-               across, the long side less the dock's column; down, the short side. */
-            float row = (Math.max(wide, tall) - dp(120)) / (float) Keep.rows(grid);
-            int across = Math.max(Keep.columns(grid), (int) Math.floor((Math.max(wide, tall) - dp(120)) / column));
-            int down = Math.max(2, (int) Math.floor((Math.min(wide, tall) - dp(16)) / row));
-            int own = Keep.number(this, Keep.LYING_GRID, 0);
-            if (own > 0) {
-                across = Math.max(3, own / 100);
-                down = Math.max(2, own % 100);
+            /* Lying down, three parts across, one, one and a half: the upright screen's width twice and
+               half of it again. Places keep their upright size where the screen is wide enough for that;
+               on a narrower one everything is drawn a little smaller, so the three parts fit whole. */
+            lyingCols = Keep.columns(grid);
+            lyingHalf = Math.max(1, lyingCols / 2);
+            /* At least as many rows as upright columns, so an upright row turned into a column fits whole. */
+            float cell = Math.min(column, Math.min((Math.max(wide, tall) - dp(8)) / (float) (2 * lyingCols + lyingHalf),
+                (Math.min(wide, tall) - dp(24)) / (float) lyingCols));
+            lyingRows = Math.max(lyingCols, (int) Math.floor((Math.min(wide, tall) - dp(24)) / cell));
+            columns = (2 * lyingCols + lyingHalf) * fine;
+            rows = lyingRows * fine;
+            /* The dock stands as a column in the half part when no screen needs it for its rows; else as
+               a row at the foot of the first part. */
+            lyingDockRow = false;
+            if (Keep.flag(this, Keep.DOCK, true)) {
+                project(Keep.placed(this), Keep.screens(this), true);
+                lyingDockRow = lyingHalfUsed;
             }
-            columns = across * fine;
-            rows = down * fine;
         }
         iconSize = Math.max(dp(48), Math.min(dp(64), column * 0.58f));
         /* The owner's own size, within the cell. */
@@ -747,8 +755,9 @@ public final class Home extends Activity {
         FrameLayout stage = new FrameLayout(this);
         stage.setClipChildren(false);
         /* Lying down, the dock stands as a column at the right edge. */
-        frame.setOrientation(lying ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
-        frame.addView(stage, lying ? new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+        boolean beside = lying && !lyingDockRow;
+        frame.setOrientation(beside ? LinearLayout.HORIZONTAL : LinearLayout.VERTICAL);
+        frame.addView(stage, beside ? new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
             : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
         frame.cut(stage);
 
@@ -792,19 +801,20 @@ public final class Home extends Activity {
            names, and the round button at its end is the way into every
            application, marked with six dots, as a grid of them would be. */
         bar = new LinearLayout(this);
-        bar.setOrientation(lying ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
-        bar.setGravity(lying ? Gravity.CENTER_HORIZONTAL : Gravity.CENTER_VERTICAL);
+        boolean barColumn = lying && !lyingDockRow;
+        bar.setOrientation(barColumn ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
+        bar.setGravity(barColumn ? Gravity.CENTER_HORIZONTAL : Gravity.CENTER_VERTICAL);
         bar.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
-        if (lying) {
+        if (barColumn) {
             bar.setPadding(dp(8), dp(4), dp(8), dp(10));
         } else {
             bar.setPadding(dp(4), dp(8), dp(10), dp(8));
         }
         bar.setClipChildren(false);
 
-        dock = lying ? new Grid(this, 1, DOCK) : new Grid(this, DOCK, 1);
+        dock = barColumn ? new Grid(this, 1, DOCK) : new Grid(this, DOCK, 1);
         dock.shape(iconSize, 0f);
-        bar.addView(dock, lying ? new LinearLayout.LayoutParams(Math.round(iconSize + dp(16)), 0, 1f)
+        bar.addView(dock, barColumn ? new LinearLayout.LayoutParams(Math.round(iconSize + dp(16)), 0, 1f)
             : new LinearLayout.LayoutParams(0, Math.round(iconSize + dp(16)), 1f));
 
         blob = new Blob(this, iconSize, Blob.GRID);
@@ -830,22 +840,31 @@ public final class Home extends Activity {
         });
         LinearLayout.LayoutParams blobParams = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        if (lying) {
+        if (barColumn) {
             blobParams.topMargin = dp(4);
         } else {
             blobParams.leftMargin = dp(4);
         }
         bar.addView(blob, blobParams);
 
-        LinearLayout.LayoutParams barParams = lying
+        LinearLayout.LayoutParams barParams = barColumn
             ? new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT)
             : new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        if (lying) {
+        if (barColumn) {
             barParams.setMargins(dp(6), dp(12), dp(10), dp(12));
         } else {
             barParams.setMargins(dp(8), dp(6), dp(8), dp(10));
         }
-        frame.addView(bar, barParams);
+        if (lying && lyingDockRow) {
+            /* A row at the foot of the first part, over the screens: each screen keeps that row free. */
+            int partOne = Math.round(wide * lyingCols / (float) (2 * lyingCols + lyingHalf));
+            FrameLayout.LayoutParams under = new FrameLayout.LayoutParams(partOne - dp(16),
+                ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.START);
+            under.setMargins(dp(8), 0, dp(8), dp(8));
+            stage.addView(bar, under);
+        } else {
+            frame.addView(bar, barParams);
+        }
         /* Without the dock the screens reach down to the foot; the list of
            every application is still a pull upward away. */
         bar.setVisibility(Keep.flag(this, Keep.DOCK, true) ? View.VISIBLE : View.GONE);
@@ -1062,22 +1081,15 @@ public final class Home extends Activity {
         for (Keep.Spot spot : spots) {
             count = Math.max(count, spot.screen + 1);
         }
-        if (lying && !Keep.lyingLaid(this)) {
-            /* The first time it lies down: the upright set-out laid again in this grid, kept as its own. */
-            List<Keep.Spot> seeded = lieDown(Keep.placedUpright(this), Keep.screensUpright(this));
-            Keep.lay(this, seeded);
-            Keep.saveScreens(this, Math.max(1, lyingCount));
-            Keep.saveHome(this, uprightToLying(Keep.homeUpright(this)));
-            spots = Keep.placed(this);
-            count = Keep.screens(this);
-            for (Keep.Spot spot : spots) {
-                count = Math.max(count, spot.screen + 1);
-            }
+        if (lying) {
+            spots = project(spots, count, lyingDockRow);
+            count = Math.max(1, lyingCount);
         }
         if (showing < 0) {
-            showing = Keep.home(this);
+            showing = lying ? uprightToLying(Keep.home(this)) : Keep.home(this);
         }
-        rowShare = shapeRows();
+        /* Lying down, the rows are the three parts' own: the upright shaping of rows stays upright. */
+        rowShare = lying ? 1f : shapeRows();
         for (int i = 0; i < count; i++) {
             Grid page = new Grid(this, columns, rows);
             page.unit(fine);
@@ -1190,7 +1202,7 @@ public final class Home extends Activity {
             place(dock, door, lying ? 0 : i, lying ? i : 0, false);
         }
 
-        int home = Math.min(Keep.roles(this), count - 1);
+        int home = Math.min(lying ? uprightToLying(Keep.roles(this)) : Keep.roles(this), count - 1);
         if (laid) {
             boolean clocked = false;
             List<Keep.Spot> folders = new ArrayList<>();
@@ -1242,12 +1254,14 @@ public final class Home extends Activity {
                     }
                 }
                 if (clock(pages.get(home), 0, 0, last)) {
-                    Keep.keepOnly(this, Keep.CLOCK_THING, last, home, 0, 0);
+                    if (!lying) {
+                        Keep.keepOnly(this, Keep.CLOCK_THING, last, home, 0, 0);
+                    }
                 }
             }
             /* Over one another, things stand in the order they were set
                down, apps and widgets alike: the last on top. */
-            if (Keep.flag(this, Keep.OVERLAP, false)) {
+            if (Keep.flag(this, Keep.OVERLAP, false) && !lying) {
                 for (Keep.Spot spot : Keep.placed(this)) {
                     if (spot.screen < 0 || spot.screen >= pages.size()) {
                         continue;
@@ -1331,7 +1345,7 @@ public final class Home extends Activity {
         drawer.grid(Keep.columns(listGrid), Keep.rows(listGrid),
             Keep.flag(this, Keep.LIST_ENDLESS, false), Keep.flag(this, Keep.LIST_DOTS, true));
         drawer.fill(listed);
-        screens.home(Keep.home(this));
+        screens.home(lying ? uprightToLying(Keep.home(this)) : Keep.home(this));
         screens.show(Math.max(0, Math.min(pages.size() - 1, showing)), false);
         dots();
     }
@@ -1488,6 +1502,145 @@ public final class Home extends Activity {
      * them, so the clock is never drawn smaller than its face allows.
      */
     private int lyingCount;
+    /** Lying down: the upright columns, the half part's columns, the rows, where the dock stands. */
+    private int lyingCols;
+    private int lyingHalf;
+    private int lyingRows;
+    private boolean lyingDockRow;
+    private boolean lyingHalfUsed;
+    /** Where each place lying down stands upright: "page:x:y" to screen, column, row. */
+    private final java.util.Map<String, int[]> lyingToUpright = new java.util.HashMap<>();
+
+    /**
+     * The upright screens seen lying down, each on a screen of its own, in
+     * three parts: one, one and a half.
+     *
+     * Part one is the upright screen's top and foot put together: its rows
+     * that hold widgets, as they stand, icons beside a widget going with it,
+     * and, if the dock stands there, the dock's row free under them. Part two
+     * takes its rows of icons alone, still rows, as many as the height holds.
+     * The half part takes the rows left over, each turned into a column. A
+     * screen with no widgets gives its first part to rows of icons as well.
+     * What does not fit runs on to one screen more. Nothing of it is kept:
+     * it is worked out from the upright set-out each time.
+     */
+    private List<Keep.Spot> project(List<Keep.Spot> upright, int screens, boolean dockRow) {
+        lyingToUpright.clear();
+        lyingHalfUsed = false;
+        List<Keep.Spot> out = new ArrayList<>();
+        lyingFirst = new int[Math.max(1, screens)];
+        boolean clocked = false;
+        for (Keep.Spot spot : upright) {
+            if (Keep.CLOCK_THING.equals(base(spot.token))) {
+                clocked = true;
+            }
+        }
+        if (!clocked && Keep.flag(this, Keep.CLOCK, true)) {
+            upright = new ArrayList<>(upright);
+            upright.add(new Keep.Spot(Keep.CLOCK_THING, Keep.home(this), 0, 0));
+        }
+        int partTwo = lyingCols * fine;
+        int partHalf = 2 * lyingCols * fine;
+        int partOneRows = rows - (dockRow ? fine : 0);
+        int page = -1;
+        for (int s = 0; s < screens; s++) {
+            page++;
+            lyingFirst[s] = page;
+            List<Keep.Spot> mine = new ArrayList<>();
+            for (Keep.Spot spot : upright) {
+                if (spot.screen == s) {
+                    mine.add(spot);
+                }
+            }
+            /* The rows that hold anything larger than one place. */
+            java.util.TreeSet<Integer> zone = new java.util.TreeSet<>();
+            for (Keep.Spot spot : mine) {
+                int[] span = lyingSpan(spot);
+                if (span[0] > fine || span[1] > fine) {
+                    for (int y = spot.y; y < spot.y + span[1]; y++) {
+                        zone.add(y);
+                    }
+                }
+            }
+            java.util.Map<Integer, Integer> squeezed = new java.util.HashMap<>();
+            int at = 0;
+            for (int y : zone) {
+                squeezed.put(y, at++);
+            }
+            /* Part one: the zone, as it stands; what does not fit goes to the top of part two. */
+            int twoY = 0;
+            List<Keep.Spot> inZone = new ArrayList<>();
+            java.util.TreeMap<Integer, List<Keep.Spot>> iconRows = new java.util.TreeMap<>();
+            for (Keep.Spot spot : mine) {
+                if (zone.contains(spot.y)) {
+                    inZone.add(spot);
+                } else {
+                    List<Keep.Spot> row = iconRows.get(spot.y);
+                    if (row == null) {
+                        row = new ArrayList<>();
+                        iconRows.put(spot.y, row);
+                    }
+                    row.add(spot);
+                }
+            }
+            java.util.Collections.sort(inZone, new java.util.Comparator<Keep.Spot>() {
+                public int compare(Keep.Spot a, Keep.Spot b) {
+                    return a.y != b.y ? Integer.compare(a.y, b.y) : Integer.compare(a.x, b.x);
+                }
+            });
+            for (Keep.Spot spot : inZone) {
+                int[] span = lyingSpan(spot);
+                int y = squeezed.get(spot.y);
+                if (y + span[1] <= partOneRows) {
+                    keepLying(out, spot, page, Math.min(spot.x, partTwo - span[0]), y);
+                } else if (twoY + span[1] <= rows) {
+                    keepLying(out, spot, page, partTwo + Math.min(spot.x, partTwo - span[0]), twoY);
+                    twoY += span[1];
+                }
+            }
+            /* The rows of icons: part one too if it holds no widget, then part two, then the half part. */
+            int oneY = zone.isEmpty() ? 0 : partOneRows;
+            int halfColumn = 0;
+            for (List<Keep.Spot> row : iconRows.values()) {
+                if (oneY + fine <= partOneRows) {
+                    for (Keep.Spot spot : row) {
+                        keepLying(out, spot, page, Math.min(spot.x, partTwo - fine), oneY);
+                    }
+                    oneY += fine;
+                } else if (twoY + fine <= rows) {
+                    for (Keep.Spot spot : row) {
+                        keepLying(out, spot, page, partTwo + Math.min(spot.x, partTwo - fine), twoY);
+                    }
+                    twoY += fine;
+                } else if (halfColumn < lyingHalf * fine) {
+                    lyingHalfUsed = true;
+                    for (Keep.Spot spot : row) {
+                        if (spot.x + fine <= rows) {
+                            keepLying(out, spot, page, partHalf + halfColumn, spot.x);
+                        }
+                    }
+                    halfColumn += fine;
+                } else {
+                    /* Run on to one screen more, its first part given to rows as well. */
+                    page++;
+                    oneY = 0;
+                    twoY = 0;
+                    halfColumn = 0;
+                    for (Keep.Spot spot : row) {
+                        keepLying(out, spot, page, Math.min(spot.x, partTwo - fine), oneY);
+                    }
+                    oneY += fine;
+                }
+            }
+        }
+        lyingCount = page + 1;
+        return out;
+    }
+
+    private void keepLying(List<Keep.Spot> out, Keep.Spot spot, int page, int x, int y) {
+        out.add(new Keep.Spot(spot.token, page, Math.max(0, x), Math.max(0, y)));
+        lyingToUpright.put(page + ":" + Math.max(0, x) + ":" + Math.max(0, y), new int[] {spot.screen, spot.x, spot.y});
+    }
 
     /** The window's width and height as it stands now, whichever way the phone is turned. */
     private int[] windowShape() {
@@ -2071,16 +2224,19 @@ public final class Home extends Activity {
     private void ask(View on) {
         boolean home = screens.page() == Keep.home(this);
         List<Integer> offered = new ArrayList<>();
-        for (int i = ADD_SCREEN; i <= ADD_FOLDER; i++) {
-            offered.add(i);
+        /* Lying down, the screens are a view of the upright ones: things are added and moved upright. */
+        if (!lying) {
+            for (int i = ADD_SCREEN; i <= ADD_FOLDER; i++) {
+                offered.add(i);
+            }
+            if (!home) {
+                offered.add(MAKE_HOME);
+            }
+            if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
+                offered.add(REMOVE_SCREEN);
+            }
+            offered.add(PORTRAIT);
         }
-        if (!home) {
-            offered.add(MAKE_HOME);
-        }
-        if (pages.size() > 1 && pages.get(screens.page()).getChildCount() == 0) {
-            offered.add(REMOVE_SCREEN);
-        }
-        offered.add(PORTRAIT);
         /* The night clock and the bare wallpaper, last before the settings. */
         offered.add(NIGHT);
         offered.add(BARE);
@@ -2420,7 +2576,7 @@ public final class Home extends Activity {
 
     private void carry(View from, String token, android.graphics.drawable.Drawable face, int[] icon,
                        int across, int down, int[] whence, float rawX, float rawY) {
-        if (lift != null) {
+        if (lift != null || lying) {
             return;
         }
         int[] floorAt = new int[2];
@@ -3059,7 +3215,10 @@ public final class Home extends Activity {
             return;
         }
         int[] at = (int[]) thing.getTag();
-        int[] whence = {pages.indexOf((Grid) thing.getParent()), at[0], at[1]};
+        int page = pages.indexOf((Grid) thing.getParent());
+        /* Lying down, a thing's menu works on where it stands upright. */
+        int[] whence = lying ? lyingToUpright.get(page + ":" + at[0] + ":" + at[1])
+            : new int[] {page, at[0], at[1]};
         Apps.Door door = thing instanceof Cell ? ((Cell) thing).door : null;
         offerThing(thing, token, whence, door);
     }
