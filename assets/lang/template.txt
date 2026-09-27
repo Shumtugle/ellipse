@@ -692,6 +692,7 @@ That file holds no phrases = That file holds no phrases
 That file could not be read = That file could not be read
 The copy is made = The copy is made
 The home screen as it stood when the copy was made. = The home screen as it stood when the copy was made.
+Everything set out now gives way to what the copy holds. = Everything set out now gives way to what the copy holds.
 No set-out of a known shape was found in that file = No set-out of a known shape was found in that file
 %1 screen of %2 × %3 | %1 screens of %2 × %3 = %1 screen of %2 × %3 | %1 screens of %2 × %3
 apps %1, folders %2, widgets %3. = apps %1, folders %2, widgets %3.

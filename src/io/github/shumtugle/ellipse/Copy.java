@@ -712,6 +712,7 @@ final class Copy {
             return null;
         }
     }
-    static final String TYPE = "application/octet-stream";
+    /** A copy's own type, so a copy file opened anywhere comes to this home screen to be brought back. */
+    static final String TYPE = "application/x-ellipse-copy";
 
 }

@@ -756,3 +756,4 @@ BIG BUBBLE = ISO KUPLA
 Bubble %1 = Kupla %1
 Add a bubble = Lisää kupla
 The bubbles, and round icons of glass with its gleam, like small bubbles; no frames, the bubbles hang free = Kuplat ja pyöreät lasikuvakkeet kiiltoineen, kuin pienet kuplat; ei kehyksiä, kuplat leijuvat vapaina
+Everything set out now gives way to what the copy holds. = Kaikki nykyinen asettelu väistyy kopion sisällön tieltä.

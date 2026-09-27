@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="21302"
-    android:versionName="2.13.2">
+    android:versionCode="21303"
+    android:versionName="2.13.3">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
 
@@ -223,6 +223,30 @@
             android:theme="@style/Room"
             android:windowSoftInputMode="adjustResize|stateAlwaysHidden"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|screenLayout|smallestScreenSize|uiMode" />
+        <!-- A copy of the home screen opened from a file: shown, and brought back when asked. -->
+        <activity
+            android:name=".CopyDoor"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/x-ellipse-copy" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.ellipse" />
+                <data android:pathPattern=".*\\..*\\.ellipse" />
+                <data android:pathPattern=".*\\..*\\..*\\.ellipse" />
+            </intent-filter>
+        </activity>
         <!-- The pages drawn as pages: the colour page and the weather. -->
         <activity
             android:name=".Folio"

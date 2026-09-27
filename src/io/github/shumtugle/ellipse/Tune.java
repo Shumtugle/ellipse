@@ -486,6 +486,17 @@ public final class Tune extends Activity {
         });
         setContentView(host);
         host.requestApplyInsets();
+        /* A copy file opened from outside: read as a picked one is, its picture shown, brought back when asked. */
+        final Intent came = getIntent();
+        if (came != null && came.getBooleanExtra(COPY_IN, false) && came.getData() != null) {
+            /* Taken once: made again, the settings do not ask a second time. */
+            came.removeExtra(COPY_IN);
+            host.post(new Runnable() {
+                public void run() {
+                    onActivityResult(READ_COPY, RESULT_OK, new Intent().setData(came.getData()));
+                }
+            });
+        }
     }
 
     /** Shows the room at the top of the path; a room entered comes in from the side it lies on. */
@@ -2402,6 +2413,8 @@ public final class Tune extends Activity {
 
     private static final int WRITE_COPY = 21;
     private static final int READ_COPY = 22;
+    /** A copy file opened from outside, handed in by the copy's door. */
+    static final String COPY_IN = "copy_in";
     private static final int READ_FOREIGN = 23;
     private static final int READ_LANGUAGE = 24;
     private static final int WRITE_TEMPLATE = 25;
@@ -3285,11 +3298,13 @@ public final class Tune extends Activity {
                     }
                 };
                 android.graphics.Bitmap seen = Copy.glimpse(words);
+                /* Always asked first, with its picture when it has one: bringing back replaces everything. */
                 if (seen != null) {
                     Ask.tell(host, "Bring back this copy?", "The home screen as it stood when the copy was made.",
                         seen, "Bring back", bring);
                 } else {
-                    bring.run();
+                    Ask.tell(host, "Bring back this copy?", "Everything set out now gives way to what the copy holds.",
+                        "Bring back", bring);
                 }
                 return;
             }

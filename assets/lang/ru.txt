@@ -756,3 +756,4 @@ BIG BUBBLE = БОЛЬШОЙ ПУЗЫРЬ
 Bubble %1 = Пузырь %1
 Add a bubble = Добавить пузырь
 The bubbles, and round icons of glass with its gleam, like small bubbles; no frames, the bubbles hang free = Баблз и круглые значки из стекла с бликом, как маленькие пузыри; без рамок, пузыри висят свободно
+Everything set out now gives way to what the copy holds. = Всё, что разложено сейчас, уступит место тому, что хранит копия.
