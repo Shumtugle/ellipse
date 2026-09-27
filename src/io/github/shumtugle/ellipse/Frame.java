@@ -21,6 +21,8 @@ final class Frame extends LinearLayout {
     private final RectF hole = new RectF();
     private final float radius;
     private View window;
+    /** Whether the ground around the window is drawn; it is not, and the wallpaper shows whole. */
+    private final boolean framed = false;
 
     Frame(Context context, float radius) {
         super(context);
@@ -42,6 +44,10 @@ final class Frame extends LinearLayout {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        /* No dark ground any more: the wallpaper runs under the bars and round the dock, whole. */
+        if (!framed) {
+            return;
+        }
         shape.reset();
         shape.setFillType(Path.FillType.EVEN_ODD);
         shape.addRect(0, 0, getWidth(), getHeight(), Path.Direction.CW);

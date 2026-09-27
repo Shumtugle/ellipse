@@ -242,6 +242,12 @@ final class Cell extends View {
                     size = iconSize * room / need;
                 }
             }
+            /* In a short cell, as where the dock takes height, the icon keeps inside it too. */
+            float below = getHeight() - iconSize - 2f * y;
+            float tallRoom = (getHeight() - Math.max(0f, below)) * 0.92f;
+            if (size > tallRoom && tallRoom > 0f) {
+                size = tallRoom;
+            }
             float ix = (getWidth() - size) / 2f;
             float iy = y + (iconSize - size) / 2f;
             icon.setBounds(Math.round(ix), Math.round(iy), Math.round(ix + size), Math.round(iy + size));

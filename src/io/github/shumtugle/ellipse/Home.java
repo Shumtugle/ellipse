@@ -802,6 +802,7 @@ public final class Home extends Activity {
            application, marked with six dots, as a grid of them would be. */
         bar = new LinearLayout(this);
         boolean barColumn = lying && !lyingDockRow;
+        dockUpright = !barColumn;
         bar.setOrientation(barColumn ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL);
         bar.setGravity(barColumn ? Gravity.CENTER_HORIZONTAL : Gravity.CENTER_VERTICAL);
         bar.setBackground(Tone.box(Tone.container(), dp(40), dp(0.5f)));
@@ -1199,7 +1200,7 @@ public final class Home extends Activity {
                     taken.add(door.name.getPackageName());
                 }
             }
-            place(dock, door, lying ? 0 : i, lying ? i : 0, false);
+            place(dock, door, dockUpright ? i : 0, dockUpright ? 0 : i, false);
         }
 
         int home = Math.min(lying ? uprightToLying(Keep.roles(this)) : Keep.roles(this), count - 1);
@@ -1469,8 +1470,37 @@ public final class Home extends Activity {
         }
         float high = wide / Keep.columns(grid) * ratio;
         int count = Math.max(3, Math.min(16, (int) Math.floor(tall / high + 0.02f)));
+        /* Never fewer rows than the things stand in: where the dock takes height, the rows grow shorter
+           and the icons in them smaller, rather than the lowest rows going out of sight. */
+        int used = (usedRows() + fine - 1) / fine;
+        if (used > count) {
+            count = Math.min(16, used);
+        }
         rows = count * fine;
         return Math.min(1f, high * count / tall);
+    }
+
+    /** How far down the things on any screen reach, in places of the grid's finest step. */
+    private int usedRows() {
+        int most = 0;
+        for (Keep.Spot spot : Keep.placed(this)) {
+            int tall = fine;
+            if (spot.name == null) {
+                String[] part = spot.token.split(":");
+                try {
+                    if ((spot.token.startsWith(WIDGET) || spot.token.startsWith(Keep.PILE_THING)
+                        || spot.token.startsWith(Keep.FOLDER_THING)) && part.length >= 4) {
+                        tall = Integer.parseInt(part[3]);
+                    } else if (Keep.CLOCK_THING.equals(base(spot.token)) && part.length >= 3) {
+                        tall = Integer.parseInt(part[2]);
+                    }
+                } catch (NumberFormatException broken) {
+                    tall = fine;
+                }
+            }
+            most = Math.max(most, spot.y + tall);
+        }
+        return most;
     }
 
     /** A screen's margin at each side: none if the grid runs to the edges whole. */
@@ -1507,6 +1537,8 @@ public final class Home extends Activity {
     private int lyingHalf;
     private int lyingRows;
     private boolean lyingDockRow;
+    /** Whether the dock's places run across, as upright, or down, as a column lying down. */
+    private boolean dockUpright = true;
     private boolean lyingHalfUsed;
     /** Where each place lying down stands upright: "page:x:y" to screen, column, row. */
     private final java.util.Map<String, int[]> lyingToUpright = new java.util.HashMap<>();
