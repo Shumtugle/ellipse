@@ -20,93 +20,11 @@ final class Keep {
      * clock, a folder the phone fills, the door to the settings.
      */
     /**
-     * Whether the home screen lies on its side. Lying down it is a set-out of
-     * its own — its own places, screens and home one, kept apart from the
-     * upright ones — begun once as a copy of the upright set-out and its own
-     * from then on.
-     */
-    static volatile boolean lying;
-    /**
      * Lying down, the screens are a view worked out from the upright set-out:
      * a whole set-out written from what stands there would be the view, not
      * the set-out, so none is written while it is so.
      */
     static volatile boolean noLay;
-    private static final String LYING = "_lying";
-
-    private static String placedKey() {
-        return lying ? PLACED + LYING : PLACED;
-    }
-
-    private static String screensKey() {
-        return lying ? SCREENS + LYING : SCREENS;
-    }
-
-    private static String homeKey() {
-        return lying ? HOME + LYING : HOME;
-    }
-
-    /** Whether the set-out lying down has been begun. */
-    static boolean lyingLaid(Context context) {
-        return store(context).contains(PLACED + LYING);
-    }
-
-    /** The set-out lying down let go of, to be begun again from the upright one. */
-    static void unlayLying(Context context) {
-        store(context).edit().remove(PLACED + LYING).remove(SCREENS + LYING).remove(HOME + LYING).apply();
-        touch(context);
-    }
-
-    /** The upright set-out, as it is kept, whichever way the phone lies. */
-    static List<Spot> placedUpright(Context context) {
-        return read(store(context).getString(PLACED, ""));
-    }
-
-    static int screensUpright(Context context) {
-        return Math.max(1, store(context).getInt(SCREENS, 3));
-    }
-
-    static int homeUpright(Context context) {
-        int home = store(context).getInt(HOME, 1);
-        return home < 0 || home >= screensUpright(context) ? 0 : home;
-    }
-
-    /**
-     * A thing taken off the other set-out too: a widget taken away from one
-     * is gone from both.
-     */
-    static void removeFromTheOther(Context context, String word) {
-        String key = lying ? PLACED : PLACED + LYING;
-        List<Spot> other = read(store(context).getString(key, ""));
-        StringBuilder out = new StringBuilder();
-        boolean changed = false;
-        for (Spot spot : other) {
-            if (spot.token.equals(word) || spot.token.startsWith(word + ":")) {
-                changed = true;
-                continue;
-            }
-            if (out.length() > 0) {
-                out.append('\n');
-            }
-            out.append(spot.line());
-        }
-        if (changed) {
-            store(context).edit().putString(key, out.toString()).apply();
-        }
-    }
-
-    /**
-     * Whether the other set-out — upright when lying, lying when upright —
-     * holds this thing: its word, or its word with a size after it.
-     */
-    static boolean inTheOther(Context context, String word) {
-        for (Spot spot : read(store(context).getString(lying ? PLACED : PLACED + LYING, ""))) {
-            if (spot.token.equals(word) || spot.token.startsWith(word + ":")) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     static final class Spot {
         final String token;
@@ -221,10 +139,6 @@ final class Keep {
     static final String NIGHT_LASTS = "night_lasts";
     /** Whether the whole home screen steps a few points aside now and then, against burning in. */
     static final String DRIFT = "drift";
-    /** How the home screen was last turned by hand: nought, as the phone turns; one, upright; two, lying. */
-    static final String TURNED = "turned";
-    /** The grid lying down, as columns and rows; nought, as many places of upright size as fit. */
-    static final String LYING_GRID = "lying_grid";
     static final String NIGHT_HIDE = "night_hide";
     static final String NIGHT_QUIET = "night_quiet";
     static final String NIGHT_AUTO = "night_auto";
@@ -1141,8 +1055,8 @@ final class Keep {
         int home = home(context);
         int roles = roles(context);
         SharedPreferences.Editor edit = store(context).edit();
-        edit.putInt(screensKey(), Math.max(1, count - 1));
-        edit.putInt(homeKey(), home > screen ? home - 1 : (home == screen ? Math.max(0, home - 1) : home));
+        edit.putInt(SCREENS, Math.max(1, count - 1));
+        edit.putInt(HOME, home > screen ? home - 1 : (home == screen ? Math.max(0, home - 1) : home));
         edit.putInt(ROLES, roles > screen ? roles - 1 : (roles == screen ? Math.max(0, roles - 1) : roles));
         edit.apply();
     }
@@ -1251,12 +1165,12 @@ final class Keep {
      */
     static boolean edges(Context context) {
         /* Lying down, nothing goes to the edges. */
-        return !lying && edgeMode(context) != EDGES_MARGINS;
+        return !noLay && edgeMode(context) != EDGES_MARGINS;
     }
 
     /** Whether the grid has no margins at all. */
     static boolean edgeless(Context context) {
-        return !lying && edgeMode(context) == EDGES_ALL;
+        return !noLay && edgeMode(context) == EDGES_ALL;
     }
 
     /** How the grid meets the edges; the first time, taken from the words that said it before. */
@@ -1293,7 +1207,7 @@ final class Keep {
 
     /** How many screens stand side by side; never fewer than one. */
     static int screens(Context context) {
-        return Math.max(1, store(context).getInt(screensKey(), 3));
+        return Math.max(1, store(context).getInt(SCREENS, 3));
     }
 
     /** The screen the everyday roles stand on: where home was when they were first set out. */
@@ -1379,17 +1293,17 @@ final class Keep {
     }
 
     static void saveScreens(Context context, int count) {
-        store(context).edit().putInt(screensKey(), Math.max(1, count)).apply();
+        store(context).edit().putInt(SCREENS, Math.max(1, count)).apply();
     }
 
     /** Which screen Home returns to, counted from the left. */
     static int home(Context context) {
-        int home = store(context).getInt(homeKey(), 1);
+        int home = store(context).getInt(HOME, 1);
         return home < 0 || home >= screens(context) ? 0 : home;
     }
 
     static void saveHome(Context context, int screen) {
-        store(context).edit().putInt(homeKey(), screen).apply();
+        store(context).edit().putInt(HOME, screen).apply();
     }
 
     /**
@@ -1397,7 +1311,7 @@ final class Keep {
      * A line of the first versions has no screen and stands on the first.
      */
     static List<Spot> placed(Context context) {
-        return read(store(context).getString(placedKey(), ""));
+        return read(store(context).getString(PLACED, ""));
     }
 
     private static List<Spot> read(String kept) {
@@ -1431,7 +1345,7 @@ final class Keep {
             }
             out.append(spot.line());
         }
-        store(context).edit().putString(placedKey(), out.toString()).apply();
+        store(context).edit().putString(PLACED, out.toString()).apply();
     }
 
     /** Sets a thing down in a place; whatever stood exactly there before gives way. */
@@ -1542,7 +1456,7 @@ final class Keep {
      * anew every time; from then on, only what is kept here stands.
      */
     static boolean laid(Context context) {
-        return lying || store(context).getBoolean(LAID, false);
+        return noLay || store(context).getBoolean(LAID, false);
     }
 
     /** Keeps the whole set-out as it stands, and from now on only it. */

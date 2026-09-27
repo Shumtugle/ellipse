@@ -266,7 +266,6 @@ public final class Home extends Activity {
         registerReceiver(sleep, night);
         Lapse.watch(this);
         super.onCreate(saved);
-        turnAsKept();
         /* The pinch, left to nothing, goes to the grey once; chosen otherwise, it stays as chosen. */
         if (!Keep.flag(this, Keep.GREY_OFFERED, false)) {
             Keep.saveFlag(this, Keep.GREY_OFFERED, true);
@@ -309,8 +308,6 @@ public final class Home extends Activity {
         /* The day's copy, if the home screen has stayed open since before the day began. */
         Copy.onUpdate(this);
         super.onResume();
-        /* Held the way it was last turned, in the settings or its menu. */
-        turnAsKept();
         greyNow();
         /* Back on the home screen: a step aside at once, then one every three minutes. */
         step(false);
@@ -697,7 +694,6 @@ public final class Home extends Activity {
         int[] shape = windowShape();
         lying = shape[0] > shape[1];
         /* Lying down is a view of the upright set-out, not a set-out of its own. */
-        Keep.lying = false;
         Keep.noLay = lying;
         if (screens != null && !pages.isEmpty() && wasLying == lying) {
             restore = screens.page();
@@ -1716,17 +1712,6 @@ public final class Home extends Activity {
         return new int[] {real.widthPixels, real.heightPixels};
     }
 
-    static final int TURNED_UPRIGHT = 1;
-    static final int TURNED_LYING = 2;
-
-    /** The home screen turns as the phone turns; a turn once held by hand is let go. */
-    void turnAsKept() {
-        if (Keep.number(this, Keep.TURNED, 0) != 0) {
-            Keep.saveNumber(this, Keep.TURNED, 0);
-        }
-        setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-    }
-
     /** A veil over nothing, while the desk is away: the first touch brings it back. */
     private View bareVeil;
 
@@ -1829,68 +1814,6 @@ public final class Home extends Activity {
             }
         }
         return new int[] {Math.max(1, Math.min(columns, span[0])), Math.max(1, Math.min(rows, span[1]))};
-    }
-
-    /**
-     * The things of every upright screen laid again in the grid lying down,
-     * in the order they stand upright — row by row, left to right — each
-     * upright screen beginning a screen of its own and running on to the next
-     * where it does not fit. Nothing of it is kept: turned upright again,
-     * everything is where it was.
-     */
-    private List<Keep.Spot> lieDown(List<Keep.Spot> upright, int screens) {
-        /* The clock stands where the home screen stands upright, kept or not: its place is held first,
-           so nothing is laid under it. */
-        boolean clocked = false;
-        for (Keep.Spot spot : upright) {
-            if (Keep.CLOCK_THING.equals(base(spot.token))) {
-                clocked = true;
-            }
-        }
-        if (!clocked && Keep.flag(this, Keep.CLOCK, true)) {
-            upright = new ArrayList<>(upright);
-            upright.add(0, new Keep.Spot(Keep.CLOCK_THING, Keep.homeUpright(this), 0, 0));
-        }
-        List<Keep.Spot> laid = new ArrayList<>();
-        lyingFirst = new int[Math.max(1, screens)];
-        int page = -1;
-        boolean[][] used = null;
-        for (int s = 0; s < screens; s++) {
-            List<Keep.Spot> mine = new ArrayList<>();
-            for (Keep.Spot spot : upright) {
-                if (spot.screen == s) {
-                    mine.add(spot);
-                }
-            }
-            java.util.Collections.sort(mine, new java.util.Comparator<Keep.Spot>() {
-                public int compare(Keep.Spot a, Keep.Spot b) {
-                    return a.y != b.y ? Integer.compare(a.y, b.y) : Integer.compare(a.x, b.x);
-                }
-            });
-            page++;
-            used = new boolean[rows][columns];
-            lyingFirst[s] = page;
-            for (Keep.Spot spot : mine) {
-                int[] span = lyingSpan(spot);
-                int[] at = firstFree(used, span);
-                if (at == null) {
-                    page++;
-                    used = new boolean[rows][columns];
-                    at = firstFree(used, span);
-                    if (at == null) {
-                        continue;
-                    }
-                }
-                for (int r = at[1]; r < at[1] + span[1]; r++) {
-                    for (int c = at[0]; c < at[0] + span[0]; c++) {
-                        used[r][c] = true;
-                    }
-                }
-                laid.add(new Keep.Spot(spot.token, page, at[0], at[1]));
-            }
-        }
-        lyingCount = page + 1;
-        return laid;
     }
 
     /** The first place, row by row, where a thing of this size fits whole, on the grid's whole steps. */
@@ -2032,42 +1955,21 @@ public final class Home extends Activity {
     // ------------------------------------------------------------- grey
 
     /**
-     * The grey, on or off. Given once the phone's leave to change its own
-     * settings, the whole phone goes grey, every app with it; without it,
-     * the home screen alone does — and says, the first time, how the whole
-     * phone may be let go grey too.
+     * The grey, on or off: the home screen drawn without colour — the screens,
+     * the dock, the list of every app. The whole phone goes grey only by the
+     * phone's own settings; the home screen does not reach into them.
      */
     private void grey(boolean on) {
         Keep.saveFlag(this, Keep.GREY, on);
-        if (wholePhone()) {
-            try {
-                android.content.ContentResolver settings = getContentResolver();
-                android.provider.Settings.Secure.putInt(settings, "accessibility_display_daltonizer", 0);
-                android.provider.Settings.Secure.putInt(settings, "accessibility_display_daltonizer_enabled", on ? 1 : 0);
-            } catch (RuntimeException refused) {
-                // The home screen alone, then.
-            }
-        } else if (on && !Keep.flag(this, "grey_told", false)) {
-            Keep.saveFlag(this, "grey_told", true);
-            Ask.tell(root, GREY_CAPTION, GREY_TOLD, "OK", new Runnable() {
-                public void run() {
-                }
-            });
-        }
         greyNow();
     }
 
-    private boolean wholePhone() {
-        return checkSelfPermission("android.permission.WRITE_SECURE_SETTINGS")
-            == android.content.pm.PackageManager.PERMISSION_GRANTED;
-    }
-
-    /** The home screen drawn without colour while the grey is on and the phone itself is not grey. */
+    /** The home screen drawn without colour while the grey is on. */
     private void greyNow() {
         if (root == null) {
             return;
         }
-        if (Keep.flag(this, Keep.GREY, false) && !wholePhone()) {
+        if (Keep.flag(this, Keep.GREY, false)) {
             android.graphics.ColorMatrix none = new android.graphics.ColorMatrix();
             none.setSaturation(0f);
             android.graphics.Paint grey = new android.graphics.Paint();
@@ -2078,10 +1980,6 @@ public final class Home extends Activity {
         }
     }
 
-    private static final String GREY_CAPTION = "Grey";
-    private static final String GREY_TOLD = "The home screen is grey now; the apps keep their colours. For the whole "
-        + "phone to go grey, give Ellipse, once, from a computer, the leave to change the phone's own settings: "
-        + "adb shell pm grant io.github.shumtugle.ellipse android.permission.WRITE_SECURE_SETTINGS";
 
     /** The dice's face: a die on the plate every icon of the home screen's own wears. */
     private android.graphics.drawable.Drawable diceFace() {
@@ -2388,13 +2286,9 @@ public final class Home extends Activity {
 
     private static final String[] ASKS = {
         "Add screen", "Add shortcut", "Add widget", "Add folder", "Make home screen", "Settings",
-        "Remove screen", "Picture of the home screen", "Night clock", "Show the wallpaper", "Lie down", "Stand up",
-        "Turn as the phone turns"
+        "Remove screen", "Picture of the home screen", "Night clock", "Show the wallpaper"
     };
-    private static final int AS_PHONE = 12;
     private static final int BARE = 9;
-    private static final int LIE_DOWN = 10;
-    private static final int STAND_UP = 11;
     private static final int REMOVE_SCREEN = 6;
     private static final int PORTRAIT = 7;
     private static final int NIGHT = 8;
@@ -2470,15 +2364,6 @@ public final class Home extends Activity {
                 break;
             case BARE:
                 bare();
-                break;
-            case AS_PHONE:
-                Keep.saveNumber(this, Keep.TURNED, 0);
-                turnAsKept();
-                break;
-            case LIE_DOWN:
-            case STAND_UP:
-                Keep.saveNumber(this, Keep.TURNED, key == LIE_DOWN ? TURNED_LYING : TURNED_UPRIGHT);
-                turnAsKept();
                 break;
             case ADD_SCREEN:
                 /* A new screen is added at the end, and the screens slide
@@ -3188,8 +3073,8 @@ public final class Home extends Activity {
      * settings, where it can be switched on again.
      */
     private void removeThing(String token, int[] whence) {
-        if (isFolder(token) && whence[0] != -2 && !Keep.inTheOther(this, base(token))) {
-            /* A folder taken off lets go of the widgets it held — unless the other set-out still has it. */
+        if (isFolder(token) && whence[0] != -2) {
+            /* A folder taken off lets go of the widgets it held. */
             for (String item : Keep.folderItems(this, folderId(token))) {
                 if (item.startsWith(WIDGET)) {
                     try {
@@ -3232,20 +3117,14 @@ public final class Home extends Activity {
         if (token.startsWith(Keep.SHORTCUT_THING)) {
             unpin(token);
         }
-        /* A widget, or a stack of them, taken away is gone from the other set-out too. */
-        if (token.startsWith(WIDGET)) {
-            Keep.removeFromTheOther(this, WIDGET + token.substring(WIDGET.length()).split(":")[0]);
-        } else if (token.startsWith(Keep.PILE_THING)) {
-            Keep.removeFromTheOther(this, base(token));
-        }
         if (token.startsWith(WIDGET)) {
             try {
                 drop(Integer.parseInt(token.substring(WIDGET.length()).split(":")[0]));
             } catch (NumberFormatException broken) {
                 // Nothing to let go.
             }
-        } else if (token.startsWith(Keep.PILE_THING) && !Keep.inTheOther(this, base(token))) {
-            /* A pile taken off lets go of every widget it held — unless the other set-out still has it. */
+        } else if (token.startsWith(Keep.PILE_THING)) {
+            /* A pile taken off lets go of every widget it held. */
             int pile = pileId(token);
             for (int id : Keep.pileItems(this, pile)) {
                 drop(id);
@@ -5056,11 +4935,6 @@ public final class Home extends Activity {
 
     private void drop(int id) {
         widgetViews.remove(id);
-        /* A widget standing on the other set-out too — upright or lying — stays alive for it. */
-        if (Keep.inTheOther(this, WIDGET + id)) {
-            pendingWidget = -1;
-            return;
-        }
         try {
             host.deleteAppWidgetId(id);
         } catch (RuntimeException gone) {
