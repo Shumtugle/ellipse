@@ -89,7 +89,7 @@ public final class Handed extends ContentProvider {
     @Override
     public String getType(Uri uri) {
         String name = uri.getLastPathSegment();
-        return name != null && name.endsWith(".json") ? "application/json" : "text/plain";
+        return name != null && (name.endsWith(".json") || name.endsWith(Copy.EXTENSION)) ? Copy.TYPE : "text/plain";
     }
 
     @Override

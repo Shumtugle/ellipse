@@ -226,7 +226,7 @@ final class Keep {
         return store(context).getInt(STAMP, 0);
     }
 
-    private static void touch(Context context) {
+    static void touch(Context context) {
         store(context).edit().putInt(STAMP, stamp(context) + 1).apply();
     }
 

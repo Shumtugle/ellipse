@@ -265,6 +265,10 @@ public final class Home extends Activity {
         registerReceiver(sleep, night);
         Lapse.watch(this);
         super.onCreate(saved);
+        /* Made again by the phone — as its colours follow a new wallpaper — the screen shown stays shown. */
+        if (saved != null) {
+            restore = saved.getInt("page", -1);
+        }
         /* The pinch, left to nothing, goes to the grey once; chosen otherwise, it stays as chosen. */
         if (!Keep.flag(this, Keep.GREY_OFFERED, false)) {
             Keep.saveFlag(this, Keep.GREY_OFFERED, true);
@@ -677,6 +681,14 @@ public final class Home extends Activity {
      * first one.
      */
     private int restore = -1;
+
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        if (screens != null && !pages.isEmpty()) {
+            out.putInt("page", screens.page());
+        }
+    }
     /** Whether the phone lies on its side: the screens laid again in a grid of their own, nothing written. */
     private boolean lying;
     /** The grid's width upright, in places: lying down, the clock keeps it rather than the whole long side. */
@@ -696,7 +708,7 @@ public final class Home extends Activity {
         Keep.noLay = lying;
         if (screens != null && !pages.isEmpty() && wasLying == lying) {
             restore = screens.page();
-        } else {
+        } else if (screens != null) {
             restore = -1;
             turned = true;
         }

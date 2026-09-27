@@ -724,13 +724,12 @@ private static String head(String title, String extra) {
             .append(Tone.hex(Tone.onSurface())).append("}")
             .append(".sorb{width:40px;height:40px;border-radius:50%;background:")
             .append(Tone.hex(Tone.primary())).append("}")
-            .append("input[type=range]{-webkit-appearance:none;width:100%;height:44px;")
-            .append("border-radius:22px;outline:none;border:1px solid ")
-            .append(Tone.hex(Tone.containerHigh())).append("}")
+            /* The sliders as the settings' own are drawn: a narrow track, a round knob to hold. */
+            .append("input[type=range]{-webkit-appearance:none;width:100%;height:16px;margin:14px 0;")
+            .append("border-radius:8px;outline:none;border:none}")
             .append("input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;")
-            .append("width:34px;height:34px;border-radius:50%;background:")
-            .append(Tone.hex(Tone.onSurface())).append(";border:2px solid ")
-            .append(Tone.hex(Tone.faint())).append("}")
+            .append("width:26px;height:26px;border-radius:50%;background:")
+            .append(Tone.hex(Tone.onSurface())).append(";border:none;box-shadow:0 1px 3px rgba(0,0,0,.35)}")
             .append("img.face{width:34px;height:34px;border-radius:9px;flex:none}")
             .append(".quietline{font-size:14px;margin:4px 0 0;color:")
             .append(Tone.hex(Tone.faint())).append("}")
@@ -789,13 +788,12 @@ private static String head(String title, String extra) {
             .append(Tone.hex(Tone.onVariant())).append("}")
             .append("#show{height:96px;border-radius:30px;display:flex;align-items:center;")
             .append("justify-content:center;font-size:19px;margin:8px 0 6px}")
-            .append("input[type=range]{-webkit-appearance:none;width:100%;height:44px;")
-            .append("border-radius:22px;outline:none;border:1px solid ")
-            .append(Tone.hex(Tone.containerHigh())).append("}")
+            /* The sliders as the settings' own are drawn: a narrow track, a round knob to hold. */
+            .append("input[type=range]{-webkit-appearance:none;width:100%;height:16px;margin:14px 0;")
+            .append("border-radius:8px;outline:none;border:none}")
             .append("input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;")
-            .append("width:34px;height:34px;border-radius:50%;background:")
-            .append(Tone.hex(Tone.onSurface())).append(";border:2px solid ")
-            .append(Tone.hex(Tone.faint())).append("}");
+            .append("width:26px;height:26px;border-radius:50%;background:")
+            .append(Tone.hex(Tone.onSurface())).append(";border:none;box-shadow:0 1px 3px rgba(0,0,0,.35)}");
 
         rules.append(chips());
 

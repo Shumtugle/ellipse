@@ -303,6 +303,14 @@ public final class Tune extends Activity {
     private Sample sample;
     private Menu menu;
     private final List<Integer> path = new ArrayList<>();
+    /** Being made again on purpose, as a look is put on: not a leaving. */
+    private static boolean remaking;
+
+    @Override
+    protected void onSaveInstanceState(Bundle out) {
+        super.onSaveInstanceState(out);
+        out.putIntegerArrayList("path", new ArrayList<>(path));
+    }
     private long armed;
     /** The choice the menu stands open for, and the words showing its value. */
     private Line asking;
@@ -320,6 +328,12 @@ public final class Tune extends Activity {
     protected void onCreate(Bundle saved) {
         Lapse.watch(this);
         super.onCreate(saved);
+        remaking = false;
+        /* Made again — as a look is put on — the settings open in the room they were in. */
+        if (saved != null && saved.getIntegerArrayList("path") != null) {
+            path.clear();
+            path.addAll(saved.getIntegerArrayList("path"));
+        }
         Tone.read(this);
         density = getResources().getDisplayMetrics().density;
         scaled = getResources().getDisplayMetrics().scaledDensity;
@@ -542,13 +556,7 @@ public final class Tune extends Activity {
         rows.removeAllViews();
         window.setVisibility(room() == ICONS || room() == CLOCK || room() == LISTGROUND || room() == FONTS
             || room() == GROUNDS || room() == GROUND_FINE || room() == LOOKS ? View.VISIBLE : View.GONE);
-        /* Leaving the presets while looking at one: the look before is put on again. */
-        if (room() != LOOKS && Looks.previewing(this)) {
-            Looks.previewEnd(this, false);
-            looking = -1;
-            worn();
-            return;
-        }
+
         window.setPadding(dp(16), dp(4), dp(16), dp(10));
         /* The wallpaper's rooms end with Done: the ground set on both screens. */
         foot.done(room() == GROUNDS || room() == GROUND_FINE ? new Runnable() {
@@ -1692,7 +1700,7 @@ public final class Tune extends Activity {
     protected void onStop() {
         super.onStop();
         /* Leaving the settings while looking at a preset: the look before is put on again. */
-        if (!isChangingConfigurations() && Looks.previewing(this)) {
+        if (!remaking && !isChangingConfigurations() && Looks.previewing(this)) {
             Looks.previewEnd(this, false);
             looking = -1;
             Tone.read(this);
@@ -2399,7 +2407,7 @@ public final class Tune extends Activity {
         rows.addView(deed("Back up into a file", new Runnable() {
             public void run() {
                 Intent make = new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("application/json").putExtra(Intent.EXTRA_TITLE, Copy.name());
+                    .setType(Copy.TYPE).putExtra(Intent.EXTRA_TITLE, Copy.name());
                 try {
                     startActivityForResult(make, WRITE_COPY);
                 } catch (RuntimeException none) {
@@ -2411,7 +2419,7 @@ public final class Tune extends Activity {
             public void run() {
                 /* The same copy, handed to whatever the phone can send it with: a cloud, a mail, a chat. */
                 try {
-                    startActivity(Handed.send(Tune.this, Copy.name(), Copy.whole(Tune.this), "application/json"));
+                    startActivity(Handed.send(Tune.this, Copy.name(), Copy.whole(Tune.this), Copy.TYPE));
                 } catch (Exception failed) {
                     said("The copy could not be written");
                 }
@@ -2827,6 +2835,7 @@ public final class Tune extends Activity {
     private void worn() {
         Tone.read(this);
         Style.read(this);
+        remaking = true;
         recreate();
     }
 
@@ -3616,7 +3625,15 @@ public final class Tune extends Activity {
             return;
         }
         if (!path.isEmpty()) {
+            boolean looked = room() == LOOKS && Looks.previewing(this);
             path.remove(path.size() - 1);
+            if (looked) {
+                /* Going back from a preset only looked at: the look before is put on again. */
+                Looks.previewEnd(this, false);
+                looking = -1;
+                worn();
+                return;
+            }
             show(-1);
             return;
         }

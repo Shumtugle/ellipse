@@ -218,6 +218,8 @@ final class Copy {
            copy does not look like a new version starting. */
         edit.putInt(SEEN, versionCode(context));
         edit.commit();
+        /* Everything the copy holds is the home screen's now: it is laid out again, the dock with it. */
+        Keep.touch(context);
         try {
             JSONObject kept = new JSONObject(words).optJSONObject("files");
             if (kept != null) {
@@ -560,7 +562,7 @@ final class Copy {
             return;
         }
         String today = new SimpleDateFormat("yyyyMMdd", Locale.ROOT).format(new Date());
-        File made = new File(dir(context), DAILY + today + ".json");
+        File made = new File(dir(context), DAILY + today + EXTENSION);
         if (made.isFile()) {
             return;
         }
@@ -666,7 +668,15 @@ final class Copy {
 
     /** A name for a copy made today. */
     static String name() {
-        return "ellipse-" + new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date()) + ".json";
+        return "ellipse-" + new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(new Date()) + EXTENSION;
     }
+
+    /**
+     * A copy's own ending, so it is known for what it is among files; inside,
+     * it is checked for its kind all the same, and copies of old with the
+     * common ending are still taken.
+     */
+    static final String EXTENSION = ".ellipse";
+    static final String TYPE = "application/octet-stream";
 
 }
