@@ -238,7 +238,7 @@ public final class Tune extends Activity {
                 return new Line[] {
                     door(Glyph.LOOK, "Presets", "Ready looks, random ones and your own — tried on before accepted", LOOKS),
                     door(Glyph.LOOK, "Typeface", "The letters of every name and every word here", FONTS),
-                    door(Glyph.LOOK, "Wallpaper", "A ground drawn from layers of light, texture and ornament",
+                    door(Glyph.LOOK, "Wallpaper", "The phone's own chooser, a picture of yours, or a ground drawn from layers",
                         GROUNDS),
                     choice("Theme", "Dark surfaces, light ones, or as the phone is set", Keep.THEME,
                         Keep.THEME_DARK, new String[] {"Dark", "Light", "As the phone"},
@@ -958,6 +958,34 @@ public final class Tune extends Activity {
      */
     private void fillGrounds() {
         groundWindow(true);
+        /* The phone's own ways first: its chooser, with live wallpapers and its own apps, and its framing of a
+           picture, which asks for the home screen, the lock screen or both. The factory's grounds follow. */
+        caption("THE PHONE'S WAY");
+        rows.addView(deed("Choose a wallpaper\u2026", new Runnable() {
+            public void run() {
+                try {
+                    startActivity(Intent.createChooser(new Intent(Intent.ACTION_SET_WALLPAPER),
+                        Words.t("Choose a wallpaper")));
+                } catch (RuntimeException none) {
+                    said("No way to choose a wallpaper was found on the phone");
+                }
+            }
+        }));
+        rows.addView(deed("A picture, framed by the phone\u2026", new Runnable() {
+            public void run() {
+                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                pick.addCategory(Intent.CATEGORY_OPENABLE);
+                pick.setType("image/*");
+                try {
+                    startActivityForResult(pick, CROP_PICTURE);
+                } catch (android.content.ActivityNotFoundException none) {
+                    said("No way to choose a picture was found on the phone");
+                }
+            }
+        }));
+        note("Set the phone's way, the wallpaper is the phone's: it may be cropped, placed on the lock screen or "
+            + "not, and live. A copy carries it only with leave to read all files; a picture of your own, below, "
+            + "is kept by Ellipse and always travels with a copy.");
         caption("READY");
         rows.addView(flow(Ground.READY, -1, new Chosen() {
             public void chosen(int which) {
@@ -2443,6 +2471,8 @@ public final class Tune extends Activity {
     private static final int READ_LANGUAGE = 24;
     private static final int WRITE_TEMPLATE = 25;
     private static final int READ_PICTURE = 26;
+    /** A picture to be framed and set by the phone itself. */
+    private static final int CROP_PICTURE = 29;
 
     /** The owner's own picture set, away from the hand; the room shows what is kept now. */
     private void wearPicture() {
@@ -3233,6 +3263,28 @@ public final class Tune extends Activity {
                 said("The template is saved");
             } catch (java.io.IOException | RuntimeException failed) {
                 said("The template could not be written");
+            }
+            return;
+        }
+        if (asked == CROP_PICTURE) {
+            /* The phone's own framing: it crops, and asks for the home screen, the lock screen or both. Where
+               it will not frame this picture, the phone's "set as" offers whatever else can. */
+            Intent frame = null;
+            try {
+                frame = android.app.WallpaperManager.getInstance(this).getCropAndSetWallpaperIntent(where);
+            } catch (RuntimeException refused) {
+                frame = null;
+            }
+            if (frame == null) {
+                frame = Intent.createChooser(new Intent(Intent.ACTION_ATTACH_DATA).setDataAndType(where, "image/*")
+                    .putExtra("mimeType", "image/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                    Words.t("Set as wallpaper"));
+            }
+            frame.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            try {
+                startActivity(frame);
+            } catch (RuntimeException none) {
+                said("That picture could not be framed here");
             }
             return;
         }
