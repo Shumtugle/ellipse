@@ -1946,42 +1946,38 @@ public final class Home extends Activity {
                 return true;
             }
         });
-        /* A sheet at the foot, as bold as the wallpaper deserves: what is on the wall now, and four tiles. */
-        LinearLayout sheet = new LinearLayout(this);
+        /* A sheet at the foot, on the wallpaper itself blurred and darkened: what is on the wall now, and the
+           two plain ways to change it — here, in the home screen's own settings, or in the phone's. */
+        final LinearLayout sheet = new LinearLayout(this);
         sheet.setOrientation(LinearLayout.VERTICAL);
-        sheet.setPadding(Math.round(dp(22)), Math.round(dp(20)), Math.round(dp(22)), Math.round(dp(20)));
-        sheet.setBackground(Tone.box((Tone.containerHigh() & 0x00FFFFFF) | 0xF0000000, dp(32),
-            Math.max(1f, dp(0.5f)), (Tone.outline() & 0x00FFFFFF) | 0x66000000));
+        sheet.setPadding(Math.round(dp(22)), Math.round(dp(22)), Math.round(dp(22)), Math.round(dp(18)));
+        final android.graphics.drawable.GradientDrawable shape = Tone.box(0xB3000000, dp(32),
+            Math.max(1f, dp(0.5f)), 0x33FFFFFF);
+        sheet.setBackground(shape);
+        sheet.setClipToOutline(true);
         sheet.setClickable(true);
         android.widget.TextView title = new android.widget.TextView(this);
         title.setText(Words.t("Wallpaper"));
-        title.setTextColor(Tone.onSurface());
+        title.setTextColor(0xFFF2EEE6);
         title.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 22f);
         title.setTypeface(Style.face());
         sheet.addView(title);
         android.widget.TextView now = new android.widget.TextView(this);
         boolean ours = Keep.flag(this, Keep.GROUND_WORN, false);
         boolean own = !ours && Keep.flag(this, Keep.PICTURE_WORN, false);
-        now.setText(Words.t(ours ? "Now: a ground of the factory" : own ? "Now: a picture of your own"
-            : "Now: set by the phone"));
-        now.setTextColor(Tone.faint());
+        now.setText(Words.t(ours ? "Now: drawn by the home screen" : own ? "Now: a picture kept by the home screen"
+            : "Now: set in the phone's settings"));
+        now.setTextColor(0xB3F2EEE6);
         now.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f);
-        now.setPadding(0, Math.round(dp(2)), 0, Math.round(dp(16)));
+        now.setPadding(0, Math.round(dp(2)), 0, Math.round(dp(14)));
         sheet.addView(now);
-        LinearLayout tiles = new LinearLayout(this);
-        tiles.setOrientation(LinearLayout.HORIZONTAL);
-        final WallTile dice = new WallTile(this, WallTile.DICE);
-        tiles.addView(wallTool(dice, "New ground", new Runnable() {
+        sheet.addView(wallWay(true, "Change in the home screen's settings", new Runnable() {
             public void run() {
-                throwGround(dice);
-                dice.postDelayed(new Runnable() {
-                    public void run() {
-                        dice.roll();
-                    }
-                }, 350);
+                unbare();
+                startActivity(new Intent(Home.this, Tune.class).putExtra(Tune.ROOM_IN, Tune.ROOM_GROUNDS));
             }
         }));
-        tiles.addView(wallTool(new WallTile(this, WallTile.PHONE), "The phone's wallpapers", new Runnable() {
+        sheet.addView(wallWay(false, "Change in the phone's settings", new Runnable() {
             public void run() {
                 unbare();
                 try {
@@ -1992,18 +1988,6 @@ public final class Home extends Activity {
                 }
             }
         }));
-        tiles.addView(wallTool(new WallTile(this, WallTile.FACTORY), "The ground factory", new Runnable() {
-            public void run() {
-                unbare();
-                startActivity(new Intent(Home.this, Tune.class).putExtra(Tune.ROOM_IN, Tune.ROOM_GROUNDS));
-            }
-        }));
-        tiles.addView(wallTool(new WallTile(this, WallTile.SAVE), "Into the gallery", new Runnable() {
-            public void run() {
-                keepWallpaper();
-            }
-        }));
-        sheet.addView(tiles);
         FrameLayout.LayoutParams sheetAt = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM);
         sheetAt.setMargins(Math.round(dp(14)), 0, Math.round(dp(14)), Math.round(dp(28)));
@@ -2012,214 +1996,154 @@ public final class Home extends Activity {
         sheet.setTranslationY(dp(40));
         sheet.animate().alpha(1f).translationY(0f).setStartDelay(Pace.ARRIVE).setDuration(Pace.ARRIVE)
             .setInterpolator(Pace.EMPHASIS).start();
+        /* Once laid, the wallpaper under the sheet, where the home screen can know it, blurred and darkened. */
+        sheet.post(new Runnable() {
+            public void run() {
+                frost(sheet, shape);
+            }
+        });
         bareVeil = veil;
         root.addView(bareVeil, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
-    /** One of the wallpaper sheet's tools: a tile with its picture, its name under it, a quarter of the width. */
-    private View wallTool(View tile, String word, final Runnable then) {
-        LinearLayout one = new LinearLayout(this);
-        one.setOrientation(LinearLayout.VERTICAL);
-        one.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
-        one.setPadding(Math.round(dp(4)), 0, Math.round(dp(4)), 0);
-        one.addView(tile, new LinearLayout.LayoutParams(Math.round(dp(68)), Math.round(dp(68))));
+    /**
+     * One of the sheet's two ways, as a broad row: its sign — the home
+     * screen's own, or a phone — the plain words of where it leads, and a
+     * chevron.
+     */
+    private View wallWay(final boolean ours, String word, final Runnable then) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        row.setPadding(Math.round(dp(14)), Math.round(dp(12)), Math.round(dp(16)), Math.round(dp(12)));
+        row.setBackground(Tone.touch(Tone.box(0x26FFFFFF, dp(22), 0f), dp(22)));
+        View sign;
+        if (ours) {
+            android.widget.ImageView mark = new android.widget.ImageView(this);
+            mark.setImageResource(R.mipmap.ic_launcher);
+            sign = mark;
+        } else {
+            sign = new View(this) {
+                private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+                @Override
+                protected void onDraw(android.graphics.Canvas c) {
+                    float w = getWidth();
+                    float h = getHeight();
+                    float d = getResources().getDisplayMetrics().density;
+                    android.graphics.RectF body = new android.graphics.RectF(w * 0.3f, h * 0.1f, w * 0.7f, h * 0.9f);
+                    p.setStyle(android.graphics.Paint.Style.FILL);
+                    p.setShader(new android.graphics.LinearGradient(0, body.top, 0, body.bottom,
+                        new int[] {0xFF1B2A3A, Tone.primary(), 0xFF120F0C}, new float[] {0f, 0.55f, 1f},
+                        android.graphics.Shader.TileMode.CLAMP));
+                    c.drawRoundRect(body, d * 5, d * 5, p);
+                    p.setShader(null);
+                    p.setStyle(android.graphics.Paint.Style.STROKE);
+                    p.setStrokeWidth(d * 1.6f);
+                    p.setColor(0xFFF2EEE6);
+                    c.drawRoundRect(body, d * 5, d * 5, p);
+                }
+            };
+        }
+        row.addView(sign, new LinearLayout.LayoutParams(Math.round(dp(44)), Math.round(dp(44))));
         android.widget.TextView said = new android.widget.TextView(this);
         said.setText(Words.t(word));
-        said.setTextColor(Tone.onSurface());
-        said.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 13f);
-        said.setGravity(android.view.Gravity.CENTER);
-        said.setMaxLines(2);
-        said.setPadding(0, Math.round(dp(8)), 0, 0);
-        one.addView(said, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT));
-        one.setOnClickListener(new View.OnClickListener() {
+        said.setTextColor(0xFFF2EEE6);
+        said.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 17f);
+        said.setPadding(Math.round(dp(14)), 0, Math.round(dp(8)), 0);
+        row.addView(said, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        Glyph more = new Glyph(this, Glyph.CHEVRON, dp(18));
+        more.tint(0xB3F2EEE6);
+        row.addView(more, new LinearLayout.LayoutParams(Math.round(dp(18)), Math.round(dp(18))));
+        row.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
                 then.run();
             }
         });
-        return one;
+        LinearLayout.LayoutParams at = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT);
+        at.topMargin = Math.round(dp(8));
+        row.setLayoutParams(at);
+        return row;
     }
 
     /**
-     * A tile of the wallpaper sheet, each its own picture: the die on the
-     * accent; a phone with a wallpaper in it; the factory's own ground,
-     * the one on the wall now, in small; an arrow going down into a tray.
+     * The sheet's ground: the very wallpaper under it, drawn small and drawn
+     * smaller still, so it comes back soft as through frosted glass, and
+     * darkened. Where the home screen cannot know the wallpaper — one the
+     * phone set — the sheet stays a dark glass.
      */
-    private static final class WallTile extends View {
-        static final int DICE = 0;
-        static final int PHONE = 1;
-        static final int FACTORY = 2;
-        static final int SAVE = 3;
-        private final int kind;
-        private final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
-        private android.graphics.drawable.Drawable die;
-        private android.graphics.Bitmap ground;
-
-        WallTile(Context context, int kind) {
-            super(context);
-            this.kind = kind;
-            if (kind == DICE) {
-                roll();
-            }
-        }
-
-        void roll() {
-            die = new Die(Die.roll());
-            die.setTint(Tone.onPrimaryContainer());
-            invalidate();
-        }
-
-        @Override
-        protected void onSizeChanged(int w, int h, int ow, int oh) {
-            super.onSizeChanged(w, h, ow, oh);
-            if (kind == FACTORY && w > 0 && h > 0) {
-                final int side = Math.max(w, h);
-                final Context app = getContext().getApplicationContext();
-                new Thread(new Runnable() {
-                    public void run() {
-                        try {
-                            final android.graphics.Bitmap made = Ground.kept(app).draw(side, side);
-                            post(new Runnable() {
-                                public void run() {
-                                    ground = made;
-                                    invalidate();
-                                }
-                            });
-                        } catch (Exception | OutOfMemoryError none) {
-                            // The tile keeps its plain colour.
-                        }
-                    }
-                }).start();
-            }
-        }
-
-        @Override
-        protected void onDraw(android.graphics.Canvas c) {
-            float w = getWidth();
-            float h = getHeight();
-            float r = Math.min(w, h) * 0.3f;
-            android.graphics.RectF all = new android.graphics.RectF(0, 0, w, h);
-            android.graphics.Path round = new android.graphics.Path();
-            round.addRoundRect(all, r, r, android.graphics.Path.Direction.CW);
-            c.save();
-            c.clipPath(round);
-            paint.setStyle(android.graphics.Paint.Style.FILL);
-            paint.setShader(null);
-            paint.setColor(kind == DICE ? Tone.primaryContainer() : Tone.container());
-            c.drawRect(all, paint);
-            float d = getResources().getDisplayMetrics().density;
-            switch (kind) {
-                case DICE:
-                    if (die != null) {
-                        int inset = Math.round(w * 0.2f);
-                        die.setBounds(inset, inset, Math.round(w) - inset, Math.round(h) - inset);
-                        die.draw(c);
-                    }
-                    break;
-                case PHONE: {
-                    /* A phone, upright, a wallpaper's light in it. */
-                    android.graphics.RectF body = new android.graphics.RectF(w * 0.32f, h * 0.16f, w * 0.68f, h * 0.84f);
-                    paint.setShader(new android.graphics.LinearGradient(0, body.top, 0, body.bottom,
-                        new int[] {0xFF1B2A3A, Tone.primary(), 0xFF120F0C}, new float[] {0f, 0.55f, 1f},
-                        android.graphics.Shader.TileMode.CLAMP));
-                    c.drawRoundRect(body, d * 5, d * 5, paint);
-                    paint.setShader(null);
-                    paint.setStyle(android.graphics.Paint.Style.STROKE);
-                    paint.setStrokeWidth(d * 1.6f);
-                    paint.setColor(Tone.onSurface());
-                    c.drawRoundRect(body, d * 5, d * 5, paint);
-                    break;
-                }
-                case FACTORY:
-                    if (ground != null) {
-                        c.drawBitmap(ground, null, all, paint);
-                    } else {
-                        paint.setShader(new android.graphics.LinearGradient(0, 0, w, h, Tone.primary(), 0xFF141210,
-                            android.graphics.Shader.TileMode.CLAMP));
-                        c.drawRect(all, paint);
-                        paint.setShader(null);
-                    }
-                    break;
-                default: {
-                    /* An arrow going down into a tray. */
-                    paint.setStyle(android.graphics.Paint.Style.STROKE);
-                    paint.setStrokeWidth(d * 2.2f);
-                    paint.setStrokeCap(android.graphics.Paint.Cap.ROUND);
-                    paint.setStrokeJoin(android.graphics.Paint.Join.ROUND);
-                    paint.setColor(Tone.onSurface());
-                    float cx = w / 2f;
-                    c.drawLine(cx, h * 0.24f, cx, h * 0.58f, paint);
-                    android.graphics.Path head = new android.graphics.Path();
-                    head.moveTo(cx - w * 0.13f, h * 0.45f);
-                    head.lineTo(cx, h * 0.58f);
-                    head.lineTo(cx + w * 0.13f, h * 0.45f);
-                    c.drawPath(head, paint);
-                    android.graphics.Path tray = new android.graphics.Path();
-                    tray.moveTo(w * 0.26f, h * 0.62f);
-                    tray.lineTo(w * 0.26f, h * 0.74f);
-                    tray.lineTo(w * 0.74f, h * 0.74f);
-                    tray.lineTo(w * 0.74f, h * 0.62f);
-                    c.drawPath(tray, paint);
-                    break;
-                }
-            }
-            c.restore();
-        }
-    }
-
-    /**
-     * The wallpaper kept as a picture in the gallery, under Pictures/Ellipse:
-     * a ground the factory drew, drawn again at the screen's own size as a
-     * PNG, no shade of it lost; a picture of one's own as the JPEG it is;
-     * another wallpaper only where the leave to read it is given.
-     */
-    private void keepWallpaper() {
+    private void frost(final View sheet, final android.graphics.drawable.GradientDrawable shape) {
         final Context app = getApplicationContext();
         final boolean ours = Keep.flag(this, Keep.GROUND_WORN, false);
         final boolean own = !ours && Keep.flag(this, Keep.PICTURE_WORN, false) && Picture.kept(this);
-        if (!ours && !own && !Copy.wallpaperReadable()) {
-            Ask.tell(root, "Keep the wallpaper?", "This wallpaper was set by the phone, not by Ellipse: it can be "
-                + "read only with leave to read all files, in Backup and restore.", "OK", new Runnable() {
-                    public void run() {
-                    }
-                });
+        if (!ours && !own) {
             return;
         }
-        final int w = getResources().getDisplayMetrics().widthPixels;
-        final int h = getResources().getDisplayMetrics().heightPixels;
+        final int screenW = getResources().getDisplayMetrics().widthPixels;
+        final int screenH = getResources().getDisplayMetrics().heightPixels;
+        final int[] at = new int[2];
+        sheet.getLocationOnScreen(at);
+        final int w = sheet.getWidth();
+        final int h = sheet.getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
+        }
         new Thread(new Runnable() {
             public void run() {
-                boolean done = false;
                 try {
+                    int sw = Math.max(8, screenW / 12);
+                    int sh = Math.max(8, screenH / 12);
+                    android.graphics.Bitmap wall;
                     if (ours) {
-                        android.graphics.Bitmap made = Ground.kept(app).draw(w, h);
-                        done = Portrait.save(app, made) != null;
-                        made.recycle();
-                    } else if (own) {
-                        done = Picture.saveToGallery(app);
+                        wall = Ground.kept(app).draw(sw, sh);
                     } else {
-                        try (android.os.ParcelFileDescriptor file = WallpaperManager.getInstance(app)
-                            .getWallpaperFile(WallpaperManager.FLAG_SYSTEM)) {
-                            android.graphics.Bitmap read = file == null ? null
-                                : android.graphics.BitmapFactory.decodeFileDescriptor(file.getFileDescriptor());
-                            if (read != null) {
-                                done = Portrait.save(app, read) != null;
-                                read.recycle();
-                            }
+                        android.graphics.BitmapFactory.Options few = new android.graphics.BitmapFactory.Options();
+                        few.inSampleSize = 16;
+                        android.graphics.Bitmap read = android.graphics.BitmapFactory.decodeFile(
+                            Picture.file(app).getPath(), few);
+                        if (read == null) {
+                            return;
                         }
+                        wall = android.graphics.Bitmap.createScaledBitmap(read, sw, sh, true);
+                        read.recycle();
                     }
-                } catch (Exception | OutOfMemoryError failed) {
-                    done = false;
+                    int left = Math.max(0, Math.min(sw - 1, at[0] / 12));
+                    int top = Math.max(0, Math.min(sh - 1, at[1] / 12));
+                    int cw = Math.max(1, Math.min(sw - left, w / 12));
+                    int ch = Math.max(1, Math.min(sh - top, h / 12));
+                    android.graphics.Bitmap piece = android.graphics.Bitmap.createBitmap(wall, left, top, cw, ch);
+                    /* Smaller still, then back: what is left of the picture is only its light. */
+                    android.graphics.Bitmap tiny = android.graphics.Bitmap.createScaledBitmap(piece,
+                        Math.max(1, cw / 3), Math.max(1, ch / 3), true);
+                    final android.graphics.Bitmap soft = android.graphics.Bitmap.createScaledBitmap(tiny, cw * 4,
+                        ch * 4, true);
+                    tiny.recycle();
+                    piece.recycle();
+                    wall.recycle();
+                    sheet.post(new Runnable() {
+                        public void run() {
+                            android.graphics.drawable.BitmapDrawable glass =
+                                new android.graphics.drawable.BitmapDrawable(getResources(), soft);
+                            glass.setFilterBitmap(true);
+                            android.graphics.drawable.GradientDrawable dark = Tone.box(0x8C000000, dp(32),
+                                Math.max(1f, dp(0.5f)), 0x33FFFFFF);
+                            sheet.setBackground(new android.graphics.drawable.LayerDrawable(
+                                new android.graphics.drawable.Drawable[] {glass, dark}));
+                            sheet.setOutlineProvider(new android.view.ViewOutlineProvider() {
+                                @Override
+                                public void getOutline(View view, android.graphics.Outline outline) {
+                                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(32));
+                                }
+                            });
+                            sheet.setClipToOutline(true);
+                        }
+                    });
+                } catch (Exception | OutOfMemoryError unread) {
+                    // The sheet stays a dark glass.
                 }
-                final boolean kept = done;
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        android.widget.Toast.makeText(Home.this, Words.t(kept ? "Kept in Pictures, Ellipse"
-                            : "The wallpaper could not be kept"), android.widget.Toast.LENGTH_SHORT).show();
-                    }
-                });
             }
         }).start();
     }
