@@ -122,6 +122,35 @@ final class Picture {
      * Whether a ground may be set without asking: the wallpaper now is the
      * home screen's own, or its owner has said once that it may go.
      */
+    /** One's own picture into the gallery, under Pictures/Ellipse, as the JPEG it is kept as. */
+    static boolean saveToGallery(Context context) {
+        android.content.ContentValues v = new android.content.ContentValues();
+        v.put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, "ellipse-wallpaper-"
+            + new java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.ROOT).format(new java.util.Date())
+            + ".jpg");
+        v.put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+        v.put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Ellipse");
+        android.net.Uri made = context.getContentResolver().insert(
+            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+        if (made == null) {
+            return false;
+        }
+        try (InputStream in = new java.io.FileInputStream(file(context));
+             OutputStream out = context.getContentResolver().openOutputStream(made)) {
+            if (out == null) {
+                return false;
+            }
+            byte[] chunk = new byte[65536];
+            int n;
+            while ((n = in.read(chunk)) > 0) {
+                out.write(chunk, 0, n);
+            }
+            return true;
+        } catch (IOException failed) {
+            return false;
+        }
+    }
+
     static boolean replaceable(Context context) {
         return Keep.flag(context, Keep.WALL_WARNED, false) || Keep.flag(context, Keep.GROUND_WORN, false)
             || Keep.flag(context, Keep.PICTURE_WORN, false);

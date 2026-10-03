@@ -792,3 +792,13 @@ Set the phone's way, the wallpaper is the phone's: it may be cropped, placed on 
 Set as wallpaper = Aseta taustakuvaksi
 That picture could not be framed here = Tätä kuvaa ei voitu rajata täällä
 The phone's own chooser, a picture of yours, or a ground drawn from layers = Puhelimen valitsin, oma kuva tai kerroksista piirretty tausta
+New ground = Uusi tausta
+The phone's = Puhelimen
+Factory = Tehdas
+Save = Tallenna
+Keep the wallpaper? = Tallennetaanko taustakuva?
+This wallpaper was set by the phone, not by Ellipse: it can be read only with leave to read all files, in Backup and restore. = Tämän taustakuvan asetti puhelin, ei Ellipse: sen voi lukea vain luvalla lukea kaikki tiedostot, Varmuuskopioissa.
+OK = Selvä
+Kept in Pictures, Ellipse = Tallennettu: Kuvat, Ellipse
+The wallpaper could not be kept = Taustakuvaa ei voitu tallentaa
+It is empty. = Se on tyhjä.

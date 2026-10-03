@@ -325,6 +325,14 @@ public final class Home extends Activity {
         /* The own strips as the settings now say: shown or not, in their colour. */
         if (root != null) {
             root.requestApplyInsets();
+            /* The strip tells the time only on a screen without the clock: the screen shown now, once laid. */
+            root.post(new Runnable() {
+                public void run() {
+                    if (statusStrip != null && screens != null) {
+                        statusStrip.clockHere(screens.page() == clockScreen);
+                    }
+                }
+            });
         }
         greyNow();
         /* Back on the home screen: a step aside at once, then one every three minutes. */
@@ -628,6 +636,8 @@ public final class Home extends Activity {
     }
 
     private Bars.Status statusStrip;
+    /** The screen the home screen's clock stands on, or none. */
+    private int clockScreen = -1;
 
     /**
      * A strip's sign touched: the shade, the quick settings, Wi-Fi, the
@@ -857,6 +867,11 @@ public final class Home extends Activity {
         /* The wallpaper goes along with the screens, a little, as through a window. */
         screens.across(new Pager.Across() {
             public void across(float fraction) {
+                /* The strip tells the time only on a screen without the clock. */
+                if (statusStrip != null && pages.size() > 0) {
+                    int shown = Math.round(fraction * Math.max(0, pages.size() - 1));
+                    statusStrip.clockHere(shown == clockScreen);
+                }
                 if (frame == null || frame.getWindowToken() == null
                     || !Keep.flag(Home.this, Keep.WALL_MOVES, true) || pages.size() < 2) {
                     return;
@@ -1325,6 +1340,7 @@ public final class Home extends Activity {
         }
 
         int home = Math.min(lying ? uprightToLying(Keep.roles(this)) : Keep.roles(this), count - 1);
+        clockScreen = -1;
         if (laid) {
             boolean clocked = false;
             List<Keep.Spot> folders = new ArrayList<>();
@@ -1332,6 +1348,7 @@ public final class Home extends Activity {
                 Grid page = pages.get(spot.screen);
                 if (Keep.CLOCK_THING.equals(base(spot.token))) {
                     clocked = clock(page, spot.x, spot.y, spot.token) || clocked;
+                    clockScreen = spot.screen;
                 } else if (Keep.DICE_THING.equals(spot.token)) {
                     if (page.free(spot.x, spot.y)) {
                         Cell dice = diceCell();
@@ -1427,6 +1444,7 @@ public final class Home extends Activity {
         } else {
             Grid middle = pages.get(home);
             clock(middle, 0, 0, Keep.CLOCK_THING);
+            clockScreen = home;
             Intent[] everyday = {
                 new Intent(Intent.ACTION_VIEW, Uri.parse("https:")),
                 category(Intent.CATEGORY_APP_MARKET),
@@ -1916,8 +1934,11 @@ public final class Home extends Activity {
         }
         frame.animate().cancel();
         frame.animate().alpha(0f).setDuration(Pace.ARRIVE).start();
-        bareVeil = new View(this);
-        bareVeil.setOnTouchListener(new View.OnTouchListener() {
+        /* The wallpaper alone, and at its foot what can be done with it: a new ground by the dice, the phone's
+           own chooser, the factory, and the wallpaper kept as a picture. A touch anywhere else brings the
+           home screen back. */
+        FrameLayout veil = new FrameLayout(this);
+        veil.setOnTouchListener(new View.OnTouchListener() {
             public boolean onTouch(View v, android.view.MotionEvent event) {
                 if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) {
                     unbare();
@@ -1925,8 +1946,137 @@ public final class Home extends Activity {
                 return true;
             }
         });
+        LinearLayout tools = new LinearLayout(this);
+        tools.setOrientation(LinearLayout.HORIZONTAL);
+        tools.setPadding(Math.round(dp(10)), Math.round(dp(10)), Math.round(dp(10)), Math.round(dp(10)));
+        tools.setBackground(Tone.box((Tone.containerHigh() & 0x00FFFFFF) | 0xE6000000, dp(28), 0f));
+        tools.setClickable(true);
+        final android.widget.ImageView die = new android.widget.ImageView(this);
+        die.setImageDrawable(diceFace());
+        tools.addView(bareTool(die, "New ground", new Runnable() {
+            public void run() {
+                throwGround(die);
+                die.postDelayed(new Runnable() {
+                    public void run() {
+                        die.setImageDrawable(diceFace());
+                    }
+                }, 350);
+            }
+        }));
+        tools.addView(bareTool(new Glyph(this, Glyph.LOOK, dp(26)), "The phone's", new Runnable() {
+            public void run() {
+                unbare();
+                try {
+                    startActivity(Intent.createChooser(new Intent(Intent.ACTION_SET_WALLPAPER),
+                        Words.t("Choose a wallpaper")));
+                } catch (RuntimeException none) {
+                    refuse(screens);
+                }
+            }
+        }));
+        tools.addView(bareTool(new Glyph(this, Glyph.BRUSH, dp(26)), "Factory", new Runnable() {
+            public void run() {
+                unbare();
+                startActivity(new Intent(Home.this, Tune.class).putExtra(Tune.ROOM_IN, Tune.ROOM_GROUNDS));
+            }
+        }));
+        tools.addView(bareTool(new Glyph(this, Glyph.BACKUP, dp(26)), "Save", new Runnable() {
+            public void run() {
+                keepWallpaper();
+            }
+        }));
+        FrameLayout.LayoutParams toolsAt = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT, android.view.Gravity.BOTTOM | android.view.Gravity.CENTER_HORIZONTAL);
+        toolsAt.bottomMargin = Math.round(dp(36));
+        veil.addView(tools, toolsAt);
+        tools.setAlpha(0f);
+        tools.setTranslationY(dp(24));
+        tools.animate().alpha(1f).translationY(0f).setStartDelay(Pace.ARRIVE).setDuration(Pace.ARRIVE)
+            .setInterpolator(Pace.EMPHASIS).start();
+        bareVeil = veil;
         root.addView(bareVeil, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT));
+    }
+
+    /** One of the wallpaper view's tools: its sign over its word. */
+    private View bareTool(View sign, String word, final Runnable then) {
+        LinearLayout one = new LinearLayout(this);
+        one.setOrientation(LinearLayout.VERTICAL);
+        one.setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+        one.setPadding(Math.round(dp(14)), Math.round(dp(8)), Math.round(dp(14)), Math.round(dp(8)));
+        one.setBackground(Tone.touch(null, dp(20)));
+        if (sign instanceof Glyph) {
+            ((Glyph) sign).tint(Tone.onSurface());
+        }
+        one.addView(sign, new LinearLayout.LayoutParams(Math.round(dp(30)), Math.round(dp(30))));
+        android.widget.TextView said = new android.widget.TextView(this);
+        said.setText(Words.t(word));
+        said.setTextColor(Tone.onSurface());
+        said.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 12f);
+        said.setPadding(0, Math.round(dp(6)), 0, 0);
+        one.addView(said);
+        one.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+                then.run();
+            }
+        });
+        return one;
+    }
+
+    /**
+     * The wallpaper kept as a picture in the gallery, under Pictures/Ellipse:
+     * a ground the factory drew, drawn again at the screen's own size as a
+     * PNG, no shade of it lost; a picture of one's own as the JPEG it is;
+     * another wallpaper only where the leave to read it is given.
+     */
+    private void keepWallpaper() {
+        final Context app = getApplicationContext();
+        final boolean ours = Keep.flag(this, Keep.GROUND_WORN, false);
+        final boolean own = !ours && Keep.flag(this, Keep.PICTURE_WORN, false) && Picture.kept(this);
+        if (!ours && !own && !Copy.wallpaperReadable()) {
+            Ask.tell(root, "Keep the wallpaper?", "This wallpaper was set by the phone, not by Ellipse: it can be "
+                + "read only with leave to read all files, in Backup and restore.", "OK", new Runnable() {
+                    public void run() {
+                    }
+                });
+            return;
+        }
+        final int w = getResources().getDisplayMetrics().widthPixels;
+        final int h = getResources().getDisplayMetrics().heightPixels;
+        new Thread(new Runnable() {
+            public void run() {
+                boolean done = false;
+                try {
+                    if (ours) {
+                        android.graphics.Bitmap made = Ground.kept(app).draw(w, h);
+                        done = Portrait.save(app, made) != null;
+                        made.recycle();
+                    } else if (own) {
+                        done = Picture.saveToGallery(app);
+                    } else {
+                        try (android.os.ParcelFileDescriptor file = WallpaperManager.getInstance(app)
+                            .getWallpaperFile(WallpaperManager.FLAG_SYSTEM)) {
+                            android.graphics.Bitmap read = file == null ? null
+                                : android.graphics.BitmapFactory.decodeFileDescriptor(file.getFileDescriptor());
+                            if (read != null) {
+                                done = Portrait.save(app, read) != null;
+                                read.recycle();
+                            }
+                        }
+                    }
+                } catch (Exception | OutOfMemoryError failed) {
+                    done = false;
+                }
+                final boolean kept = done;
+                runOnUiThread(new Runnable() {
+                    public void run() {
+                        android.widget.Toast.makeText(Home.this, Words.t(kept ? "Kept in Pictures, Ellipse"
+                            : "The wallpaper could not be kept"), android.widget.Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+        }).start();
     }
 
     private void unbare() {
@@ -2634,16 +2784,14 @@ public final class Home extends Activity {
                         held++;
                     }
                 }
-                if (held == 0) {
-                    dropScreen(gone);
-                } else {
-                    Ask.tell(root, "Remove this screen?", Words.n("It holds %1 thing; it goes with it. | It holds %1 "
-                        + "things; they go with it.", held), "Remove", new Runnable() {
-                            public void run() {
-                                dropScreen(gone);
-                            }
-                        });
-                }
+                /* Always asked: a screen taken away by a slip is a screen lost. */
+                Ask.tell(root, "Remove this screen?", held == 0 ? Words.t("It is empty.")
+                    : Words.n("It holds %1 thing; it goes with it. | It holds %1 things; they go with it.", held),
+                    "Remove", new Runnable() {
+                        public void run() {
+                            dropScreen(gone);
+                        }
+                    });
                 break;
             case PORTRAIT:
                 /* After the menu has gone, so it is not in the picture. */

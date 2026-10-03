@@ -230,6 +230,15 @@ final class Bars {
         private int charge = -1;
         private boolean charging;
         private boolean seen;
+        /** Whether the screen shown holds the home screen's clock: then the strip says neither time nor date. */
+        private boolean clockHere = true;
+
+        void clockHere(boolean here) {
+            if (clockHere != here) {
+                clockHere = here;
+                invalidate();
+            }
+        }
 
         private final BroadcastReceiver power = new BroadcastReceiver() {
             @Override
@@ -242,7 +251,8 @@ final class Bars {
             public void run() {
                 invalidate();
                 if (seen) {
-                    postDelayed(this, 30000L);
+                    long now = System.currentTimeMillis();
+                    postDelayed(this, 60000L - now % 60000L + 50L);
                 }
             }
         };
@@ -336,8 +346,12 @@ final class Bars {
                     window(SHADE, x - dp(6), 0, x + s + dp(20), h);
                 }
             }
-            if (Keep.flag(context, Keep.STRIP_DATE, true)) {
-                String day = new SimpleDateFormat("EE d MMMM", Locale.getDefault()).format(new Date());
+            if (Keep.flag(context, Keep.STRIP_DATE, true) && !clockHere) {
+                /* No clock on this screen: the strip tells the time and the date in its middle. */
+                Date now = new Date();
+                String day = new SimpleDateFormat(android.text.format.DateFormat.is24HourFormat(context) ? "HH:mm"
+                    : "h:mm", Locale.getDefault()).format(now) + "  \u00B7  "
+                    + new SimpleDateFormat("EE d MMMM", Locale.getDefault()).format(now);
                 words.setColor((ink & 0x00FFFFFF) | 0xA6000000);
                 words.setTextSize(s * 0.9f);
                 words.setTypeface(Typeface.DEFAULT);
@@ -401,9 +415,31 @@ final class Bars {
             paint.setStyle(Paint.Style.FILL);
             for (int i = 0; i < 4; i++) {
                 float tall = s * (0.3f + 0.23f * i);
-                paint.setColor(i < level ? ink : (ink & 0x00FFFFFF) | 0x40000000);
-                c.drawRect(x + i * s * 0.28f, bottom - tall, x + i * s * 0.28f + s * 0.18f, bottom, paint);
+                RectF bar = new RectF(x + i * s * 0.28f, bottom - tall, x + i * s * 0.28f + s * 0.18f, bottom);
+                if (i < level) {
+                    paint.setStyle(Paint.Style.FILL);
+                    paint.setColor(ink);
+                    c.drawRect(bar, paint);
+                } else {
+                    empty(c, bar);
+                }
             }
+        }
+
+        /**
+         * A step not reached: not grey, but see-through, a shade darker than what lies behind it — or lighter,
+         * on a light wallpaper — with the faintest edge of the ink, so its place is felt, not shown.
+         */
+        private void empty(Canvas c, RectF bar) {
+            boolean darkInk = android.graphics.Color.luminance(ink) < 0.4f;
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(darkInk ? 0x40FFFFFF : 0x4D000000);
+            c.drawRect(bar, paint);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(Math.max(1f, dp(0.7f)));
+            paint.setColor((ink & 0x00FFFFFF) | 0x47000000);
+            c.drawRect(bar, paint);
+            paint.setStyle(Paint.Style.FILL);
         }
 
         private void drawWifi(Canvas c, float x, float y, float s, int level) {
@@ -412,7 +448,8 @@ final class Bars {
             paint.setStrokeCap(Paint.Cap.ROUND);
             for (int i = 0; i < 3; i++) {
                 float r = s * (0.32f + 0.3f * i);
-                paint.setColor(i < level ? ink : (ink & 0x00FFFFFF) | 0x40000000);
+                boolean darkInk = android.graphics.Color.luminance(ink) < 0.4f;
+                paint.setColor(i < level ? ink : darkInk ? 0x55FFFFFF : 0x59000000);
                 c.drawArc(new RectF(x - r, y - r, x + r, y + r), 225f, 90f, false, paint);
             }
             paint.setStyle(Paint.Style.FILL);

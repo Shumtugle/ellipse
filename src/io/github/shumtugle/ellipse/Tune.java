@@ -353,6 +353,10 @@ public final class Tune extends Activity {
         if (saved != null && saved.getIntegerArrayList("path") != null) {
             path.clear();
             path.addAll(saved.getIntegerArrayList("path"));
+        } else if (getIntent() != null && getIntent().getIntExtra(ROOM_IN, -1) >= 0) {
+            /* Sent to a room from the home screen: opened there, Back leading to the rooms above it. */
+            path.clear();
+            path.add(getIntent().getIntExtra(ROOM_IN, -1));
         }
         Tone.read(this);
         density = getResources().getDisplayMetrics().density;
@@ -2467,6 +2471,9 @@ public final class Tune extends Activity {
     private static final int READ_COPY = 22;
     /** A copy file opened from outside, handed in by the copy's door. */
     static final String COPY_IN = "copy_in";
+    /** A room to open at, from the home screen. */
+    static final String ROOM_IN = "room_in";
+    static final int ROOM_GROUNDS = GROUNDS;
     private static final int READ_FOREIGN = 23;
     private static final int READ_LANGUAGE = 24;
     private static final int WRITE_TEMPLATE = 25;

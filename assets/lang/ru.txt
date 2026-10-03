@@ -792,3 +792,13 @@ Set the phone's way, the wallpaper is the phone's: it may be cropped, placed on 
 Set as wallpaper = Установить как обои
 That picture could not be framed here = Эту картинку здесь не получилось откадрировать
 The phone's own chooser, a picture of yours, or a ground drawn from layers = Выбор телефона, своя картинка или фон из слоёв
+New ground = Новый фон
+The phone's = Телефона
+Factory = Фабрика
+Save = Сохранить
+Keep the wallpaper? = Сохранить обои?
+This wallpaper was set by the phone, not by Ellipse: it can be read only with leave to read all files, in Backup and restore. = Эти обои поставил телефон, а не Ellipse: прочитать их можно только с правом читать все файлы — в «Копиях и восстановлении».
+OK = Понятно
+Kept in Pictures, Ellipse = Сохранено в «Изображения» → Ellipse
+The wallpaper could not be kept = Обои не удалось сохранить
+It is empty. = Он пуст.
