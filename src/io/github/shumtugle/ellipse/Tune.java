@@ -151,6 +151,8 @@ public final class Tune extends Activity {
         door(Glyph.DESK, "Desktop", "Dock, grid, scrolling, page points, new apps", DESK),
         door(Glyph.LIST, "All apps", "Grid, lines or pages, hidden apps", LIST),
         door(Glyph.LOOK, "Look", "Colour, icons, the clock, notification dots", LOOK),
+        door(Glyph.BRUSH, "Wallpaper", "The phone's own chooser, a picture of yours, or a ground drawn from layers",
+            GROUNDS),
         door(Glyph.HANDS, "Gestures", "Up, down, Back and Home on the home screen", HANDS),
         door(Glyph.CLOCK, "Night clock", "The clock across a dark screen on its side, by the bed", NIGHT),
         door(Glyph.BACKUP, "Backup and restore", "Keep the set-out, bring it back, bring one in", BACKUP),
@@ -238,8 +240,6 @@ public final class Tune extends Activity {
                 return new Line[] {
                     door(Glyph.LOOK, "Presets", "Ready looks, random ones and your own — tried on before accepted", LOOKS),
                     door(Glyph.LOOK, "Typeface", "The letters of every name and every word here", FONTS),
-                    door(Glyph.LOOK, "Wallpaper", "The phone's own chooser, a picture of yours, or a ground drawn from layers",
-                        GROUNDS),
                     choice("Theme", "Dark surfaces, light ones, or as the phone is set", Keep.THEME,
                         Keep.THEME_DARK, new String[] {"Dark", "Light", "As the phone"},
                         new int[] {Keep.THEME_DARK, Keep.THEME_LIGHT, Keep.THEME_PHONE}),
@@ -960,12 +960,100 @@ public final class Tune extends Activity {
      * sliders, seen at once; another draw of the same; and the ground set
      * as the wallpaper, or kept among the owner's own.
      */
+    private void pickPicture(int asked) {
+        Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("image/*");
+        try {
+            startActivityForResult(pick, asked);
+        } catch (android.content.ActivityNotFoundException none) {
+            said("No way to choose a picture was found on the phone");
+        }
+    }
+
+    /**
+     * A way to a wallpaper as a tile: a phone with a wallpaper's light in it;
+     * a picture between the marks of a crop; a picture in a frame of the
+     * accent, kept. Its name under it, whole.
+     */
+    private View wayTile(final int kind, String word, final Runnable then) {
+        LinearLayout one = new LinearLayout(this);
+        one.setOrientation(LinearLayout.VERTICAL);
+        one.setGravity(Gravity.CENTER_HORIZONTAL);
+        one.setPadding(dp(4), 0, dp(4), dp(6));
+        View face = new View(this) {
+            private final android.graphics.Paint p = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+
+            @Override
+            protected void onDraw(android.graphics.Canvas c) {
+                float w = getWidth();
+                float h = getHeight();
+                float d = density;
+                p.setShader(null);
+                p.setStyle(android.graphics.Paint.Style.FILL);
+                android.graphics.RectF pic = kind == 0
+                    ? new android.graphics.RectF(w * 0.32f, h * 0.16f, w * 0.68f, h * 0.84f)
+                    : new android.graphics.RectF(w * 0.22f, h * 0.24f, w * 0.78f, h * 0.76f);
+                p.setShader(new android.graphics.LinearGradient(0, pic.top, 0, pic.bottom,
+                    new int[] {0xFF1B2A3A, Tone.primary(), 0xFF120F0C}, new float[] {0f, 0.55f, 1f},
+                    android.graphics.Shader.TileMode.CLAMP));
+                c.drawRoundRect(pic, d * 4, d * 4, p);
+                p.setShader(null);
+                p.setStyle(android.graphics.Paint.Style.STROKE);
+                p.setStrokeWidth(d * 1.6f);
+                p.setStrokeCap(android.graphics.Paint.Cap.ROUND);
+                p.setColor(Tone.onSurface());
+                if (kind == 0) {
+                    c.drawRoundRect(pic, d * 4, d * 4, p);
+                } else if (kind == 1) {
+                    /* The marks of a crop at the four corners. */
+                    float m = d * 6;
+                    float g = d * 3;
+                    android.graphics.RectF k = new android.graphics.RectF(pic.left - g, pic.top - g, pic.right + g,
+                        pic.bottom + g);
+                    c.drawLine(k.left, k.top, k.left + m, k.top, p);
+                    c.drawLine(k.left, k.top, k.left, k.top + m, p);
+                    c.drawLine(k.right, k.top, k.right - m, k.top, p);
+                    c.drawLine(k.right, k.top, k.right, k.top + m, p);
+                    c.drawLine(k.left, k.bottom, k.left + m, k.bottom, p);
+                    c.drawLine(k.left, k.bottom, k.left, k.bottom - m, p);
+                    c.drawLine(k.right, k.bottom, k.right - m, k.bottom, p);
+                    c.drawLine(k.right, k.bottom, k.right, k.bottom - m, p);
+                } else {
+                    p.setColor(Tone.primary());
+                    p.setStrokeWidth(d * 3f);
+                    c.drawRoundRect(pic, d * 4, d * 4, p);
+                }
+            }
+        };
+        face.setBackground(Tone.box(Tone.container(), dp(20), 0f));
+        one.addView(face, new LinearLayout.LayoutParams(dp(78), dp(78)));
+        TextView name = new TextView(this);
+        name.setText(Words.t(word));
+        name.setTextSize(TypedValue.COMPLEX_UNIT_PX, 14f * scaled);
+        name.setTextColor(Tone.onSurface());
+        name.setGravity(Gravity.CENTER);
+        name.setMaxLines(2);
+        name.setPadding(0, dp(6), 0, 0);
+        one.addView(name, new LinearLayout.LayoutParams(dp(92), LinearLayout.LayoutParams.WRAP_CONTENT));
+        one.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                v.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
+                then.run();
+            }
+        });
+        return one;
+    }
+
     private void fillGrounds() {
         groundWindow(true);
         /* The phone's own ways first: its chooser, with live wallpapers and its own apps, and its framing of a
            picture, which asks for the home screen, the lock screen or both. The factory's grounds follow. */
-        caption("THE PHONE'S WAY");
-        rows.addView(deed("Choose a wallpaper\u2026", new Runnable() {
+        /* The ways to a picture on the wall, as tiles: bold, as the rest of the settings' choices are. */
+        caption("A PICTURE ON THE WALL");
+        LinearLayout ways = new LinearLayout(this);
+        ways.setPadding(dp(18), 0, dp(18), dp(8));
+        ways.addView(wayTile(0, "The phone's wallpapers", new Runnable() {
             public void run() {
                 try {
                     startActivity(Intent.createChooser(new Intent(Intent.ACTION_SET_WALLPAPER),
@@ -975,21 +1063,20 @@ public final class Tune extends Activity {
                 }
             }
         }));
-        rows.addView(deed("A picture, framed by the phone\u2026", new Runnable() {
+        ways.addView(wayTile(1, "Framed by the phone", new Runnable() {
             public void run() {
-                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                pick.addCategory(Intent.CATEGORY_OPENABLE);
-                pick.setType("image/*");
-                try {
-                    startActivityForResult(pick, CROP_PICTURE);
-                } catch (android.content.ActivityNotFoundException none) {
-                    said("No way to choose a picture was found on the phone");
-                }
+                pickPicture(CROP_PICTURE);
             }
         }));
-        note("Set the phone's way, the wallpaper is the phone's: it may be cropped, placed on the lock screen or "
-            + "not, and live. A copy carries it only with leave to read all files; a picture of your own, below, "
-            + "is kept by Ellipse and always travels with a copy.");
+        ways.addView(wayTile(2, "Kept by Ellipse", new Runnable() {
+            public void run() {
+                pickPicture(READ_PICTURE);
+            }
+        }));
+        rows.addView(pictures(ways));
+        note("The phone's own way, the wallpaper is the phone's: chosen, cropped, on the lock screen or not, "
+            + "live. A copy carries it only with leave to read all files. Kept by Ellipse, a picture always "
+            + "travels with a copy.");
         caption("READY");
         rows.addView(flow(Ground.READY, -1, new Chosen() {
             public void chosen(int which) {
@@ -1041,20 +1128,8 @@ public final class Tune extends Activity {
             });
         }
         rows.addView(kept);
-        caption("YOUR PICTURE");
-        rows.addView(deed("Wallpaper from a picture", new Runnable() {
-            public void run() {
-                Intent pick = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-                pick.addCategory(Intent.CATEGORY_OPENABLE);
-                pick.setType("image/*");
-                try {
-                    startActivityForResult(pick, READ_PICTURE);
-                } catch (android.content.ActivityNotFoundException none) {
-                    said("No way to choose a picture was found on the phone");
-                }
-            }
-        }));
         if (Picture.kept(this)) {
+            caption("YOUR PICTURE");
             rows.addView(deed("Your picture again", new Runnable() {
                 public void run() {
                     wearPicture();
