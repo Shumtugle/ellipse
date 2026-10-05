@@ -427,19 +427,21 @@ final class Bars {
         }
 
         /**
-         * A step not reached: not grey, but see-through, a shade darker than what lies behind it — or lighter,
-         * on a light wallpaper — with the faintest edge of the ink, so its place is felt, not shown.
+         * A step not reached: the ink itself, see-through, and nothing under it — no shade, no edge, which
+         * on any wallpaper turned it into a dark stroke — so the step is a ghost of the lit ones beside it.
          */
         private void empty(Canvas c, RectF bar) {
+            paint.clearShadowLayer();
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor((ink & 0x00FFFFFF) | 0x4D000000);
+            c.drawRect(bar, paint);
+            shade();
+        }
+
+        /** The soft shade under the lit signs, put back after a ghost is drawn. */
+        private void shade() {
             boolean darkInk = android.graphics.Color.luminance(ink) < 0.4f;
-            paint.setStyle(Paint.Style.FILL);
-            paint.setColor(darkInk ? 0x40FFFFFF : 0x4D000000);
-            c.drawRect(bar, paint);
-            paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(Math.max(1f, dp(0.7f)));
-            paint.setColor((ink & 0x00FFFFFF) | 0x47000000);
-            c.drawRect(bar, paint);
-            paint.setStyle(Paint.Style.FILL);
+            paint.setShadowLayer(dp(1.6f), 0f, dp(0.4f), darkInk ? 0x59FFFFFF : 0x80000000);
         }
 
         private void drawWifi(Canvas c, float x, float y, float s, int level) {
@@ -448,9 +450,15 @@ final class Bars {
             paint.setStrokeCap(Paint.Cap.ROUND);
             for (int i = 0; i < 3; i++) {
                 float r = s * (0.32f + 0.3f * i);
-                boolean darkInk = android.graphics.Color.luminance(ink) < 0.4f;
-                paint.setColor(i < level ? ink : darkInk ? 0x55FFFFFF : 0x59000000);
+                if (i < level) {
+                    shade();
+                    paint.setColor(ink);
+                } else {
+                    paint.clearShadowLayer();
+                    paint.setColor((ink & 0x00FFFFFF) | 0x4D000000);
+                }
                 c.drawArc(new RectF(x - r, y - r, x + r, y + r), 225f, 90f, false, paint);
+                shade();
             }
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(ink);
