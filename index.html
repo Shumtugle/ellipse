@@ -195,7 +195,7 @@
     <h2>Plain Java against the platform, nothing else</h2>
     <p>Ellipse is <b>not</b> a Gradle project and uses no library: plain Java written against <b>android.jar</b>, built by
       one short script — aapt, javac, dx, zipalign, apksigner. It went from a bare grid to what it is now through
-      <b>213 tagged versions in six days</b>, each tried on a phone, the next asked for in words.</p>
+      <b>213 versions in two weeks</b>, each tried on a phone, the next asked for in words.</p>
     <pre><span class="c"># build.sh, in short</span>
 aapt package -m -J build/gen -M AndroidManifest.xml -S res -I android.jar
 javac -bootclasspath android.jar -d build/classes $(find src build/gen -name '*.java')
