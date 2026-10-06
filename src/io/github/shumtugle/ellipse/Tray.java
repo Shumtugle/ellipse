@@ -81,6 +81,18 @@ final class Tray extends FrameLayout {
 
     /** Opens, grown out of a point of the floor: the centre of the folder's icon. */
     void show(CharSequence name, List<Apps.Door> doors, float x, float y) {
+        /* The card is measured against the layer it lies on. Made afresh — the home screen made again after a
+           while away — that layer has never been laid out and knows no size yet: it is measured by the screen it
+           stands in instead, so the first touch opens the folder whole, not its name alone. */
+        float wideAll = getWidth();
+        float tallAll = getHeight();
+        if (wideAll <= 0f || tallAll <= 0f) {
+            View holder = getParent() instanceof View ? (View) getParent() : null;
+            wideAll = holder != null && holder.getWidth() > 0 ? holder.getWidth()
+                : getResources().getDisplayMetrics().widthPixels;
+            tallAll = holder != null && holder.getHeight() > 0 ? holder.getHeight()
+                : getResources().getDisplayMetrics().heightPixels;
+        }
         card.removeAllViews();
         card.setBackground(Tone.box(Tone.containerHigh(), dp(28), dp(0.5f)));
         card.setPadding(dp(8), dp(14), dp(8), dp(12));
@@ -151,14 +163,14 @@ final class Tray extends FrameLayout {
         float full = widgetsTall + cellTall * rows;
         scroll.addView(inside, new ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT));
-        float room = getHeight() * 0.62f;
+        float room = tallAll * 0.62f;
         card.addView(scroll, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
             Math.round(Math.min(room, full))));
 
         shown = true;
         setVisibility(VISIBLE);
         float edge = dp(12);
-        float w = getWidth() - getPaddingLeft() - getPaddingRight() - 2f * edge;
+        float w = wideAll - getPaddingLeft() - getPaddingRight() - 2f * edge;
         LayoutParams params = (LayoutParams) card.getLayoutParams();
         params.width = Math.round(w);
         card.setLayoutParams(params);
@@ -167,8 +179,8 @@ final class Tray extends FrameLayout {
         float h = card.getMeasuredHeight();
         float left = getPaddingLeft() + edge;
         /* Above the icon in the lower half of the screen, below it in the upper. */
-        float top = y > getHeight() / 2f ? y - iconSize / 2f - dp(12) - h : y + iconSize / 2f + dp(12);
-        top = Math.max(getPaddingTop() + edge, Math.min(getHeight() - getPaddingBottom() - edge - h, top));
+        float top = y > tallAll / 2f ? y - iconSize / 2f - dp(12) - h : y + iconSize / 2f + dp(12);
+        top = Math.max(getPaddingTop() + edge, Math.min(tallAll - getPaddingBottom() - edge - h, top));
         card.setTranslationX(left - getPaddingLeft());
         card.setTranslationY(top - getPaddingTop());
         card.setPivotX(x - left);
