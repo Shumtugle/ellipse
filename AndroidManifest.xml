@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="io.github.shumtugle.ellipse"
-    android:versionCode="21804"
-    android:versionName="2.18.4">
+    android:versionCode="21900"
+    android:versionName="2.19.0">
 
-    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="33" />
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
 
     <!-- A pull downward on bare screens may lower the phone's own shade,
          the notices or the quick settings, if the owner asks for it. -->

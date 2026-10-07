@@ -13,6 +13,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowInsets;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -128,6 +129,16 @@ public final class Pin extends Activity {
         int side = Math.round(12 * density);
         cardParams.setMargins(side, 0, side, Math.round(40 * density));
         veil.addView(card, cardParams);
+        /* Where the card's window runs under the phone's bars, it stands clear of the bar at the foot. */
+        final FrameLayout.LayoutParams held = cardParams;
+        final int above = Math.round(40 * density);
+        veil.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+            public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+                held.bottomMargin = above + insets.getSystemWindowInsetBottom();
+                card.requestLayout();
+                return insets;
+            }
+        });
         setContentView(veil);
         card.setTranslationY(80 * density);
         card.setAlpha(0f);

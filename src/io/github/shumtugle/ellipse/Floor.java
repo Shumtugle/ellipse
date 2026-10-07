@@ -30,7 +30,10 @@ final class Floor extends FrameLayout {
         void drop(float x, float y, boolean kept);
     }
 
-    /** Two fingers on bare screens: a pinch together, or both swept up or down. */
+    /**
+     * Two fingers on bare screens: a pinch together, or both swept up or
+     * down; on the list of every app, any move of two fingers at all.
+     */
     interface Fingers {
         /** Whether two fingers are wanted now. */
         boolean free();
@@ -38,12 +41,19 @@ final class Floor extends FrameLayout {
         void pinched();
 
         void swept(boolean up);
+
+        /** Whether any move of two fingers means one thing just now: on the list of every app, back. */
+        boolean anyWay();
+
+        /** Two fingers moved, any way at all, while any way is taken. */
+        void moved();
     }
 
     private Fingers fingers;
     private boolean twoWatching;
     private boolean twoTaken;
     private float twoGap;
+    private float twoX;
     private float twoY;
 
     void fingers(Fingers fingers) {
@@ -71,6 +81,7 @@ final class Floor extends FrameLayout {
             && !pulling && fingers.free()) {
             twoWatching = true;
             twoGap = Math.max(1f, gap(event));
+            twoX = (event.getX(0) + event.getX(1)) / 2f;
             twoY = (event.getY(0) + event.getY(1)) / 2f;
             return false;
         }
@@ -85,6 +96,18 @@ final class Floor extends FrameLayout {
             float now = gap(event);
             float y = (event.getY(0) + event.getY(1)) / 2f;
             float far = 90f * getResources().getDisplayMetrics().density;
+            if (fingers.anyWay()) {
+                /* Together, apart, or both a little way in any direction: one gesture. */
+                float x = (event.getX(0) + event.getX(1)) / 2f;
+                if (now < twoGap * 0.75f || now > twoGap * 1.35f
+                    || Math.hypot(x - twoX, y - twoY) > far * 0.6f) {
+                    twoTaken = true;
+                    cancelBelow(event);
+                    fingers.moved();
+                    return true;
+                }
+                return false;
+            }
             if (now < twoGap * 0.66f) {
                 twoTaken = true;
                 cancelBelow(event);

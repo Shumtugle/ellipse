@@ -174,12 +174,27 @@ public final class Folio extends Activity {
             android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
             android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
         footAt.setMargins(dp(8), dp(6), dp(8), dp(10));
+        /* Where the phone draws its pages under its own bars, the bars' grounds are painted here. */
+        overBar = new android.view.View(this);
+        underBar = new android.view.View(this);
+        host.addView(overBar, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 0,
+            android.view.Gravity.TOP));
+        host.addView(underBar, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, 0,
+            android.view.Gravity.BOTTOM));
+        host.setOnApplyWindowInsetsListener(new android.view.View.OnApplyWindowInsetsListener() {
+            public android.view.WindowInsets onApplyWindowInsets(android.view.View v, android.view.WindowInsets insets) {
+                overBar.getLayoutParams().height = insets.getSystemWindowInsetTop();
+                underBar.getLayoutParams().height = insets.getSystemWindowInsetBottom();
+                overBar.requestLayout();
+                underBar.requestLayout();
+                return insets;
+            }
+        });
         host.addView(root, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.MATCH_PARENT));
         root.addView(foot, footAt);
         setContentView(host);
-        getWindow().setStatusBarColor(LOOK.equals(opened) ? Tone.frame() : Tone.surface());
-        getWindow().setNavigationBarColor(Tone.surface());
+        bands(LOOK.equals(opened) ? Tone.frame() : Tone.surface(), Tone.surface());
         Tone.dress(getWindow(), !LOOK.equals(opened));
         show(opened);
     }
@@ -285,8 +300,7 @@ public final class Folio extends Activity {
             if (glimpse != null) {
                 glimpse.show(Keep.zoom(this));
             }
-            getWindow().setStatusBarColor(Tone.surface());
-            getWindow().setNavigationBarColor(Tone.surface());
+            bands(Tone.surface(), Tone.surface());
             Tone.dress(getWindow(), true);
             show(LOOK);
             return;
@@ -310,8 +324,7 @@ public final class Folio extends Activity {
             Keep.saveZoom(this, zoom);
             view.getSettings().setTextZoom(zoom);
             Tone.read(this);
-            getWindow().setStatusBarColor(Tone.surface());
-            getWindow().setNavigationBarColor(Tone.surface());
+            bands(Tone.surface(), Tone.surface());
             Tone.dress(getWindow(), true);
             if (glimpse != null) {
                 glimpse.show(zoom);
@@ -439,6 +452,20 @@ public final class Folio extends Activity {
             // Left unnamed.
         }
         return Words.s("here");
+    }
+
+    private android.view.View overBar;
+    private android.view.View underBar;
+
+    /** The grounds of the phone's bars: their own colours, and the bands under them where pages run beneath. */
+    @SuppressWarnings("deprecation")
+    private void bands(int top, int bottom) {
+        getWindow().setStatusBarColor(top);
+        getWindow().setNavigationBarColor(bottom);
+        if (overBar != null) {
+            overBar.setBackgroundColor(top);
+            underBar.setBackgroundColor(bottom);
+        }
     }
 
     @Override

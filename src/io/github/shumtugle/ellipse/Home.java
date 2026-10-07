@@ -271,7 +271,11 @@ public final class Home extends Activity {
         night.addAction(Intent.ACTION_WALLPAPER_CHANGED);
         /* The day's own count: the battery as it goes. */
         night.addAction(Intent.ACTION_BATTERY_CHANGED);
-        registerReceiver(sleep, night);
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(sleep, night, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(sleep, night);
+        }
         /* The screen is on as the home screen starts: the day's count of it begins now. */
         Day.screenOn(this);
         Lapse.watch(this);
@@ -853,8 +857,19 @@ public final class Home extends Activity {
         root.hand(pulling);
         root.fingers(new Floor.Fingers() {
             public boolean free() {
-                return lift == null && !menu.shown() && !drawer.shown() && !drawer.menuShown() && !tray.shown()
+                return lift == null && !menu.shown() && !drawer.menuShown() && !tray.shown()
                     && !shelf.shown() && !chooser.shown() && !fresh.shown() && (reach == null || reach.ended());
+            }
+
+            public boolean anyWay() {
+                return drawer.shown();
+            }
+
+            /* On the list, two fingers are a way back that needs no edge of the screen. */
+            public void moved() {
+                if (drawer.shown()) {
+                    drawer.sink(true);
+                }
             }
 
             public void pinched() {
@@ -5407,7 +5422,12 @@ public final class Home extends Activity {
             android.content.IntentFilter heard = new android.content.IntentFilter(EARS_CHANGED);
             heard.addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_DISCONNECTED);
             try {
-                registerReceiver(ears, heard);
+                /* The headphones' news comes from the phone's Bluetooth, an app of its own: let in from outside. */
+                if (Build.VERSION.SDK_INT >= 33) {
+                    registerReceiver(ears, heard, Context.RECEIVER_EXPORTED);
+                } else {
+                    registerReceiver(ears, heard);
+                }
                 listening = true;
                 earsLevel = earsNow();
             } catch (RuntimeException refused) {
