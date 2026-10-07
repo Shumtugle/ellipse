@@ -624,7 +624,12 @@ public final class Home extends Activity {
         if (status || navigation) {
             flags |= View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
         }
-        getWindow().getDecorView().setSystemUiVisibility(flags);
+        View decor = getWindow().getDecorView();
+        if (decor.getSystemUiVisibility() != flags) {
+            decor.setSystemUiVisibility(flags);
+            /* The flags do not travel with the insets here: the own strip is weighed again by hand. */
+            decor.requestApplyInsets();
+        }
     }
 
     @Override
@@ -695,12 +700,22 @@ public final class Home extends Activity {
                 }
                 /* The home screen's own strips stand where the hidden bars would, as tall as they would be,
                    and only while the phone's own are away; the screens keep clear of them as of the bars. */
-                if (Build.VERSION.SDK_INT >= 30 && statusStrip != null) {
-                    boolean statusSeen = insets.isVisible(WindowInsets.Type.statusBars());
-                    android.graphics.Insets was = insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars());
+                if (statusStrip != null) {
+                    boolean statusSeen;
+                    int wasTop;
+                    if (Build.VERSION.SDK_INT >= 30) {
+                        statusSeen = insets.isVisible(WindowInsets.Type.statusBars());
+                        wasTop = insets.getInsetsIgnoringVisibility(WindowInsets.Type.statusBars()).top;
+                    } else {
+                        /* Older phones tell the hidden bar by the window's flags, and its height by the
+                           stable insets, which stay as they were while the bar is away. */
+                        statusSeen = (getWindow().getDecorView().getSystemUiVisibility()
+                            & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0;
+                        wasTop = insets.getStableInsetTop();
+                    }
                     boolean ownTop = Keep.flag(Home.this, Keep.HIDE_STATUS, false)
                         && Keep.flag(Home.this, Keep.STRIP_OWN, false) && !statusSeen;
-                    int tall = Math.max(Math.max(was.top, top), Math.round(dp(24)));
+                    int tall = Math.max(Math.max(wasTop, top), Math.round(dp(24)));
                     statusStrip.setVisibility(ownTop ? View.VISIBLE : View.GONE);
                     statusStrip.getLayoutParams().height = tall;
                     statusStrip.setPadding(left, 0, right, 0);

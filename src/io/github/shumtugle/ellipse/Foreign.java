@@ -108,6 +108,9 @@ final class Foreign {
         final Map<String, List<String>> kinds = new java.util.LinkedHashMap<>();
         Boolean hideStatus;
         Boolean hideNavigation;
+        /* The grid the other home screen said it had, which its icons need not fill; or none. */
+        int saidColumns;
+        int saidRows;
         byte[] wallpaper;
         final List<List<Item>> screens = new ArrayList<>();
 
@@ -236,6 +239,8 @@ final class Foreign {
                     found.listPages = seen.listPages;
                     found.listColumns = seen.listColumns;
                     found.listRows = seen.listRows;
+                    found.saidColumns = seen.saidColumns;
+                    found.saidRows = seen.saidRows;
                     found.listEndless = seen.listEndless;
                     found.listNames = seen.listNames;
                     found.listLines = seen.listLines;
@@ -295,6 +300,12 @@ final class Foreign {
         Matcher margin = Pattern.compile("name=\"desktop_width_margin\">([A-Z_]+)<").matcher(said);
         if (margin.find()) {
             into.edgeless = "NONE".equals(margin.group(1));
+        }
+        /* Its grid as rows by columns; the separate numbers beside it may be stale. */
+        Matcher grid = Pattern.compile("name=\"desktop_grid\">(\\d+)x(\\d+)").matcher(said);
+        if (grid.find()) {
+            into.saidRows = Integer.parseInt(grid.group(1));
+            into.saidColumns = Integer.parseInt(grid.group(2));
         }
         Matcher style = Pattern.compile("name=\"drawer_style\">([A-Z_]+)<").matcher(said);
         if (style.find()) {
@@ -892,8 +903,8 @@ final class Foreign {
         Map<String, List<String>> pins = new HashMap<>();
         android.content.pm.PackageManager pm = context.getPackageManager();
         android.appwidget.AppWidgetManager widgets = android.appwidget.AppWidgetManager.getInstance(context);
-        int columns = Math.max(3, Math.min(7, layout.columns));
-        int rows = Math.max(3, Math.min(12, layout.rows));
+        int columns = Math.max(3, Math.min(7, Math.max(layout.columns, layout.saidColumns)));
+        int rows = Math.max(3, Math.min(12, Math.max(layout.rows, layout.saidRows)));
         List<Keep.Spot> spots = new ArrayList<>();
         Map<String, Boolean> known = new HashMap<>();
         boolean clocked = false;

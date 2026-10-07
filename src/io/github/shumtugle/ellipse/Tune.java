@@ -879,6 +879,7 @@ public final class Tune extends Activity {
                 return String.valueOf(door.label);
             }
         }
+        line = held(line);
         int now = current(line);
         for (int i = 0; i < line.values.length; i++) {
             if (line.values[i] == now) {
@@ -888,8 +889,32 @@ public final class Tune extends Activity {
         return Words.t(line.names[0]);
     }
 
+    /**
+     * A grid choice as it truly stands: a grid brought in from another home
+     * screen may be none of the ready ones, and is then named and offered
+     * last in the list, so the row tells the grid in use, not the first one.
+     */
+    private Line held(Line line) {
+        if (line.values != GRID_VALUES) {
+            return line;
+        }
+        int now = current(line);
+        for (int value : line.values) {
+            if (value == now) {
+                return line;
+            }
+        }
+        String[] names = java.util.Arrays.copyOf(line.names, line.names.length + 1);
+        int[] values = java.util.Arrays.copyOf(line.values, line.values.length + 1);
+        names[names.length - 1] = Keep.columns(now) + " \u00D7 " + Keep.rows(now);
+        values[values.length - 1] = now;
+        return new Line(line.kind, line.glyph, line.title, line.about, line.room, line.key, line.fallback,
+            names, values);
+    }
+
     /** A choice opens the one menu beside the value it shows, the value it holds marked. */
     private void ask(Line line, View row, TextView value) {
+        line = held(line);
         asking = line;
         askingValue = value;
         Menu.Section section = new Menu.Section(null, line.names, line.values);
